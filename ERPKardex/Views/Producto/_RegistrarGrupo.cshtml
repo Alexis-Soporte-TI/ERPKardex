@@ -1,0 +1,85 @@
+﻿<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-3">
+                <label for="cbx_Grupo_CuentaId" class="font-weight-bold">Cuenta Contable</label>
+                <div class="input-group">
+                    <select id="cbx_Grupo_CuentaId" class="form-control">
+                        <option value="">-- SELECCIONAR CUENTA --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_GrupoCodigo" class="font-weight-bold">Código del Grupo</label>
+                <input type="text" id="txt_GrupoCodigo" class="form-control" oninput="this.value = this.value.toUpperCase();">
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_GrupoDescripcion" class="font-weight-bold">Nombre / Descripción</label>
+                <input type="text" id="txt_GrupoDescripcion" class="form-control" oninput="this.value = this.value.toUpperCase();">
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</button>
+                <button id="btn_GuardarGrupo" type="button" class="btn btn-primary">Registrar Grupo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Cargar cuentas en el modal
+        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Grupo_CuentaId', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+
+        // Pre-seleccionar si ya hay una cuenta en el Index
+        let cuentaPadre = $('#cbx_Cuenta').val();
+        if(cuentaPadre) {
+            setTimeout(() => { $('#cbx_Grupo_CuentaId').val(cuentaPadre); }, 500);
+        }
+    });
+
+    $(document).off('click', '#btn_GuardarGrupo').on('click', '#btn_GuardarGrupo', function () {
+        let cuentaId = $("#cbx_Grupo_CuentaId").val();
+        let codigo = $("#txt_GrupoCodigo").val().trim();
+        let descripcion = $("#txt_GrupoDescripcion").val().trim();
+
+        if (!cuentaId || !codigo || !descripcion) {
+            toastr.warning("Todos los campos son obligatorios", "SISTEMA");
+            return;
+        }
+
+        let pGrupo = { CuentaId: cuentaId, Codigo: codigo, Descripcion: descripcion };
+
+            Swal.fire({
+                title: "¿Confirmar Registro?",
+                text: "Se guardará el grupo.",
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar todo",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // 4. Envío de Datos
+                    $.post("/Producto/RegistrarGrupo", pGrupo, function(response) {
+                        if (response.status) {
+                            toastr.success(response.message);
+                            // Refrescar combo de grupos en Index filtrado por la cuenta actual
+                            let cuentaActualIndex = $('#cbx_Cuenta').val();
+                            if (cuentaActualIndex) {
+                                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaActualIndex, '#cbx_Grupo', 'codigo', 'descripcion', '-- SELECCIONAR GRUPO --');
+                            }
+                            $("#dynamic-modal").modal('hide');
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    });
+                }
+            });
+    });
+</script>

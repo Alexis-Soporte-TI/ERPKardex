@@ -1,0 +1,46 @@
+﻿<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-3">
+                <label for="txt_IANombre" class="font-weight-bold">Nombre del Ingrediente Activo</label>
+                <input type="text" id="txt_IANombre" class="form-control" placeholder="Ej: Glifosato" oninput="this.value = this.value.toUpperCase();">
+            </div>
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</button>
+                <button id="btn_GuardarIA" type="button" class="btn btn-primary">Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).off('click', '#btn_GuardarIA').on('click', '#btn_GuardarIA', function () {
+        let nombre = $("#txt_IANombre").val().trim();
+        if (!nombre) { toastr.warning("Ingrese el nombre"); return; }
+
+            Swal.fire({
+                title: "¿Confirmar Registro?",
+                text: "Se guardará el ingrediente activo.",
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar todo",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    // 4. Envío de Datos
+                    $.post("/Producto/RegistrarIngredienteActivo", { Descripcion: nombre }, function (response) {
+                        if (response.status) {
+                            toastr.success(response.message);
+                            // Refrescar el combo en la vista principal
+                            fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --');
+                            $("#dynamic-modal").modal('hide');
+                        } else { toastr.error(response.message); }
+                    });
+                }
+            });
+    });
+</script>

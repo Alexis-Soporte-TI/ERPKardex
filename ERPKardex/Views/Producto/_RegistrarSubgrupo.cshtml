@@ -1,0 +1,142 @@
+﻿<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-3">
+                <label for="cbx_Sub_Cuenta" class="font-weight-bold text-primary">1. Seleccionar Cuenta</label>
+                <div class="input-group">
+                    <select id="cbx_Sub_Cuenta" class="form-control border-primary"></select>
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-calculator"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="cbx_Subgrupo_CodGrupo" class="font-weight-bold text-success">2. Grupo Perteneciente</label>
+                <div class="input-group">
+                    <select id="cbx_Subgrupo_CodGrupo" class="form-control border-success">
+                        <option value="">-- PRIMERO SELECCIONE CUENTA --</option>
+                    </select>
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-layer-group"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="txt_SubgrupoCodigo" class="font-weight-bold">Código Subgrupo</label>
+                        <input type="text" id="txt_SubgrupoCodigo" class="form-control" placeholder="Ej: SGRP-01" oninput="this.value = this.value.toUpperCase();">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="txt_SubgrupoDescripcion" class="font-weight-bold">Nombre / Descripción</label>
+                        <input type="text" id="txt_SubgrupoDescripcion" class="form-control" placeholder="Nombre del subgrupo" oninput="this.value = this.value.toUpperCase();">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_SubgrupoObservacion" class="font-weight-bold">Observaciones</label>
+                <textarea id="txt_SubgrupoObservacion" class="form-control" rows="2" placeholder="Notas adicionales..." oninput="this.value = this.value.toUpperCase();"></textarea>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</button>
+                <button id="btn_GuardarSubgrupo" type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Registrar Subgrupo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // A. Cargar Cuentas al abrir el modal
+        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Sub_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+
+        // B. Evento Change: Al cambiar Cuenta, cargar Grupos
+        $('#cbx_Sub_Cuenta').on('change', function () {
+            let cuentaId = $(this).val();
+            if (cuentaId) {
+                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaId, '#cbx_Subgrupo_CodGrupo', 'codigo', 'descripcion', '-- SELECCIONAR GRUPO --');
+            } else {
+                $('#cbx_Subgrupo_CodGrupo').html('<option value="">-- SELECCIONAR GRUPO --</option>');
+            }
+        });
+
+        // C. Pre-configuración automática (si en la pantalla principal ya hay algo seleccionado)
+        let cuentaPadre = $('#cbx_Cuenta').val();
+        let grupoPadre = $('#cbx_Grupo').val();
+
+        if (cuentaPadre) {
+            setTimeout(() => {
+                $('#cbx_Sub_Cuenta').val(cuentaPadre).trigger('change');
+                // Si también hay un grupo, lo seleccionamos después de que cargue el combo de grupos
+                if (grupoPadre) {
+                    setTimeout(() => {
+                        $('#cbx_Subgrupo_CodGrupo').val(grupoPadre);
+                    }, 600);
+                }
+            }, 500);
+        }
+    });
+
+    $(document).off('click', '#btn_GuardarSubgrupo').on('click', '#btn_GuardarSubgrupo', function () {
+        let codGrupo = $("#cbx_Subgrupo_CodGrupo").val();
+        let descGrupo = $("#cbx_Subgrupo_CodGrupo option:selected").text();
+        let codigo = $("#txt_SubgrupoCodigo").val().trim();
+        let descripcion = $("#txt_SubgrupoDescripcion").val().trim();
+        let observacion = $("#txt_SubgrupoObservacion").val().trim();
+
+        if (!codGrupo || !codigo || !descripcion) {
+            toastr.warning("Complete los campos obligatorios", "MENSAJE DE SISTEMA");
+            return;
+        }
+
+        let pSubgrupo = {
+            CodGrupo: codGrupo,
+            DescripcionGrupo: descGrupo,
+            Codigo: codigo,
+            Descripcion: descripcion,
+            Observacion: observacion
+        };
+
+        Swal.fire({
+                    title: "¿Confirmar Registro?",
+                    text: "Se guardará el subgrupo.",
+                    icon: "info",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    reverseButtons: true,
+                    confirmButtonText: "Sí, guardar todo",
+                    cancelButtonText: "Revisar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+
+                        // 4. Envío de Datos
+                        $.post("/Producto/RegistrarSubgrupo", pSubgrupo, function (response) {
+                            if (response.status) {
+                                toastr.success(response.message);
+
+                                // Actualizar el combo de la pantalla principal si coincide el grupo
+                                let codGrupoActualIndex = $('#cbx_Grupo').val();
+                                if (codGrupoActualIndex === codGrupo) {
+                                    fct_FillCombo('/Producto/GetSubgruposByGrupo?codGrupo=' + codGrupo, '#cbx_Subgrupo', 'codigo', 'descripcion', '-- SELECCIONAR SUBGRUPO --');
+                                }
+
+                                $("#dynamic-modal").modal('hide');
+                            } else {
+                                toastr.warning(response.message);
+                            }
+                        });
+                    }
+                });
+    });
+</script>

@@ -1,0 +1,122 @@
+﻿<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="txt_FormulacionCodigo" class="font-weight-bold">Código</label>
+                        <div class="input-group">
+                            <input type="text" id="txt_FormulacionCodigo" class="form-control" placeholder="Ej: FQ-001" oninput="this.value = this.value.toUpperCase();">
+                            <div class="input-group-append">
+                                <div class="input-group-text"><i class="fas fa-barcode"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="txt_FormulacionNombre" class="font-weight-bold">Nombre</label>
+                        <div class="input-group">
+                            <input type="text" id="txt_FormulacionNombre" class="form-control" placeholder="Ej: Polvo Mojable" oninput="this.value = this.value.toUpperCase();">
+                            <div class="input-group-append">
+                                <div class="input-group-text"><i class="fas fa-flask"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_FormulacionDescripcion" class="font-weight-bold">Descripción</label>
+                <div class="input-group">
+                    <textarea id="txt_FormulacionDescripcion" class="form-control" rows="2" placeholder="Detalle técnico de la formulación..." oninput="this.value = this.value.toUpperCase();"></textarea>
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-align-left"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_FormulacionEjemplo" class="font-weight-bold">Ejemplo</label>
+                <div class="input-group">
+                    <input type="text" id="txt_FormulacionEjemplo" class="form-control" placeholder="Ej: WP, EC, SC" oninput="this.value = this.value.toUpperCase();">
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-info-circle"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button id="btn_CancelarFormulacion" type="button" class="btn btn-danger" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btn_GuardarFormulacion" type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Registrar Formulación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+        $(document).off('click', '#btn_GuardarFormulacion').on('click', '#btn_GuardarFormulacion', function () {
+        // 1. Recolección de datos
+        let codigo = $("#txt_FormulacionCodigo").val().trim();
+        let nombre = $("#txt_FormulacionNombre").val().trim();
+        let descripcion = $("#txt_FormulacionDescripcion").val().trim();
+        let ejemplo = $("#txt_FormulacionEjemplo").val().trim();
+
+        // 2. Validaciones básicas
+        if (!codigo || !nombre) {
+            toastr.warning("El código y el nombre son obligatorios", "MENSAJE DE SISTEMA");
+            return;
+        }
+
+        // 3. Confirmación con SweetAlert2
+        Swal.fire({
+            title: "¿Registrar Formulación?",
+            text: `Se registrará: ${nombre}`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Sí, registrar",
+            cancelButtonText: "Cancelar",
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                // 4. Objeto para el controlador (coincide con tu clase FormulacionQuimica)
+                let pFormulacion = {
+                    Codigo: codigo,
+                    Nombre: nombre,
+                    Descripcion: descripcion,
+                    Ejemplo: ejemplo
+                };
+
+                $.ajax({
+                    url: "/Producto/RegistrarFormulacion",
+                    type: "POST",
+                    data: pFormulacion,
+                    success: function (response) {
+                        if (response.status === true) {
+                            toastr.success(response.message, "MENSAJE DE SISTEMA");
+
+                            // 5. Refrescar el combo en la pantalla principal
+                            // Nota: Usamos 'nombre' como textProp según tu GetFQData
+                            fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --');
+
+                            // 6. Cerrar el modal
+                            $("#dynamic-modal").modal('hide');
+                        } else {
+                            toastr.warning(response.message, 'MENSAJE DE SISTEMA');
+                        }
+                    },
+                    error: function (xhr) {
+                        toastr.error("Error en el servidor al procesar la formulación", "MENSAJE DE SISTEMA");
+                        console.error(xhr);
+                    }
+                });
+            }
+        });
+    });
+</script>

@@ -1,0 +1,87 @@
+﻿<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="mb-3">
+                <label for="txt_CuentaCodigo" class="font-weight-bold">Código de Cuenta</label>
+                <div class="input-group">
+                    <input type="text" id="txt_CuentaCodigo" class="form-control" placeholder="Ej: 20111" oninput="this.value = this.value.toUpperCase();">
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-calculator"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="txt_CuentaDescripcion" class="font-weight-bold">Descripción / Nombre</label>
+                <div class="input-group">
+                    <input type="text" id="txt_CuentaDescripcion" class="form-control" placeholder="Ej: MERCADERÍAS" oninput="this.value = this.value.toUpperCase();">
+                    <div class="input-group-append">
+                        <div class="input-group-text"><i class="fas fa-align-left"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btn_GuardarCuenta" type="button" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Registrar Cuenta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).off('click', '#btn_GuardarCuenta').on('click', '#btn_GuardarCuenta', function () {
+        let codigo = $("#txt_CuentaCodigo").val().trim();
+        let descripcion = $("#txt_CuentaDescripcion").val().trim();
+
+        if (!codigo || !descripcion) {
+            toastr.warning("Todos los campos son obligatorios", "MENSAJE DE SISTEMA");
+            return;
+        }
+
+        let pCuenta = {
+            Codigo: codigo,
+            Descripcion: descripcion
+        };
+
+            Swal.fire({
+                title: "¿Confirmar Registro?",
+                text: "Se guardará la cuenta.",
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar todo",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // 4. Envío de Datos
+                    $.ajax({
+                        url: "/Producto/RegistrarCuenta",
+                        type: "POST",
+                        data: pCuenta,
+                        success: function (response) {
+                            if (response.status === true) {
+                                toastr.success(response.message, "MENSAJE DE SISTEMA");
+
+                                // Refrescar el combo de cuentas en la vista principal
+                                fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+
+                                $("#dynamic-modal").modal('hide');
+                            } else {
+                                toastr.warning(response.message, 'MENSAJE DE SISTEMA');
+                            }
+                        },
+                        error: function (xhr) {
+                            toastr.error("Error en el servidor al procesar la cuenta", "MENSAJE DE SISTEMA");
+                        }
+                    });
+                }
+            });
+    });
+</script>
