@@ -166,7 +166,7 @@
                     columns: ':not(.noVis)',
                 },
                 {
-                    text: '<i class= "bi bi-plus-circle" style="margin-right: 5px;"></i>Nueva empresa',
+                    text: '<i class= "bi bi-plus-circle" style="margin-right: 5px;"></i>Nuevo producto',
                     className: 'btn bg-success m-1',
                     titleAttr: 'Nuevo',
                     action: function (e, dt, node, config) {
@@ -231,7 +231,7 @@
                         <button class="btn btn m-1 btn-info" onclick="fct_EmpresaVer('${data.id}')" title="Ver empresa"><i class="bi bi-eye"></i></button>
                         <button class="btn btn m-1 btn-primary" onclick="fct_EmpresaEditar('${data.id}')" title="Editar empresa"><i class="bi bi-pencil-square"></i></button>
                         <button class="btn btn m-1 btn-danger" onclick = "fct_EmpresaEliminar('${data.id}')" title="Eliminar empresa"><i class="bi bi-trash"></i></button>`
-
+                        buttons = '';
                         return `
                         <div class="flex-wrap btn-group">
                             ${buttons}

@@ -6,7 +6,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-10">
 
-            <div class="card shadow mb-4">
+            @* <div class="card shadow mb-4">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Selección de Entidad</h5>
                 </div>
@@ -28,7 +28,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> *@
 
             <div class="card shadow mb-4">
                 <div class="card-header bg-primary text-white">
@@ -358,7 +358,7 @@
                     Serie: $("#txt_Serie").val().trim(),
                     EsActivoFijo: $("#chk_EsActivoFijo").is(":checked"),
                     Estado: $("#cbx_Estado").val() === "1",
-                    EmpresaId: $("#cbx_Empresa").val() ? parseInt($("#cbx_Empresa").val()) : null
+                    EmpresaId: 1 ? 1 : null // Empresa 1 por ahora, tiempo de desarrollo
                 };
 
                 // 2. Validaciones mínimas
@@ -414,7 +414,6 @@
     
     function fct_InitAllCombos() {
         // 1. Cargar datos inicialmente
-        fct_FillCombo('/Producto/GetEmpresaData', '#cbx_Empresa', 'id', 'razonSocial', '-- SELECCIONAR EMPRESA --');
         fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
         fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --');
         fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --');
@@ -429,7 +428,7 @@
 
         // 3. Convertir a Select2 (puedes usar una clase común o IDs específicos)
         // Agregamos el buscador a los campos más pesados
-        $('#cbx_Empresa, #cbx_Cuenta, #cbx_Grupo, #cbx_Subgrupo, #cbx_Marca, #cbx_Modelo, #cbx_IA_Busqueda, #cbx_UnidadMedida').select2({
+        $('#cbx_Cuenta, #cbx_Grupo, #cbx_Subgrupo, #cbx_Marca, #cbx_Modelo, #cbx_IA_Busqueda, #cbx_UnidadMedida').select2({
             theme: 'bootstrap4', // O el tema que estés usando
             placeholder: "Buscar...",
             allowClear: true,

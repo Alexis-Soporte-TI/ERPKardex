@@ -8,19 +8,24 @@
             <div class="card shadow mb-4">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-box-seam"></i> Datos del Movimiento</h5>
-                    <span id="lbl_TipoMovimiento" class="badge badge-secondary p-2">TIPO: PENDIENTE</span>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4 mb-3"><label>Empresa</label><select id="cbx_Empresa" class="form-control select2-busqueda"></select></div>
+                        <div class="col-md-4 mb-3">
+                            <label>Tipo de movimiento</label>
+                            <select id="cbx_TipoMovimiento" class="form-control">
+                                <option value="">-- SELECCIONAR --</option>
+                                <option value="1">ENTRADA (Compra/Ingreso)</option>
+                                <option value="0">SALIDA (Consumo/Gasto)</option>
+                            </select>
+                        </div>
                         <div class="col-md-4 mb-3"><label>Sucursal</label><select id="cbx_Sucursal" class="form-control select2-busqueda"><option value="">-- SELECCIONE EMPRESA --</option></select></div>
                         <div class="col-md-4 mb-3"><label>Almacén</label><select id="cbx_Almacen" class="form-control select2-busqueda"><option value="">-- SELECCIONE SUCURSAL --</option></select></div>
                     </div>
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label>Fecha Movimiento</label><input type="date" id="dtp_FechaMov" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
-                        <div class="col-md-3 mb-3"><label>Número Movimiento</label><input disabled type="text" id="txt_NumeroMov" class="form-control" placeholder="Autogenerado"></div>
-                        <div class="col-md-3 mb-3"><label>Motivo</label><select id="cbx_Motivo" class="form-control select2-busqueda"></select></div>
-                        <div class="col-md-3 mb-3"><label>Moneda</label><select id="cbx_MonedaCab" class="form-control select2-busqueda"></select></div>
+                        <div class="col-md-4 mb-3"><label>Fecha Movimiento</label><input type="date" id="dtp_FechaMov" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
+                        <div class="col-md-4 mb-3"><label>Motivo</label><select id="cbx_Motivo" class="form-control select2-busqueda"></select></div>
+                        <div class="col-md-4 mb-3"><label>Número Movimiento</label><input disabled type="text" id="txt_NumeroMov" class="form-control" placeholder="Autogenerado"></div>
                     </div>
                 </div>
             </div>
@@ -29,10 +34,13 @@
                 <div class="card-header bg-info text-white"><h5 class="mb-0">Documento de Referencia</h5></div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3 mb-3"><label>Tipo Documento</label><select id="cbx_TipoDoc" class="form-control select2-busqueda"></select></div>
-                        <div class="col-md-3 mb-3"><label>Serie</label><input type="text" id="txt_SerieDoc" class="form-control" placeholder="Ej: F001"></div>
-                        <div class="col-md-3 mb-3"><label>Número</label><input type="text" id="txt_NumeroDoc" class="form-control" placeholder="Ej: 000123"></div>
                         <div class="col-md-3 mb-3"><label>Fecha Doc.</label><input type="date" id="dtp_FechaDoc" class="form-control"></div>
+                        <div class="col-md-9 mb-3"><label>Tipo Documento</label><select id="cbx_TipoDoc" class="form-control select2-busqueda"></select></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label>Serie</label><input type="text" id="txt_SerieDoc" class="form-control" placeholder="Ej: F001"></div>
+                        <div class="col-md-4 mb-3"><label>Número</label><input type="text" id="txt_NumeroDoc" class="form-control" placeholder="Ej: 000123"></div>
+                        <div class="col-md-4 mb-3"><label>Moneda</label><select id="cbx_MonedaCab" class="form-control select2-busqueda"></select></div>
                     </div>
                 </div>
             </div>
@@ -41,20 +49,52 @@
                 <div class="card-header bg-success text-white"><h5 class="mb-0">Búsqueda y Detalle de Productos</h5></div>
                 <div class="card-body bg-light">
                     <div class="row">
-                        <div class="col-md-4 mb-3"><label>Filtrar por Grupo</label><select id="cbx_GrupoFiltro" class="form-control select2-busqueda"></select></div>
-                        <div class="col-md-4 mb-3"><label>Filtrar por Subgrupo</label><select id="cbx_SubgrupoFiltro" class="form-control select2-busqueda"><option value="">-- SELECCIONE GRUPO --</option></select></div>
-                        <div class="col-md-4 mb-3"><label>Producto Final</label><select id="cbx_ProductoBusqueda" class="form-control select2-busqueda"><option value="">-- SELECCIONE SUBGRUPO --</option></select></div>
+                        <div class="col-md-6 mb-3"><label>Producto Final</label><select id="cbx_ProductoBusqueda" class="form-control select2-busqueda"></select></div>
+                        <div class="col-md-2 mb-3"><label>U.M.</label><input type="text" id="txt_DetUnidad" class="form-control" readonly></div>
+                        <div class="col-md-4 mb-3"><label>Cantidad</label><input type="number" id="txt_DetCantidad" class="form-control" step="0.01" value="0.00"></div>
                     </div>
+
                     <div class="row align-items-end">
-                        <div class="col-md-3 mb-3"><label>U.M.</label><input type="text" id="txt_DetUnidad" class="form-control" readonly></div>
-                        <div class="col-md-3 mb-3"><label>Cantidad</label><input type="number" id="txt_DetCantidad" class="form-control" step="0.01" value="0.00"></div>
-                        <div class="col-md-3 mb-3"><label>Precio Unit.</label><input type="number" id="txt_DetPrecio" class="form-control" step="0.000001" value="0.000000"></div>
-                        <div class="col-md-3 mb-3"><button id="btn_AgregarDetalle" type="button" class="btn btn-primary btn-block"><i class="bi bi-plus-circle"></i> Añadir a Tabla</button></div>
+                        <div class="col-md-4 mb-3" id="div_InputPrecio">
+                            <label>Precio Unit. (Base)</label>
+                            <input type="number" id="txt_DetPrecio" class="form-control" step="0.000001" value="0.000000">
+                        </div>
+                        <div class="col-md-4 mb-3 d-none" id="div_InputSalida_CC">
+                            <label>Centro de Costo</label>
+                            <select id="cbx_CentroCosto" class="form-control select2-busqueda"></select>
+                        </div>
+                        <div class="col-md-4 mb-3 d-none" id="div_InputSalida_Act">
+                            <label>Actividad</label>
+                            <select id="cbx_Actividad" class="form-control select2-busqueda"></select>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <button id="btn_AgregarDetalle" type="button" class="btn btn-primary btn-block">
+                                <i class="bi bi-plus-circle"></i> Añadir a Tabla
+                            </button>
+                        </div>
                     </div>
+
                     <div class="table-responsive mt-4">
                         <table id="tbl_DetalleMovimiento" class="table table-bordered table-striped text-center">
                             <thead class="thead-dark">
-                                <tr><th>Item</th><th>Código</th><th>Producto</th><th>Cant.</th><th>U.M.</th><th>Precio</th><th>Subtotal</th><th>Acción</th></tr>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Cant.</th>
+                                    <th>U.M.</th>
+
+                                    <th id="th_Precio">Precio</th>
+                                    <th id="th_Subtotal">Subtotal</th>
+                                    <th id="th_IGV" class="d-none">IGV</th>
+                                    <th id="th_Total" class="d-none">Total</th>
+
+                                    <th id="th_CC" class="d-none">Centro Costo</th>
+                                    <th id="th_Actividad" class="d-none">Actividad</th>
+
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -72,57 +112,70 @@
 
 <script>
     var LISTA_DETALLE = [];
-    var PRODUCTOS_TEMP = []; // Almacena productos filtrados para obtener U.M.
+    var PRODUCTOS_TEMP = [];
     var MOTIVOS_FULL = [];
+    var CENTROS_COSTO_FULL = [];
+    var ACTIVIDADES_FULL = [];
+    const TASA_IGV = 0.18; // Constante para Perú
 
     $(document).ready(function () {
-        $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%' });
+        $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%', allowClear: true });
         fct_InitCombos();
 
-        // --- CASCADA CABECERA ---
-        $('#cbx_Empresa').on('change', function () {
-            let id = $(this).val();
-            $('#cbx_Almacen').html('<option value="">-- SELECCIONE SUCURSAL --</option>').trigger('change');
+        // --- LÓGICA DE TIPO MOVIMIENTO ---
+        $('#cbx_TipoMovimiento').on('change', function () {
+            let tipo = $(this).val(); // "1": Entrada, "0": Salida
 
-            if (id) {
-                // Value: codigo (porque así lo filtras luego), Texto: codigo - nombre
-                fct_FillCombo('/IngresoSalidaAlm/GetSucursalesByEmpresa?empresaId=' + id, '#cbx_Sucursal', 'codigo', 'nombre', '-- SELECCIONAR --', 'codigo');
+            if(LISTA_DETALLE.length > 0){
+                Swal.fire("Atención", "Al cambiar el tipo de movimiento se limpiará la lista de productos.", "warning");
+                LISTA_DETALLE = [];
+                fct_RenderDetalle();
+            }
+
+            // Filtrar Motivos
+            let h = '<option value="">-- MOTIVO --</option>';
+            if (tipo !== "") {
+                let esIngreso = (tipo === "1");
+                let filtrados = MOTIVOS_FULL.filter(x => x.tipoMovimiento === esIngreso);
+                filtrados.forEach(m => {
+                    h += `<option data-tipo-movimiento="${m.tipoMovimiento}" value="${m.codigo}">${m.codigo} - ${m.descripcion}</option>`;
+                });
+            }
+            $('#cbx_Motivo').html(h).trigger('change');
+
+            // Alternar Visibilidad
+            if (tipo === "0") {
+                // --- MODO SALIDA ---
+                $('#div_InputPrecio').addClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_Act').removeClass('d-none');
+
+                // Tabla
+                $('#th_Precio, #th_Subtotal, #th_IGV, #th_Total').addClass('d-none');
+                $('#th_CC, #th_Actividad').removeClass('d-none');
+
             } else {
-                $('#cbx_Sucursal').html('<option value="">-- SELECCIONE EMPRESA --</option>').trigger('change');
+                // --- MODO ENTRADA ---
+                $('#div_InputPrecio').removeClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_Act').addClass('d-none');
+
+                // Tabla
+                $('#th_Precio, #th_Subtotal, #th_IGV, #th_Total').removeClass('d-none');
+                $('#th_CC, #th_Actividad').addClass('d-none');
             }
         });
-        
+
+        // --- CASCADAS ---
+        let empresaId = 1;
+        if (empresaId) fct_FillCombo('/IngresoSalidaAlm/GetSucursalesByEmpresa?empresaId=' + empresaId, '#cbx_Sucursal', 'codigo', 'nombre', '-- SELECCIONAR --', 'codigo');
+
         $('#cbx_Sucursal').on('change', function () {
             let codSuc = $(this).val();
-            let empId = $('#cbx_Empresa').val();
-
-            if (codSuc) {
-                // Texto: codigo - nombre (Visualización para el usuario)
-                fct_FillCombo(`/IngresoSalidaAlm/GetAlmacenesBySucursal?codSucursal=${codSuc}&empresaId=${empId}`, '#cbx_Almacen', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
-            } else {
-                $('#cbx_Almacen').html('<option value="">-- SELECCIONE SUCURSAL --</option>').trigger('change');
-            }
+            if (codSuc) fct_FillCombo(`/IngresoSalidaAlm/GetAlmacenesBySucursal?codSucursal=${codSuc}&empresaId=${empresaId}`, '#cbx_Almacen', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
+            else $('#cbx_Almacen').html('<option value="">-- SELECCIONE SUCURSAL --</option>').trigger('change');
         });
 
-        // --- CASCADA PRODUCTOS ---
-        $('#cbx_GrupoFiltro').on('change', function () {
-            let id = $(this).val();
-            if (id) fct_FillCombo('/IngresoSalidaAlm/GetSubgruposByGrupo?codGrupo=' + id, '#cbx_SubgrupoFiltro', 'codigo', 'descripcion', '-- SELECCIONAR --', 'codigo');
-            else $('#cbx_SubgrupoFiltro, #cbx_ProductoBusqueda').html('<option value="">-- SELECCIONE GRUPO --</option>').trigger('change');
-        });
-
-        $('#cbx_SubgrupoFiltro').on('change', function () {
-            let id = $(this).val();
-            if (id) {
-                $.getJSON('/IngresoSalidaAlm/GetProductosBySubgrupo?codSubgrupo=' + id, function(res){
-                    if(res.status){
-                        PRODUCTOS_TEMP = res.data;
-                        let h = '<option value="">-- SELECCIONAR PRODUCTO --</option>';
-                        res.data.forEach(p => h += `<option value="${p.codigo}">${p.codigo} - ${p.descripcionProducto}</option>`);
-                        $('#cbx_ProductoBusqueda').html(h).trigger('change');
-                    }
-                });
-            } else $('#cbx_ProductoBusqueda').html('<option value="">-- SELECCIONE SUBGRUPO --</option>').trigger('change');
+        $.getJSON('/IngresoSalidaAlm/GetProductos', function(res){
+            if(res.status){ PRODUCTOS_TEMP = res.data; let h = '<option value="">-- SELECCIONAR PRODUCTO --</option>'; res.data.forEach(p => h += `<option value="${p.codigo}">${p.codigo} - ${p.descripcionProducto}</option>`); $('#cbx_ProductoBusqueda').html(h).trigger('change'); }
         });
 
         $('#cbx_ProductoBusqueda').on('change', function () {
@@ -130,28 +183,50 @@
             $("#txt_DetUnidad").val(p ? p.codUnidadMedida : "");
         });
 
-        // --- LÓGICA MOTIVO ---
-        $('#cbx_Motivo').on('change', function () {
-            let m = MOTIVOS_FULL.find(x => x.codigo == $(this).val());
-            let b = $("#lbl_TipoMovimiento");
-            if (m) {
-                if (m.tipoMovimiento) b.text("TIPO: INGRESO").removeClass("badge-secondary badge-danger").addClass("badge-success");
-                else b.text("TIPO: SALIDA").removeClass("badge-secondary badge-success").addClass("badge-danger");
-            } else b.text("TIPO: PENDIENTE").attr("class", "badge badge-secondary p-2");
-        });
-
-        // --- AGREGAR Y GUARDAR ---
+        // --- AGREGAR DETALLE (Con cálculo de IGV) ---
         $("#btn_AgregarDetalle").click(function () {
+            let tipoMov = $('#cbx_TipoMovimiento').val();
+            if(!tipoMov) return toastr.warning("Seleccione primero el Tipo de Movimiento");
+
             let cod = $("#cbx_ProductoBusqueda").val();
             let nom = $("#cbx_ProductoBusqueda option:selected").text();
             let can = parseFloat($("#txt_DetCantidad").val());
-            let pre = parseFloat($("#txt_DetPrecio").val());
-            if (!cod || can <= 0) return toastr.warning("Complete producto y cantidad");
+
+            if (!cod || can <= 0) return toastr.warning("Producto y cantidad obligatorios");
+
+            let pre = 0, ccId = null, ccNom = "", actId = null, actNom = "";
+            let subtotal = 0, igv = 0, total = 0;
+
+            if (tipoMov === "1") {
+                // ENTRADA: Calculamos Precios
+                pre = parseFloat($("#txt_DetPrecio").val());
+                if(pre < 0) return toastr.warning("El precio no puede ser negativo");
+
+                subtotal = can * pre;
+                igv = subtotal * TASA_IGV; // 0.18
+                total = subtotal + igv;
+            } else {
+                // SALIDA: Validamos CC y Actividad
+                ccId = $("#cbx_CentroCosto").val();
+                ccNom = $("#cbx_CentroCosto option:selected").text();
+                actId = $("#cbx_Actividad").val();
+                actNom = $("#cbx_Actividad option:selected").text();
+
+                if(!ccId || !actId) return toastr.warning("Seleccione Centro de Costo y Actividad");
+            }
 
             LISTA_DETALLE.push({
                 Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
                 CodProducto: cod, DescripcionProducto: nom, CodUnidadMedida: $("#txt_DetUnidad").val(),
-                Cantidad: can, Precio: pre, TipoCambio: 1.0, TipoDocumentoId: $("#cbx_TipoDoc").val(),
+                Cantidad: can,
+                Precio: pre,
+                Subtotal: subtotal, // Guardamos para mostrar
+                Igv: igv,           // Guardamos para mostrar
+                Total: total,       // Guardamos para mostrar
+                CentroCostoId: ccId, NombreCentroCosto: ccNom,
+                ActividadId: actId, NombreActividad: actNom,
+
+                TipoCambio: 1.0, TipoDocumentoId: $("#cbx_TipoDoc").val(),
                 SerieDocumento: $("#txt_SerieDoc").val(), NumeroDocumento: $("#txt_NumeroDoc").val(),
                 MonedaId: $("#cbx_MonedaCab").val(), FechaDocumento: $("#dtp_FechaDoc").val()
             });
@@ -159,57 +234,107 @@
             fct_LimpiarInputsDetalle();
         });
 
+        // --- GUARDAR TODO (Con tu SweetAlert personalizado) ---
         $("#btn_GuardarTodo").click(function () {
             if (LISTA_DETALLE.length === 0) return toastr.error("Detalle vacío");
+
             let cab = {
                 Fecha: $("#dtp_FechaMov").val(), Numero: $("#txt_NumeroMov").val(),
                 SucursalId: parseInt($("#cbx_Sucursal").val()), AlmacenId: parseInt($("#cbx_Almacen").val()),
                 CodMotivo: $("#cbx_Motivo").val(), FechaDocumento: $("#dtp_FechaDoc").val(),
                 TipoDocumentoId: $("#cbx_TipoDoc").val(), SerieDocumento: $("#txt_SerieDoc").val(),
                 NumeroDocumento: $("#txt_NumeroDoc").val(), MonedaId: parseInt($("#cbx_MonedaCab").val()),
-                EstadoId: 1, EmpresaId: parseInt($("#cbx_Empresa").val())
+                EstadoId: 1, EmpresaId: empresaId
             };
-            $.post("/IngresoSalidaAlm/GuardarMovimiento", { cabecera: cab, detallesJson: JSON.stringify(LISTA_DETALLE) }, function (res) {
-                if (res.status) { toastr.success(res.message); location.reload(); }
-                else toastr.error(res.message);
+
+            Swal.fire({
+                title: "¿Confirmar Registro?",
+                text: "Se guardará el movimiento y su detalle.",
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar todo",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "/IngresoSalidaAlm/GuardarMovimiento",
+                        type: "POST",
+                        data: {
+                            cabecera: cab,
+                            detallesJson: JSON.stringify(LISTA_DETALLE)
+                        },
+                        success: function (response) {
+                            if (response.status) {
+                                toastr.success(response.message, "ÉXITO");
+                                setTimeout(() => { location.reload(); }, 1500);
+                            } else {
+                                toastr.error(response.message, "ERROR");
+                            }
+                        },
+                        error: function () {
+                            toastr.error("Error crítico en el servidor");
+                        }
+                    });
+                }
             });
         });
     });
 
     function fct_InitCombos() {
-        fct_FillCombo('/IngresoSalidaAlm/GetEmpresas', '#cbx_Empresa', 'id', 'razonSocial', '-- EMPRESA --', 'id');
         fct_FillCombo('/IngresoSalidaAlm/GetMonedaData', '#cbx_MonedaCab', 'id', 'nombre', '-- MONEDA --', 'id');
         fct_FillCombo('/IngresoSalidaAlm/GetTipoDocumentoData', '#cbx_TipoDoc', 'id', 'descripcion', '-- TIPO DOC --', 'codigo');
-        fct_FillCombo('/IngresoSalidaAlm/GetGruposData', '#cbx_GrupoFiltro', 'codigo', 'descripcion', '-- GRUPO --', 'codigo');
-
-        $.getJSON('/IngresoSalidaAlm/GetMotivosData', function(res){
-            if(res.status){ MOTIVOS_FULL = res.data; let h = '<option value="">-- MOTIVO --</option>'; res.data.forEach(m => h += `<option value="${m.codigo}">${m.codigo} - ${m.descripcion}</option>`); $('#cbx_Motivo').html(h).trigger('change'); }
-        });
+        $.getJSON('/IngresoSalidaAlm/GetMotivosData', function(res){ if(res.status){ MOTIVOS_FULL = res.data; } });
+        fct_FillCombo('/IngresoSalidaAlm/GetCentrosCosto', '#cbx_CentroCosto', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
+        fct_FillCombo('/IngresoSalidaAlm/GetActividades', '#cbx_Actividad', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
     }
-    
-    function fct_FillCombo(url, id, valProp, txtProp, placeholder, extraTextProp = null) {
-        $.getJSON(url, function (res) {
-            let h = `<option value="">${placeholder}</option>`;
-            if (res.status) {
-                res.data.forEach(i => {
-                    // Si enviamos extraTextProp, mostramos: CODIGO - NOMBRE
-                    let display = extraTextProp
-                        ? `${i[extraTextProp]} - ${i[txtProp]}`
-                        : i[txtProp];
 
-                    h += `<option value="${i[valProp]}">${display}</option>`;
-                });
-            }
+    function fct_FillCombo(url, id, valProp, txtProp, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => h += `<option value="${i[valProp]}">${extra ? i[extra] + ' - ' : ''}${i[txtProp]}</option>`);
             $(id).html(h).trigger('change');
         });
     }
 
     function fct_RenderDetalle() {
         let h = "";
-        LISTA_DETALLE.forEach((d, i) => h += `<tr><td>${d.Item}</td><td>${d.CodProducto}</td><td>${d.DescripcionProducto}</td><td>${d.Cantidad}</td><td>${d.CodUnidadMedida}</td><td>${d.Precio.toFixed(6)}</td><td>${(d.Cantidad * d.Precio).toFixed(2)}</td><td><button class="btn btn-danger btn-sm" onclick="fct_QuitarDetalle(${i})">X</button></td></tr>`);
+        let tipoMov = $('#cbx_TipoMovimiento').val(); // "1" Entrada, "0" Salida
+
+        LISTA_DETALLE.forEach((d, i) => {
+            h += `<tr>
+                <td>${d.Item}</td>
+                <td>${d.CodProducto}</td>
+                <td>${d.DescripcionProducto}</td>
+                <td>${d.Cantidad}</td>
+                <td>${d.CodUnidadMedida}</td>`;
+
+            if (tipoMov === "1") {
+                // Entrada: Mostramos Precio, Subtotal, IGV y Total
+                h += `<td>${d.Precio.toFixed(6)}</td>
+                      <td>${d.Subtotal.toFixed(6)}</td>
+                      <td>${d.Igv.toFixed(6)}</td>
+                      <td>${d.Total.toFixed(6)}</td>
+                      <td class="d-none"></td><td class="d-none"></td>`;
+            } else {
+                // Salida: Mostramos CC y Actividad
+                h += `<td class="d-none"></td><td class="d-none"></td><td class="d-none"></td><td class="d-none"></td>
+                      <td>${d.NombreCentroCosto}</td>
+                      <td>${d.NombreActividad}</td>`;
+            }
+
+            h += `<td><button class="btn btn-danger btn-sm" onclick="fct_QuitarDetalle(${i})">X</button></td></tr>`;
+        });
         $("#tbl_DetalleMovimiento tbody").html(h);
     }
 
     function fct_QuitarDetalle(i) { LISTA_DETALLE.splice(i, 1); LISTA_DETALLE.forEach((d, x) => d.Item = (x + 1).toString().padStart(3, '0')); fct_RenderDetalle(); }
-    function fct_LimpiarInputsDetalle() { $("#txt_DetCantidad, #txt_DetPrecio").val("0.00"); }
+
+    function fct_LimpiarInputsDetalle() {
+        $("#txt_DetCantidad").val("0.00");
+        $("#txt_DetPrecio").val("0.000000");
+        $("#cbx_CentroCosto, #cbx_Actividad").val("").trigger('change');
+    }
 </script>

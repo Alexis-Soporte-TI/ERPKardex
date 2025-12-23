@@ -33,6 +33,13 @@ namespace ERPKardex.Models
         public decimal? TipoCambio { get; set; }
         [Precision(19, 6)]
         public decimal? Precio { get; set; }
+        public decimal? Subtotal { get; set; }
+        public decimal? Igv { get; set; }
+        public decimal? Total { get; set; }
+        [Column("centro_costo_id")]
+        public int? CentroCostoId { get; set; }
+        [Column("actividad_id")]
+        public int? ActividadId { get; set; }
         [Column("fecha_documento")]
         public DateTime? FechaDocumento { get; set; }
         [Column("usuario_id")]

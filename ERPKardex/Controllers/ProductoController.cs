@@ -130,15 +130,29 @@ namespace ERPKardex.Controllers
         // Filtrar Subgrupos por Grupo
         public JsonResult GetSubgruposByGrupo(string codGrupo)
         {
-            var data = _context.Subgrupos.Where(s => s.CodGrupo == codGrupo).ToList();
-            return Json(new { data = data, status = true, message = "Subgrupos retornados exitosamente." });
+            try
+            {
+                var data = _context.Subgrupos.Where(s => s.CodGrupo == codGrupo).ToList();
+                return Json(new { data = data, status = true, message = "Subgrupos retornados exitosamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
         }
 
         // Filtrar Modelos por Marca
         public JsonResult GetModelosByMarca(int marcaId)
         {
-            var data = _context.Modelos.Where(m => m.MarcaId == marcaId).ToList();
-            return Json(new { data = data, status = true, message = "Modelos retornados exitosamente." });
+            try
+            {
+                var data = _context.Modelos.Where(m => m.MarcaId == marcaId).ToList();
+                return Json(new { data = data, status = true, message = "Modelos retornados exitosamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
         }
         // GET UMEDIDA
         public JsonResult GetUMedidaData()

@@ -26,7 +26,7 @@ namespace ERPKardex.Models
         public DateTime? FechaDocumento { get; set; }
 
         [Column("tipo_documento_id")]
-        public string? TipoDocumentoId { get; set; }
+        public int? TipoDocumentoId { get; set; }
 
         [Column("serie_documento")]
         public string? SerieDocumento { get; set; }

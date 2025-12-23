@@ -5,6 +5,8 @@ drop table if exists empresa;
 drop table if exists sucursal;
 drop table if exists almacen;
 drop table if exists motivo;
+drop table if exists centro_costo;
+drop table if exists actividad;
 drop table if exists moneda;
 drop table if exists tipo_documento;
 drop table if exists ingresosalidaalm;
@@ -20,6 +22,13 @@ drop table if exists ingrediente_activo;
 drop table if exists detalle_ingrediente_activo;
 drop table if exists marca;
 drop table if exists modelo;
+drop table if exists estado;
+
+create table estado (
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	nombre varchar(255),
+	tabla varchar(255)
+);
 
 create table empresa (
 	id INT IDENTITY(1,1) PRIMARY KEY,
@@ -59,6 +68,24 @@ create table motivo (
 	estado BIT
 );
 
+create table centro_costo (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    codigo VARCHAR(20),
+    nombre VARCHAR(255),
+    empresa_id INT,
+    padre_id INT,
+    es_imputable BIT DEFAULT 1,
+    estado BIT DEFAULT 1,
+    fecha_registro DATETIME DEFAULT GETDATE(),
+);
+
+create table actividad (
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	codigo varchar(255),
+	nombre varchar(255),
+	estado BIT,
+);
+
 create table tipo_documento (
 	id INT IDENTITY(1,1) PRIMARY KEY,
 	codigo varchar(255),
@@ -74,7 +101,7 @@ create table ingresosalidaalm (
 	almacen_id INT,
 	cod_motivo varchar(255),
 	fecha_documento DATE,
-	tipo_documento_id varchar(255),
+	tipo_documento_id int,
 	serie_documento varchar(255),
 	numero_documento varchar(255),
 	moneda_id int,
@@ -92,12 +119,17 @@ create table dingresosalidaalm (
 	cod_unidad_medida varchar(255),
 	cantidad decimal(12,2),
 	tipo_documento_id int,
+	fecha_documento DATE,
 	serie_documento varchar(255),
 	numero_documento varchar(255),
 	moneda_id int,
 	tipo_cambio decimal(12,6),
 	precio decimal(19,6),
-	fecha_documento DATE,
+	igv decimal(19,6),
+	subtotal decimal(19,6),
+	total decimal(19,6),
+	centro_costo_id int,
+	actividad_id int,
 	usuario_id INT,
 	fecha_registro DATETIME DEFAULT GETDATE()
 );
@@ -312,69 +344,48 @@ INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('
 INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('07','EQUIPOS DE PROTECCION',1,'002',2);
 
 -- inserts de 'tipo_documento'
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('00','Otros',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('01','Factura',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('02','Recibo por Honorarios',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('03','Boleta de Venta',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('04','Liquidación de compra',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('05','Boleto de compañía de aviación comercial por el servicio de transporte aéreo de pasajeros',1);
+INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('05','Boletos de Transporte Aéreo',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('06','Carta de porte aéreo por el servicio de transporte de carga aérea',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('07','Nota de crédito',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('08','Nota de débito',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('09','Guía de remisión - Remitente',1);
 INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('10','Recibo por Arrendamiento',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('11','Póliza emitida por las Bolsas de Valores, Bolsas de Productos o Agentes de Intermediación por operaciones realizadas en las Bolsas de Valores o Productos o fuera de las mismas, autorizadas por CONASEV',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('12','Ticket o cinta emitido por máquina registradora',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('13','Documento emitido por bancos, instituciones financieras, crediticias y de seguros que se encuentren bajo el control de la Superintendencia de Banca y Seguros',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('14','Recibo por servicios públicos de suministro de energía eléctrica, agua, teléfono, telex y telegráficos y otros servicios complementarios que se incluyan en el recibo de servicio público',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('15','Boleto emitido por las empresas de transporte público urbano de pasajeros',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('16','Boleto de viaje emitido por las empresas de transporte público interprovincial de pasajeros dentro del país',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('17','Documento emitido por la Iglesia Católica por el arrendamiento de bienes inmuebles',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('18','Documento emitido por las Administradoras Privadas de Fondo de Pensiones que se encuentran bajo la supervisión de la Superintendencia de Administradoras Privadas de Fondos de Pensiones',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('19','Boleto o entrada por atracciones y espectáculos públicos',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('20','Comprobante de Retención',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('21','Conocimiento de embarque por el servicio de transporte de carga marítima',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('22','Comprobante por Operaciones No Habituales',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('23','Pólizas de Adjudicación emitidas con ocasión del remate o adjudicación de bienes por venta forzada, por los martilleros o las entidades que rematen o subasten bienes por cuenta de terceros',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('24','Certificado de pago de regalías emitidas por PERUPETRO S.A',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('25','Documento de Atribución (Ley del Impuesto General a las Ventas e Impuesto Selectivo al Consumo, Art. 19º, último párrafo, R.S. N° 022-98-SUNAT).',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('26','Recibo por el Pago de la Tarifa por Uso de Agua Superficial con fines agrarios y por el pago de la Cuota para la ejecución de una determinada obra o actividad acordada por la Asamblea General de la Comisión de Regantes o Resolución expedida por el Jefe de la Unidad de Aguas y de Riego (Decreto Supremo N° 003-90-AG, Arts. 28 y 48)',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('27','Seguro Complementario de Trabajo de Riesgo',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('28','Tarifa Unificada de Uso de Aeropuerto',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('29','Documentos emitidos por la COFOPRI en calidad de oferta de venta de terrenos, los correspondientes a las subastas públicas y a la retribución de los servicios que presta',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('30','Documentos emitidos por las empresas que desempeñan el rol adquirente en los sistemas de pago mediante tarjetas de crédito y débito',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('31','Guía de Remisión - Transportista',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('32','Documentos emitidos por las empresas recaudadoras de la denominada Garantía de Red Principal a la que hace referencia el numeral 7.6 del artículo 7° de la Ley N° 27133  Ley de Promoción del Desarrollo de la Industria del Gas Natural',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('34','Documento del Operador',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('35','Documento del Partícipe',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('36','Recibo de Distribución de Gas Natural',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('37','Documentos que emitan los concesionarios del servicio de revisiones técnicas vehiculares, por la prestación de dicho servicio',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('40','Constancia de Depósito - IVAP (Ley 28211)',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('50','Declaración Única de Aduanas - Importación definitiva',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('52','Despacho Simplificado - Importación Simplificada',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('53','Declaración de Mensajería o Courier',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('54','Liquidación de Cobranza',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('87','Nota de Crédito Especial',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('88','Nota de Débito Especial',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('91','Comprobante de No Domiciliado',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('96','Exceso de crédito fiscal por retiro de bienes',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('97','Nota de Crédito - No Domiciliado',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('98','Nota de Débito - No Domiciliado',1);
-INSERT INTO tipo_documento (codigo, descripcion, estado) VALUES ('99','Otros - Consolidado de Boletas de Venta',1);
 
 -- inserts de 'moneda'
 INSERT INTO moneda (codigo, nombre, estado) VALUES ('01', 'SOLES', 1);
 INSERT INTO moneda (codigo, nombre, estado) VALUES ('02', 'DÓLARES', 1);
 
 -- inserts de 'motivo'
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('01',0,'VENTA NACIONAL',1);
+-- tipo_movimiento: 1 - ENTRADAS
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('02',1,'COMPRA NACIONAL',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('03',1,'CONSIGNACIÓN RECIBIDA',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('04',0,'CONSIGNACIÓN ENTREGADA',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('05',1,'DEVOLUCIÓN RECIBIDA',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('06',0,'DEVOLUCIÓN ENTREGADA',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('07',1,'BONIFICACIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('08',1,'PREMIO',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('09',1,'DONACIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('16',1,'SALDO INICIAL',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('18',1,'IMPORTACIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('19',1,'ENTRADA DE PRODUCCIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('20',1,'ENTRADA POR DEVOLUCIÓN DE PRODUCCIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('21',1,'ENTRADA POR TRANSFERENCIA ENTRE ALMACENES ',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('22',1,'ENTRADA POR IDENTIFICACIÓN ERRONEA',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('24',1,'ENTRADA POR DEVOLUCIÓN DEL CLIENTE',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('26',1,'ENTRADA PARA SERVICIO DE PRODUCCIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('28',1,'AJUSTE POR DIFERENCIA DE INVENTARIO',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('29',1,'ENTRADA DE BIENES EN PRÉSTAMO',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('31',1,'ENTRADA DE BIENES EN CUSTODIA',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('33',1,'MUESTRAS MÉDICAS',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('34',1,'PUBLICIDAD',1);
+-- tipo_movimiento: 0 - SALIDAS
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('01',0,'VENTA NACIONAL',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('04',0,'CONSIGNACIÓN ENTREGADA',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('06',0,'DEVOLUCIÓN ENTREGADA',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('07',0,'BONIFICACIÓN',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('08',0,'PREMIO',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('09',0,'DONACIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('10',0,'SALIDA A PRODUCCIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('11',0,'SALIDA POR TRANSFERENCIA ENTRE ALMACENES ',1);
@@ -382,26 +393,64 @@ INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('12',0
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('13',0,'MERMAS',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('14',0,'DESMEDROS',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('15',0,'DESTRUCCIÓN',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('16',1,'SALDO INICIAL',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('17',0,'EXPORTACIÓN',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('18',1,'IMPORTACIÓN',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('19',1,'ENTRADA DE PRODUCCIÓN',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('20',1,'ENTRADA POR DEVOLUCIÓN DE PRODUCCIÓN',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('21',1,'ENTRADA POR TRANSFERENCIA ENTRE ALMACENES ',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('22',1,'ENTRADA POR IDENTIFICACIÓN ERRONEA',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('23',0,'SALIDA POR IDENTIFICACIÓN ERRONEA',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('24',1,'ENTRADA POR DEVOLUCIÓN DEL CLIENTE',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('25',0,'SALIDA POR DEVOLUCIÓN AL PROVEEDOR',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('26',1,'ENTRADA PARA SERVICIO DE PRODUCCIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('27',0,'SALIDA POR SERVICIO DE PRODUCCIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('28',0,'AJUSTE POR DIFERENCIA DE INVENTARIO',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('29',1,'ENTRADA DE BIENES EN PRÉSTAMO',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('30',0,'SALIDA DE BIENES EN PRÉSTAMO',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('31',1,'ENTRADA DE BIENES EN CUSTODIA',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('32',0,'SALIDA DE BIENES EN CUSTODIA',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('33',1,'MUESTRAS MÉDICAS',1);
+INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('33',0,'MUESTRAS MÉDICAS',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('34',0,'PUBLICIDAD',1);
-INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('35',0,'GASTOS DE REPRESENTACIÓN',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('36',0,'RETIRO PARA ENTREGA A TRABAJADORES',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('37',0,'RETIRO POR CONVENIO COLECTIVO',1);
 INSERT INTO motivo (codigo, tipo_movimiento, descripcion, estado) VALUES ('38',0,'RETIRO POR SUSTITUCIÓN DE BIEN SINIESTRADO',1);
+
+
+-- inserts de 'estado'
+INSERT INTO estado (nombre, tabla) VALUES ('Aprobado', 'INGRESOSALIDAALM');
+
+-- inserts de 'centro_costo'
+-- 1. NIVEL 1: Áreas Generales (Padres - No Imputables)
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+('ADM', 'ADMINISTRACIÓN CENTRAL', 1, NULL, 0, 1),      -- ID 1
+('OP-AGRO', 'OPERACIONES AGRÍCOLAS', 1, NULL, 0, 1),   -- ID 2
+('PROD', 'PLANTA DE PRODUCCIÓN', 1, NULL, 0, 1),       -- ID 3
+('COM', 'COMERCIAL Y VENTAS', 1, NULL, 0, 1);          -- ID 4
+
+-- 2. NIVEL 2: Sub-áreas (Hijos - Sí Imputables)
+-- Hijos de ADMINISTRACIÓN (ID 1)
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+('ADM-RH', 'RECURSOS HUMANOS', 1, 1, 1, 1),
+('ADM-CON', 'CONTABILIDAD Y FINANZAS', 1, 1, 1, 1),
+('ADM-LOG', 'LOGÍSTICA Y COMPRAS', 1, 1, 1, 1);
+
+-- Hijos de OPERACIONES AGRÍCOLAS (ID 2)
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+('FND-01', 'FUNDO SAN JORGE', 1, 2, 1, 1),
+('FND-02', 'FUNDO EL ALAMO', 1, 2, 1, 1),
+('MAQ-AGR', 'FLOTA DE TRACTORES', 1, 2, 1, 1);
+
+-- Hijos de PLANTA DE PRODUCCIÓN (ID 3)
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+('PLT-L01', 'LÍNEA DE PROCESO 1', 1, 3, 1, 1),
+('PLT-MAN', 'MANTENIMIENTO PLANTA', 1, 3, 1, 1),
+('PLT-ALM', 'ALMACÉN DE INSUMOS', 1, 3, 1, 1);
+
+-- Hijos de COMERCIAL (ID 4)
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+('VTAS-NAC', 'VENTAS NACIONALES', 1, 4, 1, 1),
+('VTAS-EXP', 'EXPORTACIONES', 1, 4, 1, 1);
+
+-- inserts de 'actividad'
+INSERT INTO actividad (codigo, nombre, estado) VALUES 
+('ACT-001', 'PREPARACIÓN DE TERRENO', 1),
+('ACT-002', 'SIEMBRA Y CULTIVO', 1),
+('ACT-003', 'FERTILIZACIÓN Y RIEGO', 1),
+('ACT-004', 'COSECHA Y RECOLECCIÓN', 1),
+('ACT-005', 'MANTENIMIENTO DE MAQUINARIA', 1),
+('ACT-006', 'GESTIÓN ADMINISTRATIVA', 1),
+('ACT-007', 'EMBALAJE Y DESPACHO', 1),
+('ACT-008', 'CONTROL DE CALIDAD', 1),
+('ACT-009', 'CAPACITACIÓN DE PERSONAL', 1),
+('ACT-010', 'SERVICIOS GENERALES (LIMPIEZA/VIGILANCIA)', 1);

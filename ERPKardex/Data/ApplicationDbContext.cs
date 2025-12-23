@@ -28,5 +28,8 @@ namespace ERPKardex.Data
         public DbSet<Moneda> Monedas { get; set; }
         public DbSet<IngresoSalidaAlm> IngresoSalidaAlms { get; set; }
         public DbSet<DIngresoSalidaAlm> DIngresoSalidaAlms { get; set; }
+        public DbSet<Estado> Estados { get; set; }
+        public DbSet<CentroCosto> CentroCostos { get; set; }
+        public DbSet<Actividad> Actividades { get; set; }
     }
 }
