@@ -267,7 +267,7 @@
             let cuentaId = $(this).val();
             $('#cbx_Subgrupo').html('<option value="">-- SELECCIONAR SUBGRUPO --</option>'); // Limpiar nieto
             if (cuentaId) {
-                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaId, '#cbx_Grupo', 'codigo', 'descripcion', '-- SELECCIONAR GRUPO --');
+                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaId, '#cbx_Grupo', 'id', 'descripcion', '-- SELECCIONAR GRUPO --', 'codigo');
             } else {
                 $('#cbx_Grupo').html('<option value="">-- SELECCIONAR GRUPO --</option>').trigger('change');
             }
@@ -275,9 +275,9 @@
 
         // --- ENLACE GRUPO -> SUBGRUPO ---
         $('#cbx_Grupo').on('change', function () {
-            let codGrupo = $(this).val();
-            if (codGrupo) {
-                fct_FillCombo('/Producto/GetSubgruposByGrupo?codGrupo=' + codGrupo, '#cbx_Subgrupo', 'codigo', 'descripcion', '-- SELECCIONAR SUBGRUPO --');
+            let grupoId = $(this).val();
+            if (grupoId) {
+                fct_FillCombo('/Producto/GetSubgruposByGrupo?grupoId=' + grupoId, '#cbx_Subgrupo', 'id', 'descripcion', '-- SELECCIONAR SUBGRUPO --', 'codigo');
             } else {
                 $('#cbx_Subgrupo').html('<option value="">-- SELECCIONAR SUBGRUPO --</option>').trigger('change');
             }
@@ -287,7 +287,7 @@
         $('#cbx_Marca').on('change', function () {
             let marcaId = $(this).val();
             if (marcaId) {
-                fct_FillCombo('/Producto/GetModelosByMarca?marcaId=' + marcaId, '#cbx_Modelo', 'id', 'nombre', '-- SELECCIONAR MODELO --');
+                fct_FillCombo('/Producto/GetModelosByMarca?marcaId=' + marcaId, '#cbx_Modelo', 'id', 'nombre', '-- SELECCIONAR MODELO --', 'id');
             } else {
                 $('#cbx_Modelo').html('<option value="">-- SELECCIONAR MODELO --</option>').trigger('change');
             }
@@ -335,10 +335,10 @@
         $("#btn_GuardarProducto").click(function () {
                 // 1. Recolección de Datos Maestro
                 let producto = {
-                    CodGrupo: $("#cbx_Grupo").val(),
+                    GrupoId: $("#cbx_Grupo").val(),
                     DescripcionGrupo: $("#cbx_Grupo").val() ? $("#cbx_Grupo option:selected").text() : null,
                     DescripcionComercial: $('#txt_DescripcionComercialProducto').val().trim(),
-                    CodSubgrupo: $("#cbx_Subgrupo").val(),
+                    SubgrupoId: $("#cbx_Subgrupo").val(),
                     DescripcionSubgrupo: $("#cbx_Subgrupo").val() ? $("#cbx_Subgrupo option:selected").text() : null,
                     DescripcionProducto: $("#txt_DescripcionProducto").val().trim(),
                     Concentracion: parseFloat($("#txt_Concentracion").val()),
@@ -358,7 +358,7 @@
 
                 // 2. Validaciones mínimas
                 if (!producto.EmpresaId || !producto.DescripcionProducto) {
-                    toastr.warning("Empresa y Descripción son obligatorios", "SISTEMA");
+                    toastr.warning("La descripción es obligatoria", "SISTEMA");
                     return;
                 }
 
@@ -409,12 +409,12 @@
     
     function fct_InitAllCombos() {
         // 1. Cargar datos inicialmente
-        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
-        fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --');
-        fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --');
-        fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR U. MEDIDA --');
-        fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --');
-        fct_FillCombo('/Producto/GetPeligrosidadData', '#cbx_Peligrosidad', 'codigo', 'descripcion', '-- SELECCIONAR PELIGROSIDAD --');
+        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --', 'codigo');
+        fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --', 'id');
+        fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --', 'id');
+        fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR U. MEDIDA --', 'codigo');
+        fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --', 'codigo');
+        fct_FillCombo('/Producto/GetPeligrosidadData', '#cbx_Peligrosidad', 'codigo', 'descripcion', '-- SELECCIONAR PELIGROSIDAD --', 'codigo');
 
         // 2. Inicializar hijos vacíos
         $('#cbx_Grupo').html('<option value="">-- SELECCIONAR GRUPO --</option>');
@@ -455,24 +455,15 @@
         LISTA_DETALLE_IA.splice(index, 1);
         fct_RenderizarTablaIA();
     }
-    
-    function fct_FillCombo(url, selectorId, valProp, textProp, placeholder) {
-        $.getJSON(url, function (response) {
-            if (response.status === true) {
-                let items = `<option value="" selected>${placeholder}</option>`;
 
-                $.each(response.data, function (index, item) {
-                    items += `<option value="${item[valProp]}">${item[valProp]} - ${item[textProp]}</option>`;
-                });
-
-                $(selectorId).html(items);
-
-                // --- NUEVO: Refrescar Select2 si está inicializado ---
-                if ($(selectorId).hasClass("select2-hidden-accessible")) {
-                    $(selectorId).trigger('change');
-                }
-            } else {
-                toastr.error('Error al cargar datos en ' + selectorId, 'SISTEMA');
+    function fct_FillCombo(url, id, valProp, txtProp, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => h += `<option value="${i[valProp]}">${extra ? i[extra] + ' - ' : ''}${i[txtProp]}</option>`);
+            $(id).html(h).trigger('change');
+            // --- NUEVO: Refrescar Select2 si está inicializado ---
+            if ($(id).hasClass("select2-hidden-accessible")) {
+                $(id).trigger('change');
             }
         });
     }

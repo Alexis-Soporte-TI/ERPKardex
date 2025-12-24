@@ -73,7 +73,7 @@
                             toastr.success(response.message, "MENSAJE DE SISTEMA");
 
                             // 5. Refrescar el combo en la pantalla principal
-                            fct_FillCombo('/Producto/GetPeligrosidadData', '#cbx_Peligrosidad', 'codigo', 'descripcion', '-- SELECCIONAR PELIGROSIDAD --');
+                            fct_FillCombo('/Producto/GetPeligrosidadData', '#cbx_Peligrosidad', 'codigo', 'descripcion', '-- SELECCIONAR PELIGROSIDAD --', 'codigo');
 
                             // 6. Cerrar el modal
                             $("#dynamic-modal").modal('hide');

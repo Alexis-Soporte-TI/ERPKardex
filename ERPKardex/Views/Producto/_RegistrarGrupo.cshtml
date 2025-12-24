@@ -31,7 +31,7 @@
 <script>
     $(document).ready(function() {
         // Cargar cuentas en el modal
-        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Grupo_CuentaId', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Grupo_CuentaId', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --', 'codigo');
 
         // Pre-seleccionar si ya hay una cuenta en el Index
         let cuentaPadre = $('#cbx_Cuenta').val();
@@ -72,7 +72,7 @@
                             // Refrescar combo de grupos en Index filtrado por la cuenta actual
                             let cuentaActualIndex = $('#cbx_Cuenta').val();
                             if (cuentaActualIndex) {
-                                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaActualIndex, '#cbx_Grupo', 'codigo', 'descripcion', '-- SELECCIONAR GRUPO --');
+                                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaActualIndex, '#cbx_Grupo', 'id', 'descripcion', '-- SELECCIONAR GRUPO --', 'codigo');
                             }
                             $("#dynamic-modal").modal('hide');
                         } else {

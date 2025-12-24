@@ -28,7 +28,7 @@
 <script>
         $(document).ready(function () {
         // 1. Llenar el combo de marcas dentro del modal
-        fct_FillCombo('/Producto/GetMarcaData', '#cbx_Modelo_MarcaId', 'id', 'nombre', '-- SELECCIONAR MARCA --');
+        fct_FillCombo('/Producto/GetMarcaData', '#cbx_Modelo_MarcaId', 'id', 'nombre', '-- SELECCIONAR MARCA --', 'id');
 
         // 2. Pre-seleccionar la marca que ya esté elegida en el formulario principal
         let marcaPadre = $('#cbx_Marca').val();
@@ -84,7 +84,7 @@
                             // 5. Refrescar el combo en el Index filtrado por la marca actual
                             let marcaActualIndex = $('#cbx_Marca').val();
                             if (marcaActualIndex) {
-                                fct_FillCombo('/Producto/GetModelosByMarca?marcaId=' + marcaActualIndex, '#cbx_Modelo', 'id', 'nombre', '-- SELECCIONAR MODELO --');
+                                fct_FillCombo('/Producto/GetModelosByMarca?marcaId=' + marcaActualIndex, '#cbx_Modelo', 'id', 'nombre', '-- SELECCIONAR MODELO --', 'id');
                             }
 
                             // 6. Cerrar el modal

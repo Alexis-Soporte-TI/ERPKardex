@@ -60,7 +60,7 @@
                             toastr.success(response.message, "MENSAJE DE SISTEMA");
 
                             // 5. Refrescar el combo en la pantalla principal
-                            fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --');
+                            fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --', 'id');
 
                             // 6. Cerrar el modal
                             $("#dynamic-modal").modal('hide');

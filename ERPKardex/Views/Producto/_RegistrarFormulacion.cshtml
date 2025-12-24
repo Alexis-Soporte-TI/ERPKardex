@@ -103,7 +103,7 @@
 
                             // 5. Refrescar el combo en la pantalla principal
                             // Nota: Usamos 'nombre' como textProp según tu GetFQData
-                            fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --');
+                            fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --', 'codigo');
 
                             // 6. Cerrar el modal
                             $("#dynamic-modal").modal('hide');

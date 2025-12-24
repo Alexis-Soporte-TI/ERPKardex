@@ -36,7 +36,7 @@
                         if (response.status) {
                             toastr.success(response.message);
                             // Refrescar el combo en la vista principal
-                            fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --');
+                            fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --', 'id');
                             $("#dynamic-modal").modal('hide');
                         } else { toastr.error(response.message); }
                     });

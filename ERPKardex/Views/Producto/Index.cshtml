@@ -12,6 +12,11 @@
             <div class="col-md-12">
                 <h1>Gestionar productos</h1>
             </div>
+            <div class="col-md-4 mb-3"><label>Sucursal</label><select id="cbx_Sucursal" class="form-control select2-busqueda"></select></div>
+            <div class="col-md-4 mb-3"><label>Almacén</label><select id="cbx_Almacen" class="form-control select2-busqueda"><option value="">-- SELECCIONE --</option></select></div>
+            <div class="col-md-4 text-right">
+                <button id="btn_Generar" class="btn btn-primary btn-lg"><i class="bi bi-play-fill"></i> Generar Reporte</button>
+            </div>
         </div>
     </div>
     <div class="panel-body">
@@ -20,17 +25,15 @@
                 <table id="tbl_Productos" class="table table-bordered table-striped">
                     <thead>
                         <tr>
+                            <th class="text-center">CLIENTE</th>
+                            <th class="text-center">TIPO DOCUMENTO</th>
+                            <th class="text-center">DOCUMENTO</th>
                             <th class="text-center">CÓDIGO</th>
-                            <th class="text-center">COD GRUPO</th>
                             <th class="text-center">GRUPO</th>
-                            <th class="text-center">COD SUBGRUPO</th>
                             <th class="text-center">SUBGRUPO</th>
                             <th class="text-center">DESCRIPCIÓN</th>
-                            <th class="text-center">FECHA FABRICACIÓN</th>
-                            <th class="text-center">FECHA VENCIMIENTO</th>
-                            <th class="text-center">ES ACTIVO</th>
-                            <th class="text-center">ESTADO</th>
-                            <th class="text-center">ACCIÓN</th>
+                            <th class="text-center">U. MEDIDA</th>
+                            <th class="text-center">CANTIDAD</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -44,6 +47,21 @@
     var dtProductos;
 
     $(document).ready(function () {
+
+        $('#btn_Generar').on('click', function() {
+            if ($('#cbx_Almacen').val()) {
+                fct_IniciarTablaProductos('#tbl_Productos');
+            } else {
+                toastr.warning('Debe seleccionar un almacén');
+            }
+        });
+
+        fct_FillCombo('/Producto/GetSucursalesByEmpresa?empresaId=1', '#cbx_Sucursal', 'codigo', 'nombre', '-- SUCURSAL --', 'codigo');
+        
+        $('#cbx_Sucursal').on('change', function () {
+            fct_FillCombo(`/Producto/GetAlmacenesBySucursal?codSucursal=${$(this).val()}&empresaId=1`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --', 'codigo');
+        });
+
         // $('body').addClass('sidebar-collapse');
         var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
         //CONFIGURACION POR DEFECTO DATATABLES
@@ -107,7 +125,6 @@
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
         });
 
-        fct_IniciarTablaProductos('#tbl_Productos');
     });
 
     function fct_IniciarTablaProductos(IdTabla) {
@@ -124,13 +141,23 @@
                     extend: 'excel',
                     text: '<i class="bi bi-file-earmark-excel"></i>',
                     titleAttr: 'Exportar a Excel',
+                    title: function() {
+                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
+                        var almacen = $('#cbx_Almacen option:selected').text().trim();
+
+                        // Validación por si dice "-- SELECCIONE --" o está vacío
+                        if (almacen === "" || almacen === "-- SELECCIONE --") {
+                            almacen = "Todos";
+                        }
+
+                        return 'Reporte de Stock / Sucursal: ' + sucursal + ' / Almacén: ' + almacen;
+                    },
                     className: 'btn btn-success',
                     filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
                     footer: true,
                     exportOptions:
                     {
                         stripHtml: true,
-                        columns: ':not(:last-child)'
                     },
                 },
                 {
@@ -139,23 +166,57 @@
                     titleAttr: 'Exportar a PDF',
                     className: 'btn btn-danger',
                     filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
-                    exportOptions:
-                    {
+                    title: function() {
+                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
+                        var almacen = $('#cbx_Almacen option:selected').text().trim();
+
+                        // Validación por si dice "-- SELECCIONE --" o está vacío
+                        if (almacen === "" || almacen === "-- SELECCIONE --") {
+                            almacen = "Todos";
+                        }
+
+                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
+                    },
+                    exportOptions: {
                         stripHtml: true,
-                        columns: ':not(:last-child)'
                     },
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
+                    customize: function (doc) {
+                        // Tu código de alineación a la derecha (mantenlo aquí)
+                        var colsRight = [8];
+                        doc.content[1].table.body.forEach(function (row) {
+                            colsRight.forEach(function (index) {
+                                if (row[index]) {
+                                    row[index].alignment = 'right';
+                                }
+                            });
+                        });
+
+                        // Opcional: Para centrar el título que acabamos de crear
+                        doc.styles.title.alignment = 'center';
+                        doc.styles.title.fontSize = 14;
+                    }
                 },
                 {
                     extend: 'print',
                     text: '<i class="bi bi-printer-fill"></i>',
                     titleAttr: 'Imprimir',
                     className: 'btn btn-info',
+                    title: function() {
+                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
+                        var almacen = $('#cbx_Almacen option:selected').text().trim();
+
+                        // Validación por si dice "-- SELECCIONE --" o está vacío
+                        if (almacen === "" || almacen === "-- SELECCIONE --") {
+                            almacen = "Todos";
+                        }
+
+                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
+                    },
                     exportOptions:
                     {
                         stripHtml: true,
-                        columns: ':not(:last-child)'
                     },
                 },
                 {
@@ -179,6 +240,7 @@
                 type: "GET",
                 datatype: "json",
                 data: function (d) {
+                    d.almacenId = $('#cbx_Almacen').val();
                 },
                 dataSrc: function (json) {
                     if (json.status === false) {
@@ -194,52 +256,21 @@
                 },
             },
             columns: [
+                { data: "cliente", name: "cliente" },
+                { data: "tipoDocumento", name: "tipoDocumento" },
+                { data: "documento", name: "documento" },
                 { data: "codigo", name: "codigo" },
-                { data: "codGrupo", name: "codGrupo", visible: false },
                 { data: "descripcionGrupo", name: "descripcionGrupo" },
-                { data: "codSubgrupo", name: "codSubgrupo", visible: false },
                 { data: "descripcionSubgrupo", name: "descripcionSubgrupo" },
                 { data: "descripcionProducto", name: "descripcionProducto" },
-                { data: "fechaFabricacion", name: "fechaFabricacion", visible: false },
-                { data: "fechaVencimiento", name: "fechaVencimiento", visible: false },
+                { data: "codUnidadMedida", name: "codUnidadMedida" },
                 { 
-                    data: "esActivoFijo", 
-                    name: "esActivoFijo",
-                    render: function (data, type, row) {
-                        return data ? 'SÍ' : 'NO';
+                    data: "cantidad", 
+                    name: "cantidad",
+                    render: function(data, type, row) {
+                        return formatearNumero(data);
                     },
                 },
-                {
-                    data: "estado",
-                    name: "estado",
-                    render: function (data, type, row) {
-                        let estado = data === true ? 'Activo' : 'Inactivo';
-                        if (estado === "Activo") {
-                            return `<h5 class="mb-0 d-flex align-items-center justify-content-center"><span class="badge badge-success fs-5">${estado}</span></h5>`;
-                        } else if (estado === "Inactivo") {
-                            return `<h5 class="mb-0 d-flex align-items-center justify-content-center"><span class="badge badge-danger fs-5">${estado}</span></h5>`;
-                        } else {
-                            return `<h5 class="mb-0 d-flex align-items-center justify-content-center"><span class="badge fs-5" style="background-color: #800080; color: white;">${estado}</span></h5>`;
-                        }
-                    },
-                },
-                {
-                    data: null,
-                    name: null,
-                    render: function (data, type, row) {
-                        let buttons = `
-                        <button class="btn btn m-1 btn-info" onclick="fct_EmpresaVer('${data.id}')" title="Ver empresa"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn m-1 btn-primary" onclick="fct_EmpresaEditar('${data.id}')" title="Editar empresa"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn m-1 btn-danger" onclick = "fct_EmpresaEliminar('${data.id}')" title="Eliminar empresa"><i class="bi bi-trash"></i></button>`
-                        buttons = '';
-                        return `
-                        <div class="flex-wrap btn-group">
-                            ${buttons}
-                        </div>
-                        `;
-                    },
-                    className: 'text-center align-middle',
-                }
             ],
             columnDefs: [
                 {
@@ -247,13 +278,13 @@
                     className: "text-center align-middle",
                 },
                 {
-                    targets: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+                    targets: [1, 2, 3, 4, 5, 6, 7],
                     className: 'align-middle',
                 },
-                {
-                    targets: [10],
-                    orderable: false,
-                },
+                // {
+                //     targets: [],
+                //     orderable: false,
+                // },
             ],
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
             initComplete: function (data, row, cell, start, end, display) {
@@ -317,6 +348,30 @@
                 });
             }
         });
+    }
+
+    function fct_FillCombo(url, id, val, txt, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => {
+                let display = extra ? `${i[extra]} - ${i[txt]}` : i[txt];
+                h += `<option value="${i[val]}">${display}</option>`;
+            });
+            $(id).html(h).trigger('change');
+        });
+    }
+    
+    function formatearNumero(numero) {
+        // Validación para evitar errores si viene nulo o indefinido
+        if (numero === null || numero === undefined || isNaN(numero)) {
+            return "0.00";
+        }
+
+        // Convertimos a float por seguridad y formateamos
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(parseFloat(numero));
     }
 
     function ShowSpinner() {

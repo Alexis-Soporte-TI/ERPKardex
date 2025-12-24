@@ -58,13 +58,13 @@
 <script>
     $(document).ready(function () {
         // A. Cargar Cuentas al abrir el modal
-        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Sub_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+        fct_FillCombo('/Producto/GetCuentaData', '#cbx_Sub_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --', 'codigo');
 
         // B. Evento Change: Al cambiar Cuenta, cargar Grupos
         $('#cbx_Sub_Cuenta').on('change', function () {
             let cuentaId = $(this).val();
             if (cuentaId) {
-                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaId, '#cbx_Subgrupo_CodGrupo', 'codigo', 'descripcion', '-- SELECCIONAR GRUPO --');
+                fct_FillCombo('/Producto/GetGruposByCuenta?cuentaId=' + cuentaId, '#cbx_Subgrupo_CodGrupo', 'id', 'descripcion', '-- SELECCIONAR GRUPO --', 'codigo');
             } else {
                 $('#cbx_Subgrupo_CodGrupo').html('<option value="">-- SELECCIONAR GRUPO --</option>');
             }
@@ -88,19 +88,19 @@
     });
 
     $(document).off('click', '#btn_GuardarSubgrupo').on('click', '#btn_GuardarSubgrupo', function () {
-        let codGrupo = $("#cbx_Subgrupo_CodGrupo").val();
+        let grupoId = $("#cbx_Subgrupo_CodGrupo").val();
         let descGrupo = $("#cbx_Subgrupo_CodGrupo option:selected").text();
         let codigo = $("#txt_SubgrupoCodigo").val().trim();
         let descripcion = $("#txt_SubgrupoDescripcion").val().trim();
         let observacion = $("#txt_SubgrupoObservacion").val().trim();
 
-        if (!codGrupo || !codigo || !descripcion) {
+        if (!grupoId || !codigo || !descripcion) {
             toastr.warning("Complete los campos obligatorios", "MENSAJE DE SISTEMA");
             return;
         }
 
         let pSubgrupo = {
-            CodGrupo: codGrupo,
+            GrupoId: grupoId,
             DescripcionGrupo: descGrupo,
             Codigo: codigo,
             Descripcion: descripcion,
@@ -126,9 +126,9 @@
                                 toastr.success(response.message);
 
                                 // Actualizar el combo de la pantalla principal si coincide el grupo
-                                let codGrupoActualIndex = $('#cbx_Grupo').val();
-                                if (codGrupoActualIndex === codGrupo) {
-                                    fct_FillCombo('/Producto/GetSubgruposByGrupo?codGrupo=' + codGrupo, '#cbx_Subgrupo', 'codigo', 'descripcion', '-- SELECCIONAR SUBGRUPO --');
+                                let grupoIdActualIndex = $('#cbx_Grupo').val();
+                                if (grupoIdActualIndex === grupoId) {
+                                    fct_FillCombo('/Producto/GetSubgruposByGrupo?grupoId=' + grupoId, '#cbx_Subgrupo', 'id', 'descripcion', '-- SELECCIONAR SUBGRUPO --', 'codigo');
                                 }
 
                                 $("#dynamic-modal").modal('hide');

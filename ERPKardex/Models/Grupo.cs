@@ -6,7 +6,8 @@ namespace ERPKardex.Models
     [Table("Grupo")]
     public class Grupo
     {
-        [Key] // Define que esta es la clave primaria
+        [Key]
+        public int Id { get; set; }
         [Column("codigo")]
         public string Codigo { get; set; } = null!;
 

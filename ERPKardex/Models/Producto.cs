@@ -11,12 +11,16 @@ namespace ERPKardex.Models
         public string Codigo { get; set; } = null!;
         [Column("empresa_id")]
         public int? EmpresaId { get; set; }
+        [Column("grupo_id")]
+        public int? GrupoId { get; set; }
         [Column("cod_grupo")]
         public string? CodGrupo { get; set; }
         [Column("descripcion_grupo")]
         public string? DescripcionGrupo { get; set; }
         [Column("descripcion_comercial")]
         public string? DescripcionComercial { get; set; }
+        [Column("subgrupo_id")]
+        public int? SubgrupoId { get; set; }
         [Column("cod_subgrupo")]
         public string? CodSubgrupo { get; set; }
         [Column("descripcion_subgrupo")]

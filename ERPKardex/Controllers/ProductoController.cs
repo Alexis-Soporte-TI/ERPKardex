@@ -73,12 +73,40 @@ namespace ERPKardex.Controllers
         }
         #endregion
         #region APIs
+        [HttpGet]
+        public JsonResult GetSucursalesByEmpresa(int empresaId) =>
+            Json(new { data = _context.Sucursales.Where(s => s.EmpresaId == empresaId && s.Estado == true).ToList(), status = true });
+
+        [HttpGet]
+        public JsonResult GetAlmacenesBySucursal(string codSucursal, int empresaId) =>
+            Json(new { data = _context.Almacenes.Where(a => a.CodSucursal == codSucursal && a.EmpresaId == empresaId && a.Estado == true).ToList(), status = true });
         // GET PRODUCTOS
-        public JsonResult GetProductosData()
+        [HttpGet]
+        public JsonResult GetProductosData(int? almacenId)
         {
             try
             {
-                var productosData = _context.Productos.ToList();
+                var productosData = (from pro in _context.Productos
+                                     join disa in _context.DIngresoSalidaAlms on pro.Codigo equals disa.CodProducto
+                                     join isa in _context.IngresoSalidaAlms on disa.IngresoSalidaAlmId equals isa.Id
+                                     where isa.AlmacenId == almacenId
+                                     join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
+                                     from td in joinDoc.DefaultIfEmpty()
+                                     select new
+                                     {
+                                         pro.Codigo,
+                                         pro.CodGrupo,
+                                         pro.DescripcionGrupo,
+                                         pro.CodSubgrupo,
+                                         pro.DescripcionSubgrupo,
+                                         pro.DescripcionProducto,
+                                         pro.CodUnidadMedida,
+                                         disa.Cantidad,
+                                         Cliente = isa.Cliente ?? "Sin Cliente",
+                                         TipoDocumento = td != null ? td.Descripcion : "S/D",
+                                         Documento = (isa.SerieDocumento ?? "") + " - " + (isa.NumeroDocumento ?? ""),
+                                     }).ToList();
+
                 return Json(new { data = productosData, message = "Productos retornados exitosamente.", status = true });
             }
             catch (Exception ex)
@@ -128,11 +156,11 @@ namespace ERPKardex.Controllers
         }
         // GET SUBGRUPOS
         // Filtrar Subgrupos por Grupo
-        public JsonResult GetSubgruposByGrupo(string codGrupo)
+        public JsonResult GetSubgruposByGrupo(int grupoId)
         {
             try
             {
-                var data = _context.Subgrupos.Where(s => s.CodGrupo == codGrupo).ToList();
+                var data = _context.Subgrupos.Where(s => s.GrupoId == grupoId).ToList();
                 return Json(new { data = data, status = true, message = "Subgrupos retornados exitosamente." });
             }
             catch (Exception ex)
@@ -324,11 +352,13 @@ namespace ERPKardex.Controllers
         {
             try
             {
-                if (_context.Subgrupos.Any(s => s.Codigo == subgrupo.Codigo))
+                if (_context.Subgrupos.Any(s => s.Codigo == subgrupo.Codigo && s.CodGrupo == subgrupo.CodGrupo))
                 {
                     return Json(new { status = false, message = "El código de subgrupo ya existe." });
                 }
 
+                subgrupo.CodGrupo = _context.Grupos.Where(g => g.Id == subgrupo.GrupoId).Select(g => g.Codigo).FirstOrDefault();
+                subgrupo.DescripcionGrupo = subgrupo.DescripcionGrupo?.Split('-')[1].Trim();
                 _context.Subgrupos.Add(subgrupo);
                 _context.SaveChanges();
                 return Json(new { status = true, message = "Subgrupo registrado exitosamente." });
@@ -442,6 +472,11 @@ namespace ERPKardex.Controllers
             {
                 try
                 {
+                    producto.CodGrupo = _context.Grupos.Where(g => g.Id == producto.GrupoId).Select(g => g.Codigo).FirstOrDefault();
+                    producto.CodSubgrupo = _context.Subgrupos.Where(g => g.Id == producto.SubgrupoId).Select(g => g.Codigo).FirstOrDefault();
+                    producto.DescripcionGrupo = producto.DescripcionGrupo?.Split('-')[1].Trim();
+                    producto.DescripcionSubgrupo = producto.DescripcionSubgrupo?.Split('-')[1].Trim();
+
                     // 1. Generación Automática del Código
                     // El prefijo es: CodGrupo + CodSubgrupo
                     string prefijo = $"{producto.CodGrupo}{producto.CodSubgrupo}";

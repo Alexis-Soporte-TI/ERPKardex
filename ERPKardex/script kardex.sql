@@ -143,14 +143,17 @@ create table cuenta (
 );
 
 create table grupo (
-	codigo varchar(255) PRIMARY KEY,
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	codigo varchar(255),
 	descripcion varchar(200),
 	cuenta_id varchar(255)
 );
 
 create table subgrupo (
-	codigo varchar(255) PRIMARY KEY,
+	id INT IDENTITY(1,1) PRIMARY KEY,
+	codigo varchar(255),
 	descripcion varchar(200),
+	grupo_id INT,
 	cod_grupo varchar(255),
 	descripcion_grupo varchar(255),
 	observacion varchar(255)
@@ -192,8 +195,10 @@ create table modelo (
 
 create table producto (
 	codigo varchar(255) PRIMARY KEY,
+	grupo_id INT,
 	cod_grupo varchar(255),
 	descripcion_grupo varchar(255),
+	subgrupo_id INT,
 	cod_subgrupo varchar(255),
 	descripcion_subgrupo varchar(255),
 	descripcion_producto varchar(255),
@@ -323,13 +328,14 @@ INSERT INTO empresa (ruc, razon_social, estado) VALUES ('20607778338', 'CONTROL 
 INSERT INTO empresa (ruc, razon_social, estado) VALUES ('20603727551', 'STALNO S.A.C.', 1);
 
 -- inserts de 'sucursal'
-INSERT INTO sucursal (codigo, nombre, estado, empresa_id) VALUES ('001', 'PRINCIPAL - CHICLAYO', 1, 1);
+INSERT INTO sucursal (codigo, nombre, estado, empresa_id) VALUES ('001', 'PRINCIPAL - POMALCA', 1, 1);
 --INSERT INTO sucursal (codigo, nombre, estado, empresa_id) VALUES ('002', 'SUCURSAL - MORROPE', 1, 1);
 --INSERT INTO sucursal (codigo, nombre, estado, empresa_id) VALUES ('002', 'PRINCIPAL - CHICLAYO', 1, 2);
 --INSERT INTO sucursal (codigo, nombre, estado, empresa_id) VALUES ('002', 'SUCURSAL - MORROPE', 1, 2);
 
 -- inserts de 'almacen'
 INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('01','PRINCIPAL',1,'001',1);
+INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('02','TERCEROS',1,'001',1);
 --INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('02','PRODUCTO TERMIANDO',1,'001',1);
 --INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('03','MERMAS Y DESPERDICIOS',1,'001',1);
 --INSERT INTO almacen (codigo, nombre, estado, cod_sucursal, empresa_id) VALUES ('04','ENVASES Y EMBALAJES',1,'001',1);
@@ -423,45 +429,47 @@ INSERT INTO estado (nombre, tabla) VALUES ('Aprobado', 'INGRESOSALIDAALM');
 
 -- inserts de 'centro_costo'
 -- 1. NIVEL 1: Áreas Generales (Padres - No Imputables)
-INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
-('ADM', 'ADMINISTRACIÓN CENTRAL', 1, NULL, 0, 1),      -- ID 1
-('OP-AGRO', 'OPERACIONES AGRÍCOLAS', 1, NULL, 0, 1),   -- ID 2
-('PROD', 'PLANTA DE PRODUCCIÓN', 1, NULL, 0, 1),       -- ID 3
-('COM', 'COMERCIAL Y VENTAS', 1, NULL, 0, 1);          -- ID 4
+--INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+--('ADM', 'ADMINISTRACIÓN CENTRAL', 1, NULL, 0, 1),      -- ID 1
+--('OP-AGRO', 'OPERACIONES AGRÍCOLAS', 1, NULL, 0, 1),   -- ID 2
+--('PROD', 'PLANTA DE PRODUCCIÓN', 1, NULL, 0, 1),       -- ID 3
+--('COM', 'COMERCIAL Y VENTAS', 1, NULL, 0, 1);          -- ID 4
+
+INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES
+('001', 'RECEPCIÓN', 1, NULL, 1, 1),
+('002', 'PROCESAMIENTO', 1, NULL, 1, 1),
+('003', 'ENVASADO', 1, NULL, 1, 1);
 
 -- 2. NIVEL 2: Sub-áreas (Hijos - Sí Imputables)
 -- Hijos de ADMINISTRACIÓN (ID 1)
-INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
-('ADM-RH', 'RECURSOS HUMANOS', 1, 1, 1, 1),
-('ADM-CON', 'CONTABILIDAD Y FINANZAS', 1, 1, 1, 1),
-('ADM-LOG', 'LOGÍSTICA Y COMPRAS', 1, 1, 1, 1);
+--INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+--('ADM-RH', 'RECURSOS HUMANOS', 1, 1, 1, 1),
+--('ADM-CON', 'CONTABILIDAD Y FINANZAS', 1, 1, 1, 1),
+--('ADM-LOG', 'LOGÍSTICA Y COMPRAS', 1, 1, 1, 1);
 
--- Hijos de OPERACIONES AGRÍCOLAS (ID 2)
-INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
-('FND-01', 'FUNDO SAN JORGE', 1, 2, 1, 1),
-('FND-02', 'FUNDO EL ALAMO', 1, 2, 1, 1),
-('MAQ-AGR', 'FLOTA DE TRACTORES', 1, 2, 1, 1);
+---- Hijos de OPERACIONES AGRÍCOLAS (ID 2)
+--INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+--('FND-01', 'FUNDO SAN JORGE', 1, 2, 1, 1),
+--('FND-02', 'FUNDO EL ALAMO', 1, 2, 1, 1),
+--('MAQ-AGR', 'FLOTA DE TRACTORES', 1, 2, 1, 1);
 
--- Hijos de PLANTA DE PRODUCCIÓN (ID 3)
-INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
-('PLT-L01', 'LÍNEA DE PROCESO 1', 1, 3, 1, 1),
-('PLT-MAN', 'MANTENIMIENTO PLANTA', 1, 3, 1, 1),
-('PLT-ALM', 'ALMACÉN DE INSUMOS', 1, 3, 1, 1);
+---- Hijos de PLANTA DE PRODUCCIÓN (ID 3)
+--INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+--('PLT-L01', 'LÍNEA DE PROCESO 1', 1, 3, 1, 1),
+--('PLT-MAN', 'MANTENIMIENTO PLANTA', 1, 3, 1, 1),
+--('PLT-ALM', 'ALMACÉN DE INSUMOS', 1, 3, 1, 1);
 
--- Hijos de COMERCIAL (ID 4)
-INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
-('VTAS-NAC', 'VENTAS NACIONALES', 1, 4, 1, 1),
-('VTAS-EXP', 'EXPORTACIONES', 1, 4, 1, 1);
+---- Hijos de COMERCIAL (ID 4)
+--INSERT INTO centro_costo (codigo, nombre, empresa_id, padre_id, es_imputable, estado) VALUES 
+--('VTAS-NAC', 'VENTAS NACIONALES', 1, 4, 1, 1),
+--('VTAS-EXP', 'EXPORTACIONES', 1, 4, 1, 1);
 
 -- inserts de 'actividad'
 INSERT INTO actividad (codigo, nombre, estado) VALUES 
-('ACT-001', 'PREPARACIÓN DE TERRENO', 1),
-('ACT-002', 'SIEMBRA Y CULTIVO', 1),
-('ACT-003', 'FERTILIZACIÓN Y RIEGO', 1),
-('ACT-004', 'COSECHA Y RECOLECCIÓN', 1),
-('ACT-005', 'MANTENIMIENTO DE MAQUINARIA', 1),
-('ACT-006', 'GESTIÓN ADMINISTRATIVA', 1),
-('ACT-007', 'EMBALAJE Y DESPACHO', 1),
-('ACT-008', 'CONTROL DE CALIDAD', 1),
-('ACT-009', 'CAPACITACIÓN DE PERSONAL', 1),
-('ACT-010', 'SERVICIOS GENERALES (LIMPIEZA/VIGILANCIA)', 1);
+('001', 'RECEPCIÓN Y ALMACENAMIENTO', 1),
+('002', 'PASAJE Y DOSIFICACIÓN', 1),
+('003', 'MEZCLADO', 1),
+('004', 'ENVASADO', 1),
+('005', 'ETIQUETADO', 1),
+('006', 'DESPACHO', 1),
+('007', 'GESTIÓN OPERATIVA', 1);

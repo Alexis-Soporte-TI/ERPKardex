@@ -73,7 +73,7 @@
                             toastr.success(response.message, "MENSAJE DE SISTEMA");
 
                             // 5. Refrescar el combo en la pantalla principal
-                            fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR U. MEDIDA --');
+                            fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR U. MEDIDA --', 'codigo');
 
                             // 6. Cerrar el modal
                             $("#dynamic-modal").modal('hide');

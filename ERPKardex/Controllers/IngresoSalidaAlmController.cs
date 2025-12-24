@@ -32,9 +32,11 @@ namespace ERPKardex.Controllers
                                    join suc in _context.Sucursales on isa.SucursalId equals suc.Id
                                    join alm in _context.Almacenes on isa.AlmacenId equals alm.Id
                                    join emp in _context.Empresas on alm.EmpresaId equals emp.Id
-                                   join tc in _context.TipoDocumentos on isa.TipoDocumentoId equals tc.Id
-                                   join mo in _context.Monedas on isa.MonedaId equals mo.Id
-                                   // where emp.Id == 1
+                                   join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
+                                   from tc in joinDoc.DefaultIfEmpty()
+                                   join mon in _context.Monedas on isa.MonedaId equals mon.Id into joinMon
+                                   from mo in joinMon.DefaultIfEmpty()
+                                       // where emp.Id == 1
                                    select new IngresoSalidaAlmViewModel
                                    {
                                        Id = isa.Id,

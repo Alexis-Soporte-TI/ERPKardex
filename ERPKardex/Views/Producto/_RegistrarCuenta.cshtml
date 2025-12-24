@@ -70,7 +70,7 @@
                                 toastr.success(response.message, "MENSAJE DE SISTEMA");
 
                                 // Refrescar el combo de cuentas en la vista principal
-                                fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --');
+                                fct_FillCombo('/Producto/GetCuentaData', '#cbx_Cuenta', 'codigo', 'descripcion', '-- SELECCIONAR CUENTA --', 'codigo');
 
                                 $("#dynamic-modal").modal('hide');
                             } else {

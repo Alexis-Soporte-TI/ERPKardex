@@ -8,6 +8,7 @@ namespace ERPKardex.Models
     {
         [Key]
         public int Id { get; set; }
+        public string? Cliente { get; set; }
         public DateTime? Fecha { get; set; }
         public string? Numero { get; set; }
         [Column("sucursal_id")]

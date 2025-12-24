@@ -75,11 +75,11 @@
     $(document).ready(function () {
         $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%' });
 
-        fct_FillCombo('/IngresoSalidaAlm/GetSucursalesByEmpresa?empresaId=1', '#cbx_Sucursal', 'codigo', 'nombre', '-- SUCURSAL --');
+        fct_FillCombo('/IngresoSalidaAlm/GetSucursalesByEmpresa?empresaId=1', '#cbx_Sucursal', 'codigo', 'nombre', '-- SUCURSAL --', 'codigo');
         fct_FillCombo('/IngresoSalidaAlm/GetProductos', '#cbx_Producto', 'codigo', 'descripcionProducto', '-- PRODUCTO --', 'codigo');
 
         $('#cbx_Sucursal').on('change', function () {
-            fct_FillCombo(`/IngresoSalidaAlm/GetAlmacenesBySucursal?codSucursal=${$(this).val()}&empresaId=1`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --');
+            fct_FillCombo(`/IngresoSalidaAlm/GetAlmacenesBySucursal?codSucursal=${$(this).val()}&empresaId=1`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --', 'codigo');
         });
 
         $('#btn_Generar').click(function () {
