@@ -97,6 +97,7 @@ namespace ERPKardex.Controllers
                                          pro.Codigo,
                                          pro.CodGrupo,
                                          pro.DescripcionGrupo,
+                                         pro.DescripcionComercial,
                                          pro.CodSubgrupo,
                                          pro.DescripcionSubgrupo,
                                          pro.DescripcionProducto,

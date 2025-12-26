@@ -32,6 +32,7 @@
                             <th class="text-center">GRUPO</th>
                             <th class="text-center">SUBGRUPO</th>
                             <th class="text-center">DESCRIPCIÓN</th>
+                            <th class="text-center">DESCRIPCIÓN COM.</th>
                             <th class="text-center">U. MEDIDA</th>
                             <th class="text-center">CANTIDAD</th>
                         </tr>
@@ -263,6 +264,13 @@
                 { data: "descripcionGrupo", name: "descripcionGrupo" },
                 { data: "descripcionSubgrupo", name: "descripcionSubgrupo" },
                 { data: "descripcionProducto", name: "descripcionProducto" },
+                { 
+                    data: "descripcionComercial", 
+                    name: "descripcionComercial", 
+                    render: function(data, type, row) {
+                        return data ? data : '-';
+                    },  
+                },
                 { data: "codUnidadMedida", name: "codUnidadMedida" },
                 { 
                     data: "cantidad", 
@@ -278,7 +286,7 @@
                     className: "text-center align-middle",
                 },
                 {
-                    targets: [1, 2, 3, 4, 5, 6, 7],
+                    targets: [1, 2, 3, 4, 5, 6, 7, 8],
                     className: 'align-middle',
                 },
                 // {
