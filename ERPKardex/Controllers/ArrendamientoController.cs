@@ -39,6 +39,17 @@ namespace ERPKardex.Controllers
                                      .ToListAsync();
             return Json(new { status = true, data });
         }
+        [HttpGet]
+        public async Task<JsonResult> GetMonedas()
+        {
+            // Asumiendo que existe _context.Monedas
+            var data = await _context.Monedas
+                                     .Where(x => x.Estado == true) // Si tienes campo estado
+                                     .Select(x => new { x.Id, x.Simbolo, x.Nombre })
+                                     .OrderBy(x => x.Id)
+                                     .ToListAsync();
+            return Json(new { status = true, data });
+        }
         #endregion
 
         #region API LISTADO (Reporte Principal)
@@ -49,6 +60,7 @@ namespace ERPKardex.Controllers
             {
                 // YA NO FILTRAMOS POR EmpresaUsuarioId
                 var query = from a in _context.Arrendamientos
+                            join mo in _context.Monedas on a.MonedaId equals mo.Id
                             join e in _context.Empresas on a.EmpresaId equals e.Id
                             where a.Estado == true
                             orderby e.RazonSocial, a.Id descending
@@ -56,6 +68,8 @@ namespace ERPKardex.Controllers
                             {
                                 a.Id,
                                 Empresa = e.RazonSocial, // Nuevo campo para mostrar
+                                Moneda = mo.Nombre,
+                                MonedaSimbolo = mo.Simbolo,
                                 a.DireccionLocal,
                                 a.TipoUso,
                                 FechaInicio = a.FechaInicioContrato.HasValue ? a.FechaInicioContrato.Value.ToString("dd/MM/yyyy") : "-",
@@ -196,6 +210,7 @@ namespace ERPKardex.Controllers
                         PeriodoAnioMes = periodo,
                         FechaVencimiento = vencimiento,
                         MontoCuota = arr.MontoAlquiler.Value,
+                        MonedaId = arr.MonedaId,
                         EstadoPago = 0 // Pendiente
                     };
                     _context.CuotaArrendamientos.Add(nuevaCuota);
@@ -210,18 +225,21 @@ namespace ERPKardex.Controllers
         public async Task<JsonResult> GetCuotas(int id)
         {
             var data = await _context.CuotaArrendamientos
-                .Where(x => x.ArrendamientoId == id)
-                .OrderBy(x => x.FechaVencimiento)
+                .Join(_context.Monedas, c => c.MonedaId, m => m.Id, (c, m) => new { c, m })
+                .Where(x => x.c.ArrendamientoId == id)
+                .OrderBy(x => x.c.FechaVencimiento)
                 .Select(x => new
                 {
-                    x.Id,
-                    Periodo = x.PeriodoAnioMes,
-                    Vencimiento = x.FechaVencimiento.ToString("dd/MM/yyyy"),
-                    Monto = x.MontoCuota,
-                    Estado = x.EstadoPago, // 0 Rojo, 1 Verde
-                    FechaPago = x.FechaPago.HasValue ? x.FechaPago.Value.ToString("dd/MM/yyyy") : "-",
-                    x.NumeroOperacion,
-                    x.RutaEvidencia
+                    x.c.Id,
+                    Periodo = x.c.PeriodoAnioMes,
+                    Vencimiento = x.c.FechaVencimiento.ToString("dd/MM/yyyy"),
+                    MonedaNombre = x.m.Nombre,
+                    MonedaSimbolo = x.m.Simbolo,
+                    Monto = x.c.MontoCuota,
+                    Estado = x.c.EstadoPago, // 0 Rojo, 1 Verde
+                    FechaPago = x.c.FechaPago.HasValue ? x.c.FechaPago.Value.ToString("dd/MM/yyyy") : "-",
+                    x.c.NumeroOperacion,
+                    x.c.RutaEvidencia
                 }).ToListAsync();
 
             return Json(new { status = true, data });
@@ -270,6 +288,7 @@ namespace ERPKardex.Controllers
         public async Task<JsonResult> GetDataCalendario(DateTime start, DateTime end)
         {
             var eventos = await (from c in _context.CuotaArrendamientos
+                                 join m in _context.Monedas on c.MonedaId equals m.Id
                                  join a in _context.Arrendamientos on c.ArrendamientoId equals a.Id
                                  join e in _context.Empresas on a.EmpresaId equals e.Id // JOIN NUEVO
                                  where c.FechaVencimiento >= start && c.FechaVencimiento <= end
@@ -285,6 +304,8 @@ namespace ERPKardex.Controllers
                                          empresa = e.Nombre,
                                          razonSocial = e.RazonSocial, // Dato extra por si acaso
                                          monto = c.MontoCuota,
+                                         monedaNombre = m.Nombre,
+                                         monedaSimbolo = m.Simbolo,
                                          estado = c.EstadoPago == 1 ? "PAGADO" : "PENDIENTE"
                                      }
                                  }).ToListAsync();

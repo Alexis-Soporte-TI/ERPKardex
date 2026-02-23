@@ -272,7 +272,7 @@ namespace ERPKardex.Controllers
                 var estadosOrdenValidos = new List<string> { "Aprobado", "Atendido Parcial", "Atendido Total" };
                 var estadoAnuladoDoc = _context.Estados.FirstOrDefault(x => x.Tabla == "DOCUMENTO_PAGAR" && x.Nombre == "Anulado");
                 int idAnulado = estadoAnuladoDoc?.Id ?? -1;
-                var codigosFacturables = new List<string> { "FAC", "BOL", "RH" };
+                var codigosFacturables = new List<string> { "FAC", "BOL", "RH", "REC" };
 
                 if (tipoOrigen == "OC")
                 {

@@ -62,6 +62,37 @@
 
                 let ubicacion = d.ubicacion || '';
                 let ubicacionHtml = ubicacion ? `<div class="info-row"><span class="label">UBICACIÓN:</span><span>${ubicacion}</span></div>` : '';
+                
+                const contenidoGerente = 
+                `
+                    <div class="linea">Fernando José Dávila Ubillús</div>
+                    <div class="cargo">Gerente de TI</div>
+                    <div class="dni">DNI: 77013712</div>
+                `;
+
+                const contenidoEntrega = (d.titulo === 'ACTA DE ENTREGA')
+                    ? `
+                        ${contenidoGerente}
+                        <div class="cargo">ENTREGA</div>
+                      `
+                    : `
+                        <div class="linea">${d.emisor ? d.emisor.nombre : ''}</div>
+                        <div class="cargo">${d.emisor ? d.emisor.cargo : ''}</div>
+                        <div class="dni">${d.emisor && d.emisor.dni ? 'DNI: ' + d.emisor.dni : ''}</div>
+                        <div class="cargo">ENTREGA</div>
+                      `;
+
+                const contenidoRecibe = (d.titulo === 'ACTA DE ENTREGA')
+                    ? `
+                        <div class="linea">${d.receptor ? d.receptor.nombre : ''}</div>
+                        <div class="cargo">${d.receptor ? d.receptor.cargo : ''}</div>
+                        <div class="dni">${d.receptor && d.receptor.dni ? 'DNI: ' + d.receptor.dni : ''}</div>
+                        <div class="cargo">RECIBE</div>
+                      `
+                    : `
+                        ${contenidoGerente}
+                        <div class="cargo">RECIBE</div>
+                      `;
 
                 let html = `
                     <div class="header-acta">
@@ -116,16 +147,11 @@
 
                     <div class="firma-container">
                         <div class="firma-box">
-                            <div class="linea">Fernando José Dávila Ubillús</div>
-                            <div class="cargo">Gerente de TI</div>
-                            <div class="dni">DNI: 77013712</div>
-                            <div class="cargo">ENTREGA</div>
+                            ${contenidoEntrega}
                         </div>
+
                         <div class="firma-box">
-                            <div class="linea">${d.receptor ? d.receptor.nombre : ''}</div>
-                            <div class="cargo">${d.receptor ? d.receptor.cargo : ''}</div>
-                            <div class="dni">${d.receptor && d.receptor.dni ? 'DNI: ' + d.receptor.dni : ''}</div>
-                            <div class="cargo">RECIBE</div>
+                            ${contenidoRecibe}
                         </div>
                     </div>
                 `;

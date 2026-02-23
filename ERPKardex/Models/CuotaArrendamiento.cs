@@ -10,6 +10,7 @@ namespace ERPKardex.Models
         public int Id { get; set; }
 
         [Column("arrendamiento_id")] public int ArrendamientoId { get; set; }
+        [Column("moneda_id")] public int? MonedaId { get; set; }
 
         // Ej: "2025-01"
         [Column("periodo_anio_mes")] public string PeriodoAnioMes { get; set; } = string.Empty;

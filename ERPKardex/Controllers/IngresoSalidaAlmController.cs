@@ -991,6 +991,7 @@ namespace ERPKardex.Controllers
                                      join disa in _context.DIngresoSalidaAlms on pro.Id equals disa.ProductoId
                                      join isa in _context.IngresoSalidaAlms on disa.IngresoSalidaAlmId equals isa.Id
                                      where isa.AlmacenId == almacenId
+                                     where isa.TipoMovimiento == true // Solo Entradas para mostrar el proveedor y doc asociado
                                      join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
                                      from td in joinDoc.DefaultIfEmpty()
                                      join ent in _context.Proveedores on isa.ProveedorId equals ent.Id into joinEnt

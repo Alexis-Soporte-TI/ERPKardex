@@ -45,19 +45,23 @@
                         </div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group col-md-3">
+                        <div class="form-group col-md-6">
                             <label class="font-weight-bold">Inicio Contrato</label>
                             <input type="date" id="txt_FecIni" class="form-control">
                         </div>
-                        <div class="form-group col-md-3">
+                        <div class="form-group col-md-6">
                             <label class="font-weight-bold">Fin Contrato</label>
                             <input type="date" id="txt_FecFin" class="form-control">
                         </div>
-                        <div class="form-group col-md-3">
+                        <div class="form-group col-md-4">
+                            <label>Moneda</label>
+                            <select id="cbx_Moneda" class="form-control"></select>
+                        </div>
+                        <div class="form-group col-md-4">
                             <label class="font-weight-bold text-primary">Monto Alquiler (S/)</label>
                             <input type="number" id="txt_Monto" class="form-control text-right" step="0.01">
                         </div>
-                        <div class="form-group col-md-3">
+                        <div class="form-group col-md-4">
                             <label class="font-weight-bold">Día de Pago</label>
                             <input type="number" id="txt_Dia" class="form-control" min="1" max="31">
                         </div>
@@ -135,6 +139,17 @@
                 }
             });
 
+            $.get('/Arrendamiento/GetMonedas', function(res) {
+                if(res.status) {
+                    let opts = '<option value="">-- Seleccione --</option>';
+                    res.data.forEach(m => opts += `<option value="${m.id}">${m.nombre}</option>`);
+                    $('#cbx_Moneda').html(opts);
+
+                    let id = $('#hdn_Id').val();
+                    if(id > 0) cargarDatos(id);
+                }
+            });
+
             $('#btn_Cancelar').on('click', function () {
                 window.location.href = '/Arrendamiento/Index';
             });
@@ -145,6 +160,7 @@
                 if(res.status) {
                     let d = res.data;
                     $('#cbx_Empresa').val(d.empresaId).trigger('change');
+                    $('#cbx_Moneda').val(d.monedaId).trigger('change');
                     $('#txt_Direccion').val(d.direccionLocal);
                     $('#cbx_Uso').val(d.tipoUso);
                     $('#txt_FecIni').val(d.fechaInicioContrato ? d.fechaInicioContrato.substring(0,10) : '');
@@ -163,6 +179,7 @@
             let modelo = {
                 Id: $('#hdn_Id').val(),
                 EmpresaId: $('#cbx_Empresa').val(),
+                MonedaId: $('#cbx_MonedaId').val(),
                 DireccionLocal: $('#txt_Direccion').val(),
                 TipoUso: $('#cbx_Uso').val(),
                 FechaInicioContrato: $('#txt_FecIni').val() || null,

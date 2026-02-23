@@ -19,6 +19,7 @@
                             <th>Dirección Local</th>
                             <th>Uso</th>
                             <th>Vigencia</th>
+                            <th>Moneda</th>
                             <th>Monto Alquiler</th>
                             <th>Día Pago</th>
                             <th>Estado</th>
@@ -172,6 +173,7 @@
                         data: null,
                         render: function(d) { return `<small>${d.fechaInicio} al <br> ${d.fechaFin}</small>`; }
                     },
+                    { data: 'moneda' },
                     { data: 'monto', render: $.fn.dataTable.render.number(',', '.', 2, 'S/ ') },
                     { data: 'diaPago', className: 'text-center' },
                     {

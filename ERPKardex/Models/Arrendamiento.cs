@@ -9,6 +9,7 @@ namespace ERPKardex.Models
         [Key]
         public int Id { get; set; }
 
+        [Column("moneda_id")] public int? MonedaId { get; set; }
         [Column("empresa_id")] public int EmpresaId { get; set; }
 
         [Column("direccion_local")] public string DireccionLocal { get; set; } = string.Empty;

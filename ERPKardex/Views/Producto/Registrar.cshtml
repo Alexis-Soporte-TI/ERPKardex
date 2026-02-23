@@ -392,8 +392,8 @@
                 });
 
                 // 2. Validaciones mínimas
-                if (!producto.DescripcionProducto) {
-                    toastr.warning("La descripción es obligatoria", "SISTEMA");
+                if (!producto.GrupoId || !producto.SubgrupoId || !producto.CodUnidadMedida || !producto.DescripcionProducto) {
+                    toastr.warning("El grupo, subgrupo, unidad de medida y descripción son obligatorios.", "SISTEMA");
                     return;
                 }
 
