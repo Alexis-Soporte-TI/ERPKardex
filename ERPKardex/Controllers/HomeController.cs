@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace ERPKardex.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
         private readonly ApplicationDbContext _context;
         public HomeController(ApplicationDbContext context)
@@ -119,6 +119,23 @@ namespace ERPKardex.Controllers
 
             // 3. Redirigir al usuario a la página de Login
             return RedirectToAction("Index", "Home");
+        }
+        [Authorize]
+        [HttpGet]
+        public JsonResult GetPeriodosContables()
+        {
+            try
+            {
+                var periodos = _context.PeriodosContables
+                    .Where(p => p.Estado == true && p.EmpresaId == EmpresaUsuarioId)
+                    .Select(p => new { p.Id, p.Anio, p.Mes })
+                    .ToList();
+                return Json(new ApiResponse { data = periodos, message = "Periodos obtenidos correctamente.", status = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse { data = null, message = ex.Message, status = false });
+            }
         }
     }
 }

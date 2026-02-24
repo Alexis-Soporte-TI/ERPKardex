@@ -16,6 +16,15 @@ namespace ERPKardex.Controllers
             _context = context;
         }
 
+        public bool EsPeriodoValido(int periodoId)
+        {
+            using (var db = _context)
+            {
+                // Buscamos el periodo y verificamos que el estado sea true (Abierto)
+                return db.PeriodosContables.Any(p => p.Id == periodoId && p.Estado == true);
+            }
+        }
+
         #region VISTAS
         public IActionResult Index() => View();
         public IActionResult Registrar() => View();
@@ -257,6 +266,11 @@ namespace ERPKardex.Controllers
             {
                 try
                 {
+                    if (!EsPeriodoValido(cabecera.PeriodoContableId ?? 0))
+                    {
+                        throw new Exception("El periodo seleccionado ya no se encuentra abierto o es inválido. Por favor, actualice la página o seleccione otro periodo.");
+                    }
+
                     var empresaId = EmpresaUsuarioId;
                     var usuarioId = UsuarioActualId;
 

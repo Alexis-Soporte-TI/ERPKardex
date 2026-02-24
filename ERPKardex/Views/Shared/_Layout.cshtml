@@ -59,6 +59,27 @@
     <!-- Datatables -->
     <script src="/plugins/datatables-test/datatables.min.js"></script>
     <script>
+        
+        const PeriodoManager = {
+            // La clave centralizada para evitar errores
+            KEY: 'periodoSeleccionado',
+
+            // El Getter: Obtiene el ID guardado
+            getActual: function() {
+                return localStorage.getItem(this.KEY);
+            },
+
+            // El Setter: Guarda el ID (opcional, para encapsular todo)
+            setActual: function(id) {
+                localStorage.setItem(this.KEY, id);
+            },
+
+            // Útil para saber si el usuario ya seleccionó algo
+            existe: function() {
+                return this.getActual() !== null;
+            }
+        };
+
         toastr.options = {
             "closeButton": true,
             "debug": false,
@@ -125,6 +146,36 @@
                 }
             });
         }
+        
+        $(document).ready(function() {
+            const selector = '#cbx_Gen_Periodo';
+            
+            $.getJSON('/Home/GetPeriodosContables', function (response) {
+                if (response.status) {
+                    let $select = $('#cbx_Gen_Periodo');
+                    let valorGuardado = PeriodoManager.getActual();
+                    let existeEnLista = false;
+
+                    response.data.forEach(p => {
+                        $select.append($('<option>', { value: p.id, text: `${p.anio}-${p.mes}` }));
+                        if (p.id == valorGuardado) existeEnLista = true;
+                    });
+
+                    if (valorGuardado && existeEnLista) {
+                        $select.val(valorGuardado);
+                    } else {
+                        // Si el periodo guardado ya no está en la lista (se cerró)
+                        localStorage.removeItem('periodoSeleccionado');
+                        $select.val(""); // O seleccionar el primero por defecto
+                    }
+                }
+            });
+
+            $(document).on('change', selector, function() {
+                // Usamos el Setter
+                PeriodoManager.setActual($(this).val());
+            });
+        });
     </script>
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -144,6 +195,14 @@
                 </li>
                 <li class="nav-item d-none d-sm-inline-block">
                     <a href="#" class="nav-link">Inicio</a>
+                </li>
+            </ul>
+
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item d-flex align-items-center">
+                    <label class="font-weight-bold mb-0 mr-2" for="cbx_Gen_Periodo">Periodo Operativo</label>
+                    <select id="cbx_Gen_Periodo" class="form-control form-control-sm" style="width: auto;">
+                    </select>
                 </li>
             </ul>
 

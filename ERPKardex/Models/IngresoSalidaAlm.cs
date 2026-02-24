@@ -48,5 +48,7 @@ namespace ERPKardex.Models
         public int? EmpresaId { get; set; }
         [Column("proveedor_id")]
         public int? ProveedorId { get; set; }
+        [Column("periodo_contable_id")]
+        public int? PeriodoContableId { get; set; }
     }
 }

@@ -32,5 +32,7 @@ namespace ERPKardex.Models
         public int? UsuarioRegistro { get; set; }
         [Column("fecha_registro")]
         public DateTime? FechaRegistro { get; set; }
+        [Column("periodo_contable_id")]
+        public int? PeriodoContableId { get; set; }
     }
 }

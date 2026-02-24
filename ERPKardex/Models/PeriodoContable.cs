@@ -20,7 +20,7 @@ namespace ERPKardex.Models
         public int Mes { get; set; }
 
         [Column("estado")]
-        public string Estado { get; set; } = "ABIERTO";
+        public bool Estado { get; set; } = true;
 
         [Column("fecha_registro")]
         public DateTime? FechaRegistro { get; set; }

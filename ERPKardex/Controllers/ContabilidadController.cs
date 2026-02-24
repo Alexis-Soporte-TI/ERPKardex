@@ -31,7 +31,7 @@ namespace ERPKardex.Controllers
         {
             // Usamos EmpresaUsuarioId de tu BaseController
             var periodos = await _context.PeriodosContables
-                .Where(p => p.EmpresaId == EmpresaUsuarioId && p.Estado == "ABIERTO")
+                .Where(p => p.EmpresaId == EmpresaUsuarioId && p.Estado == true)
                 .OrderByDescending(p => p.Anio).ThenByDescending(p => p.Mes)
                 .Select(p => new { id = p.Id, texto = $"{p.Mes:D2}-{p.Anio}" })
                 .ToListAsync();
