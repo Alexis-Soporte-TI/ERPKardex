@@ -37,5 +37,6 @@ namespace ERPKardex.Models
         [Column("observacion")] public string? Observacion { get; set; }
         [Column("usuario_registro_id")] public int? UsuarioRegistroId { get; set; }
         [Column("fecha_registro")] public DateTime? FechaRegistro { get; set; }
+        [Column("periodo_contable_id")] public int? PeriodoContableId { get; set; }
     }
 }

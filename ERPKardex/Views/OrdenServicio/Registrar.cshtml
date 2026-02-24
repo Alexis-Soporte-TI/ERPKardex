@@ -504,7 +504,7 @@
             TipoCambio: parseFloat($('#txtTCRef').val()),
             CondicionPago: condPagoFinal,
             Observacion: $('#txt_Observacion').val(),
-
+            PeriodoContableId: PeriodoManager.getActual(),
             // LA CLAVE: 1 = true (Nacional), 0 = false (Inafecto)
             IncluyeIgv: ($('#cbx_TieneIgv').val() === "1"),
 

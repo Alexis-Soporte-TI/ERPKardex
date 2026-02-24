@@ -13,6 +13,10 @@ namespace ERPKardex.Controllers
         {
             _context = context;
         }
+        public bool EsPeriodoValido(int periodoId)
+        {
+            return _context.PeriodosContables.Any(p => p.Id == periodoId && p.Estado == true);
+        }
 
         #region VISTAS
         public IActionResult IndexProvisiones() => View();
@@ -426,6 +430,11 @@ namespace ERPKardex.Controllers
             {
                 try
                 {
+                    if (!EsPeriodoValido(doc.PeriodoContableId ?? 0))
+                    {
+                        throw new Exception("El periodo seleccionado ya no se encuentra abierto o es inválido. Por favor, actualice la página o seleccione otro periodo.");
+                    }
+
                     if (doc.OrdenCompraId == null && doc.OrdenServicioId == null)
                         throw new Exception("Anticipo requiere Orden.");
 
@@ -490,6 +499,11 @@ namespace ERPKardex.Controllers
             {
                 try
                 {
+                    if (!EsPeriodoValido(doc.PeriodoContableId ?? 0))
+                    {
+                        throw new Exception("El periodo seleccionado ya no se encuentra abierto o es inválido. Por favor, actualice la página o seleccione otro periodo.");
+                    }
+
                     // 1. Validaciones
                     if (codigoTipoDoc == "PROV") throw new Exception("Provisión requiere documento físico.");
                     if (doc.OrdenCompraId == null && doc.OrdenServicioId == null) throw new Exception("Requiere Orden.");
@@ -775,6 +789,11 @@ namespace ERPKardex.Controllers
             {
                 try
                 {
+                    if (!EsPeriodoValido(doc.PeriodoContableId ?? 0))
+                    {
+                        throw new Exception("El periodo seleccionado ya no se encuentra abierto o es inválido. Por favor, actualice la página o seleccione otro periodo.");
+                    }
+
                     if (doc.TipoCambio == null || doc.TipoCambio == 0) throw new Exception("El tipo de cambio no es válido.");
 
                     doc.EmpresaId = EmpresaUsuarioId;

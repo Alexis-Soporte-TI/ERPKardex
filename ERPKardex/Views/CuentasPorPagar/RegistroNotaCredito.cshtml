@@ -218,6 +218,7 @@
                 ProveedorId: parseInt($('#hdn_ProveedorId').val()),
                 MonedaId: parseInt($('#hdn_MonedaId').val()),
                 DocumentoReferenciaId: parseInt(docRefId),
+                PeriodoContableId: PeriodoManager.getActual(),
 
                 Serie: $('#txt_Serie').val().toUpperCase(),
                 Numero: $('#txt_Numero').val(),

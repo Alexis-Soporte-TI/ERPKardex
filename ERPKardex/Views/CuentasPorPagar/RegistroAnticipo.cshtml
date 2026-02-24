@@ -223,7 +223,7 @@
                 MonedaId: parseInt($('#hdn_MonedaId').val()),
                 OrdenCompraId: ($('input[name="optOrigen"]:checked').val() === 'OC') ? parseInt(ordenId) : null,
                 OrdenServicioId: ($('input[name="optOrigen"]:checked').val() === 'OS') ? parseInt(ordenId) : null,
-
+                PeriodoContableId: PeriodoManager.getActual(),
                 FechaEmision: $('#txt_Fecha').val(),
                 TipoCambio: parseFloat($('#txtTCRef').val()),
                 Total: monto,

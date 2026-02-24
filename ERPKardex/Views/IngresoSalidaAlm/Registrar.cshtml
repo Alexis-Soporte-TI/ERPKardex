@@ -273,6 +273,7 @@
 
                 // Proveedor ahora viene del combo en la sección de Guía
                 ProveedorId: $("#cbx_Proveedor").val() ? parseInt($("#cbx_Proveedor").val()) : null,
+                PeriodoContableId: PeriodoManager.getActual(),
 
                 FechaDocumento: $("#dtp_FechaDoc").val(),
                 TipoDocumentoId: $("#cbx_TipoDoc").val(),

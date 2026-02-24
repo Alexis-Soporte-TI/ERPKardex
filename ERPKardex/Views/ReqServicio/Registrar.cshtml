@@ -162,7 +162,8 @@
             let cabecera = {
                 FechaEmision: $("#dtp_FechaEmision").val(),
                 FechaNecesaria: $("#dtp_FechaNecesaria").val(),
-                Observacion: $("#txt_Observacion").val()
+                Observacion: $("#txt_Observacion").val(),
+                PeriodoContableId: PeriodoManager.getActual()
             };
 
             Swal.fire({

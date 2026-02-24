@@ -522,7 +522,7 @@
             TipoCambio: parseFloat($('#txtTCRef').val()),
             CondicionPago: condPagoFinal,
             Observacion: $('#txt_Observacion').val(),
-
+            PeriodoContableId: PeriodoManager.getActual(),
             // Enviamos el flag. 1=True (Nacional), 0=False (Importación)
             IncluyeIgv: ($('#cbx_TieneIgv').val() === "1"),
 

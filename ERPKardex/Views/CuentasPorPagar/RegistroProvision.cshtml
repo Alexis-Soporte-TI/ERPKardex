@@ -309,6 +309,7 @@
 
             let documento = {
                 ProveedorId: parseInt($('#hdn_ProveedorId').val()),
+                PeriodoContableId: PeriodoManager.getActual(),
                 MonedaId: parseInt($('#cbx_Moneda').val()),
                 OrdenCompraId: ($('input[name="optOrigen"]:checked').val() === 'OC') ? parseInt(ordenId) : null,
                 OrdenServicioId: ($('input[name="optOrigen"]:checked').val() === 'OS') ? parseInt(ordenId) : null,

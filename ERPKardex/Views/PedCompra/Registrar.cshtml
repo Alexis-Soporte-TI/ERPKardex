@@ -429,6 +429,7 @@
             FechaEmision: $("#dtp_FechaEmision").val(),
             FechaNecesaria: $("#dtp_FechaNecesaria").val(),
             Observacion: $("#txt_Observacion").val(),
+            PeriodoContableId: PeriodoManager.getActual(),
             // NUEVOS CAMPOS
             SucursalId: parseInt($("#hdn_SucursalId").val()),
             AlmacenId: $("#hdn_AlmacenId").val() ? parseInt($("#hdn_AlmacenId").val()) : null, // Almacén puede ser nulo en servicios

@@ -19,11 +19,7 @@ namespace ERPKardex.Controllers
 
         public bool EsPeriodoValido(int periodoId)
         {
-            using (var db = _context)
-            {
-                // Buscamos el periodo y verificamos que el estado sea true (Abierto)
-                return db.PeriodosContables.Any(p => p.Id == periodoId && p.Estado == true);
-            }
+            return _context.PeriodosContables.Any(p => p.Id == periodoId && p.Estado == true);
         }
 
         #region VISTAS
