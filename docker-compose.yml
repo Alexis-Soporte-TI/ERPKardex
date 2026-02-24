@@ -1,0 +1,18 @@
+services:
+  app-kardex:
+    build:
+      context: .
+      dockerfile: ERPKardex/Dockerfile
+    restart: always
+    environment:
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Server=db-sqlserver;Database=ERPKardex;User Id=sa;Password=${BD_PASSWORD};TrustServerCertificate=True;
+    volumes:
+      - ./datos/uploads:/app/wwwroot/uploads
+    networks:
+      - public_network
+
+networks:
+  public_network:
+    external: true
