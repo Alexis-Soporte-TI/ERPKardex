@@ -1,5 +1,6 @@
 ﻿using ERPKardex.Data;
 using ERPKardex.Models;
+using ERPKardex.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +10,11 @@ namespace ERPKardex.Controllers
     public class SeguridadController : BaseController
     {
         private readonly ApplicationDbContext _context;
-
-        public SeguridadController(ApplicationDbContext context)
+        private readonly IPermisoService _permisoService;
+        public SeguridadController(ApplicationDbContext context, IPermisoService permisoService)
         {
             _context = context;
+            _permisoService = permisoService;
         }
 
         public IActionResult Usuarios()
@@ -245,6 +247,13 @@ namespace ERPKardex.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // --- SOLUCIÓN AQUÍ ---
+                // Al limpiar el caché, la próxima vez que el usuario cargue el menú, 
+                // el servicio se verá obligado a consultar la BD y traerá los cambios.
+                _permisoService.LimpiarCacheUsuario(idVinculo);
+                // ---------------------
+
                 return Json(new { status = true });
             }
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
