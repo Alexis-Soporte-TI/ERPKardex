@@ -7,7 +7,7 @@ services:
     environment:
       - TZ=${TZ}
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=db-sqlserver;Database=ERPKardex;User Id=sa;Password=${BD_PASSWORD};TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=db-sqlserver;Database=erp_kardex;User Id=sa;Password=${BD_PASSWORD};TrustServerCertificate=True;
     volumes:
       - ./datos/uploads:/app/wwwroot/uploads
     networks:
