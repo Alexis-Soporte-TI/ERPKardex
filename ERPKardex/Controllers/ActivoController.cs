@@ -1098,6 +1098,7 @@ namespace ERPKardex.Controllers
                                          select new
                                          {
                                              a.Id,
+                                             a.Codigo,
                                              Tipo = t.Nombre,
                                              TipoCodigo = t.Codigo,
                                              Marca = a.Marca ?? "",
@@ -1140,6 +1141,7 @@ namespace ERPKardex.Controllers
 
                     itemsProcesados.Add(new
                     {
+                        item.Codigo,
                         item.Tipo,
                         Equipo = !string.IsNullOrEmpty(item.Subtipo) ? $"{item.Subtipo} {item.Marca}" : $"{item.Tipo} {item.Marca}",
                         item.Modelo,

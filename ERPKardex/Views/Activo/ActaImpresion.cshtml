@@ -51,6 +51,7 @@
                     d.items.forEach((item, i) => {
                         itemsHtml += `<tr>
                             <td style="text-align:center;">${i + 1}</td>
+                            <td>${item.codigo || ''}</td>
                             <td>${item.equipo || ''}</td>
                             <td>${item.modelo || ''}</td>
                             <td>${item.serie || ''}</td>
@@ -127,6 +128,7 @@
                         <thead>
                             <tr>
                                 <th style="width:30px;">N°</th>
+                                <th>CÓDIGO</th>
                                 <th>EQUIPO</th>
                                 <th>MODELO</th>
                                 <th>SERIE</th>
