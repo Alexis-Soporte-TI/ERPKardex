@@ -998,6 +998,7 @@ namespace ERPKardex.Controllers
             try
             {
                 var productosData = (from pro in _context.Productos
+                                     where pro.Estado == true
                                      join disa in _context.DIngresoSalidaAlms on pro.Id equals disa.ProductoId
                                      join isa in _context.IngresoSalidaAlms on disa.IngresoSalidaAlmId equals isa.Id
                                      where isa.AlmacenId == almacenId
