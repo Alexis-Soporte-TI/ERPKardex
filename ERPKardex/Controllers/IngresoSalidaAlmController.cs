@@ -519,7 +519,7 @@ namespace ERPKardex.Controllers
                 return Json(new
                 {
                     data = _context.Productos
-                        .Where(p => p.EmpresaId == EmpresaUsuarioId) // <--- CAMBIO AQUÍ
+                        .Where(p => p.EmpresaId == EmpresaUsuarioId && p.Estado == true) // <--- CAMBIO AQUÍ
                         .Select(p => new { p.Id, p.Codigo, p.DescripcionProducto, p.DescripcionComercial, p.CodUnidadMedida })
                         .ToList(),
                     status = true
