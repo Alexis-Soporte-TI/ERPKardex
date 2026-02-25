@@ -1035,5 +1035,71 @@ namespace ERPKardex.Controllers
         }
 
         #endregion
+        #region 4. IMPRESIÓN (SIN VALORIZACIÓN)
+        [HttpGet]
+        public async Task<IActionResult> Imprimir(int id)
+        {
+            try
+            {
+                // 1. OBTENER CABECERA
+                var dataCabecera = await (from isa in _context.IngresoSalidaAlms
+                                          join e in _context.Empresas on isa.EmpresaId equals e.Id
+                                          join a in _context.Almacenes on isa.AlmacenId equals a.Id
+                                          join s in _context.Sucursales on isa.SucursalId equals s.Id
+                                          join u in _context.Usuarios on isa.UsuarioId equals u.Id
+                                          join est in _context.Estados on isa.EstadoId equals est.Id
+                                          join mot in _context.Motivos on isa.MotivoId equals mot.Id
+                                          // Hacemos LEFT JOIN al proveedor por si es una salida sin entidad asignada
+                                          join prov in _context.Proveedores on isa.ProveedorId equals prov.Id into provJoin
+                                          from prov in provJoin.DefaultIfEmpty()
+                                          where isa.Id == id && isa.EmpresaId == EmpresaUsuarioId
+                                          select new
+                                          {
+                                              Movimiento = isa,
+                                              Empresa = e,
+                                              Almacen = a.Nombre,
+                                              Sucursal = s.Nombre,
+                                              Usuario = u,
+                                              Estado = est.Nombre,
+                                              Motivo = mot.Descripcion,
+                                              Proveedor = prov,
+                                              // Definimos el título dinámicamente según el tipo de movimiento
+                                              TituloImpresion = isa.TipoMovimiento == true ? "INGRESO DE ALMACÉN" : "SALIDA DE ALMACÉN"
+                                          }).FirstOrDefaultAsync();
+
+                if (dataCabecera == null) return NotFound("El movimiento no existe o no tiene permisos.");
+
+                // 2. OBTENER DETALLES (Estrictamente campos logísticos, NADA financiero)
+                var detalles = await (from d in _context.DIngresoSalidaAlms
+                                      where d.IngresoSalidaAlmId == id
+                                      orderby d.Item
+                                      select new
+                                      {
+                                          d.Item,
+                                          d.CodProducto,
+                                          d.DescripcionProducto,
+                                          d.CodUnidadMedida,
+                                          d.Cantidad
+                                      }).ToListAsync();
+
+                // 3. PASAR A LA VISTA (ViewBag)
+                ViewBag.Empresa = dataCabecera.Empresa;
+                ViewBag.Almacen = dataCabecera.Almacen;
+                ViewBag.Sucursal = dataCabecera.Sucursal;
+                ViewBag.Usuario = dataCabecera.Usuario;
+                ViewBag.Estado = dataCabecera.Estado;
+                ViewBag.Motivo = dataCabecera.Motivo;
+                ViewBag.Proveedor = dataCabecera.Proveedor;
+                ViewBag.TituloImpresion = dataCabecera.TituloImpresion;
+                ViewBag.Detalles = detalles;
+
+                return View(dataCabecera.Movimiento);
+            }
+            catch (Exception ex)
+            {
+                return Content($"Error al generar el documento: {ex.Message}");
+            }
+        }
+        #endregion
     }
 }

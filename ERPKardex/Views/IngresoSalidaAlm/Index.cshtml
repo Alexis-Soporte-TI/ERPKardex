@@ -280,6 +280,7 @@
                     orderable: false,
                     render: function (data) {
                         let btns = '';
+                        btns += `<button class="btn btn-sm btn-secondary" onclick="fct_Imprimir(${data.id})" title="Imprimir Formato"><i class="fas fa-print"></i></button>`;
                         btns += `<button class="btn btn-sm btn-info" onclick="verDetalle(${data.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>`
                         // btns += `<button class="btn btn-sm btn-danger" onclick="anular(${data.id})" title="Anular"><i class="fas fa-times"></i></button>`;
                         return btns;
@@ -349,6 +350,10 @@
         }).fail(function() {
             $('#tblBodyDetalleMov').html('<tr><td colspan="7" class="text-danger">Error de conexión.</td></tr>');
         });
+    }
+    
+    function fct_Imprimir(id) {
+        window.open('/IngresoSalidaAlm/Imprimir?id=' + id, '_blank');
     }
 
     function anular(id) {
