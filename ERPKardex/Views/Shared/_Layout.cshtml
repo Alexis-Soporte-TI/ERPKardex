@@ -364,83 +364,94 @@
 
                             bool isLogOpen = new[] { "Logistica", "ReqCompra", "ReqServicio", "PedCompra", "PedServicio", "OrdenCompra", "OrdenServicio" }.Contains(controllerName);
 
-                            <li class="nav-item @(isLogOpen ? "menu-open" : "")">
-                                <a href="#" class="nav-link @(isLogOpen ? "active" : "")">
-                                    <i class="nav-icon fas fa-truck-loading"></i>
-                                    <p>Logística <i class="right fas fa-angle-left"></i></p>
-                                </a>
-                                <ul class="nav nav-treeview">
+                            @if (await _permisos.TienePermiso("SUP_LOG_DASH_VER") || 
+                            await _permisos.TienePermiso("SUP_LOG_DASH_VER") || 
+                            await _permisos.TienePermiso("SUP_LOG_REQ_COMPRA_VER") || 
+                            await _permisos.TienePermiso("SUP_LOG_PED_COMPRA_VER") || 
+                            await _permisos.TienePermiso("SUP_LOG_ORD_COMPRA_VER") ||
+                            await _permisos.TienePermiso("SUP_LOG_REQ_SERV_VER") ||
+                            await _permisos.TienePermiso("SUP_LOG_PED_SERV_VER") ||
+                            await _permisos.TienePermiso("SUP_LOG_ORD_SERV_VER")
+                            )
+                            {
+                                <li class="nav-item @(isLogOpen ? "menu-open" : "")">
+                                    <a href="#" class="nav-link @(isLogOpen ? "active" : "")">
+                                        <i class="nav-icon fas fa-truck-loading"></i>
+                                        <p>Logística <i class="right fas fa-angle-left"></i></p>
+                                    </a>
+                                    <ul class="nav nav-treeview">
 
-                                    @if (await _permisos.TienePermiso("SUP_LOG_DASH_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/Logistica/Dashboard" class="nav-link @(controllerName == "Logistica" ? "active" : "")">
-                                                <i class="fas fa-chart-line nav-icon"></i><p>Dashboard Logístico</p>
-                                            </a>
-                                        </li>
-                                    }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_DASH_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/Logistica/Dashboard" class="nav-link @(controllerName == "Logistica" ? "active" : "")">
+                                                    <i class="fas fa-chart-line nav-icon"></i><p>Dashboard Logístico</p>
+                                                </a>
+                                            </li>
+                                        }
 
-                                    @if (await _permisos.TienePermiso("SUP_LOG_REQ_COMPRA_VER") || await _permisos.TienePermiso("SUP_LOG_ORD_COMPRA_VER"))
-                                    {
-                                        <li class="nav-header pl-3 text-uppercase text-secondary small font-weight-bold mt-2" style="font-size: 0.7rem;">Gestión de Compras</li>
-                                    }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_REQ_COMPRA_VER") || await _permisos.TienePermiso("SUP_LOG_ORD_COMPRA_VER"))
+                                        {
+                                            <li class="nav-header pl-3 text-uppercase text-secondary small font-weight-bold mt-2" style="font-size: 0.7rem;">Gestión de Compras</li>
+                                        }
 
-                                    @if (await _permisos.TienePermiso("SUP_LOG_REQ_COMPRA_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/ReqCompra/Index" class="nav-link @(controllerName == "ReqCompra" ? "active" : "")">
-                                                <i class="fas fa-cart-plus nav-icon"></i><p>Req. de Compra</p>
-                                            </a>
-                                        </li>
-                                    }
-                                    @if (await _permisos.TienePermiso("SUP_LOG_PED_COMPRA_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/PedCompra/Index" class="nav-link @(controllerName == "PedCompra" ? "active" : "")">
-                                                <i class="fas fa-shopping-cart nav-icon"></i><p>Pedido de Compra</p>
-                                            </a>
-                                        </li>
-                                    }
-                                    @if (await _permisos.TienePermiso("SUP_LOG_ORD_COMPRA_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/OrdenCompra/Index" class="nav-link @(controllerName == "OrdenCompra" ? "active" : "")">
-                                                <i class="fas fa-file-invoice-dollar nav-icon"></i><p>Orden de Compra</p>
-                                            </a>
-                                        </li>
-                                    }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_REQ_COMPRA_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/ReqCompra/Index" class="nav-link @(controllerName == "ReqCompra" ? "active" : "")">
+                                                    <i class="fas fa-cart-plus nav-icon"></i><p>Req. de Compra</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_PED_COMPRA_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/PedCompra/Index" class="nav-link @(controllerName == "PedCompra" ? "active" : "")">
+                                                    <i class="fas fa-shopping-cart nav-icon"></i><p>Pedido de Compra</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_ORD_COMPRA_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/OrdenCompra/Index" class="nav-link @(controllerName == "OrdenCompra" ? "active" : "")">
+                                                    <i class="fas fa-file-invoice-dollar nav-icon"></i><p>Orden de Compra</p>
+                                                </a>
+                                            </li>
+                                        }
 
-                                    @if (await _permisos.TienePermiso("SUP_LOG_REQ_SERV_VER") || await _permisos.TienePermiso("SUP_LOG_ORD_SERV_VER"))
-                                    {
-                                        <li class="nav-header pl-3 text-uppercase text-secondary small font-weight-bold mt-2" style="font-size: 0.7rem;">Gestión de Servicios</li>
-                                    }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_REQ_SERV_VER") || await _permisos.TienePermiso("SUP_LOG_ORD_SERV_VER"))
+                                        {
+                                            <li class="nav-header pl-3 text-uppercase text-secondary small font-weight-bold mt-2" style="font-size: 0.7rem;">Gestión de Servicios</li>
+                                        }
 
-                                    @if (await _permisos.TienePermiso("SUP_LOG_REQ_SERV_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/ReqServicio/Index" class="nav-link @(controllerName == "ReqServicio" ? "active" : "")">
-                                                <i class="fas fa-tools nav-icon"></i><p>Req. de Servicio</p>
-                                            </a>
-                                        </li>
-                                    }
-                                    @if (await _permisos.TienePermiso("SUP_LOG_PED_SERV_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/PedServicio/Index" class="nav-link @(controllerName == "PedServicio" ? "active" : "")">
-                                                <i class="fas fa-concierge-bell nav-icon"></i><p>Pedido de Servicio</p>
-                                            </a>
-                                        </li>
-                                    }
-                                    @if (await _permisos.TienePermiso("SUP_LOG_ORD_SERV_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/OrdenServicio/Index" class="nav-link @(controllerName == "OrdenServicio" ? "active" : "")">
-                                                <i class="fas fa-file-signature nav-icon"></i><p>Orden de Servicio</p>
-                                            </a>
-                                        </li>
-                                    }
-                                </ul>
-                            </li>
+                                        @if (await _permisos.TienePermiso("SUP_LOG_REQ_SERV_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/ReqServicio/Index" class="nav-link @(controllerName == "ReqServicio" ? "active" : "")">
+                                                    <i class="fas fa-tools nav-icon"></i><p>Req. de Servicio</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_PED_SERV_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/PedServicio/Index" class="nav-link @(controllerName == "PedServicio" ? "active" : "")">
+                                                    <i class="fas fa-concierge-bell nav-icon"></i><p>Pedido de Servicio</p>
+                                                </a>
+                                            </li>
+                                        }
+                                        @if (await _permisos.TienePermiso("SUP_LOG_ORD_SERV_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/OrdenServicio/Index" class="nav-link @(controllerName == "OrdenServicio" ? "active" : "")">
+                                                    <i class="fas fa-file-signature nav-icon"></i><p>Orden de Servicio</p>
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                            }                            
                         }
 
                         @if (await _permisos.TienePermiso("MOD_PROVISIONES"))
