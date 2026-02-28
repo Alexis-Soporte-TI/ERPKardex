@@ -448,6 +448,20 @@
                                                 </a>
                                             </li>
                                         }
+
+                                        @if (await _permisos.TienePermiso("MOD_VENTAS_ORD_PED_VER"))
+                                        {
+                                            <li class="nav-header pl-3 text-uppercase text-secondary small font-weight-bold mt-2" style="font-size: 0.7rem;">Gestión de Ventas</li>
+                                        }
+
+                                        @if (await _permisos.TienePermiso("MOD_VENTAS_ORD_PED_VER"))
+                                        {
+                                            <li class="nav-item">
+                                                <a href="/OrdenPedido/Index" class="nav-link @(controllerName == "OrdenPedido" ? "active" : "")">
+                                                    <i class="fas fa-shopping-cart nav-icon"></i><p>Orden de Pedido</p>
+                                                </a>
+                                            </li>
+                                        }
                                     </ul>
                                 </li>
                             }                            
@@ -498,6 +512,48 @@
                                     }
                                 </ul>
                             </li>
+
+                            bool isCobOpen = (controllerName == "CuentasPorCobrar");
+                            <li class="nav-item @(isCobOpen ? "menu-open" : "")">
+                                <a href="#" class="nav-link @(isCobOpen ? "active" : "")">
+                                    <i class="nav-icon fas fa-hand-holding-usd"></i>
+                                    <p>Cuentas por Cobrar <i class="right fas fa-angle-left"></i></p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    @if (await _permisos.TienePermiso("COB_ANT_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/CuentasPorCobrar/IndexAnticipos" class="nav-link @(actionName.Contains("Anticipo") ? "active" : "")">
+                                                <i class="fas fa-money-bill-wave nav-icon"></i><p>Anticipos Clientes</p>
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (await _permisos.TienePermiso("COB_REG_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/CuentasPorCobrar/IndexProvisiones" class="nav-link @(actionName.Contains("Provision") ? "active" : "")">
+                                                <i class="fas fa-file-invoice nav-icon"></i><p>Facturación Emitida</p>
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (await _permisos.TienePermiso("COB_NOTA_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/CuentasPorCobrar/IndexNotas" class="nav-link @(actionName.Contains("Nota") ? "active" : "")">
+                                                <i class="fas fa-sticky-note nav-icon"></i><p>Notas Crédito/Débito</p>
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (await _permisos.TienePermiso("COB_APP_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/CuentasPorCobrar/AplicacionDocumentos" class="nav-link @(actionName == "AplicacionDocumentos" ? "active" : "")">
+                                                <i class="fas fa-exchange-alt nav-icon"></i><p>Aplicación Anticipos</p>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
                         }
 
                         @if (await _permisos.TienePermiso("MOD_TESORERIA"))
@@ -510,6 +566,31 @@
                                     <a href="/OrdenPago/Index" class="nav-link @((controllerName == "OrdenPago") ? "active" : "")">
                                         <i class="fas fa-money-check-alt nav-icon"></i>
                                         <p>Gestión de Pagos</p>
+                                    </a>
+                                </li>
+                            }
+                        }
+
+                        @if (await _permisos.TienePermiso("MOD_CONTABILIDAD"))
+                        {
+                            <li class="nav-header font-weight-bold">MÓDULO CONTABILIDAD</li>
+
+                            @if (await _permisos.TienePermiso("CON_ASI_VER"))
+                            {
+                                <li class="nav-item">
+                                    <a href="/Contabilidad/CrearAsiento" class="nav-link @((controllerName == "Contabilidad" && actionName == "CrearAsiento") ? "active" : "")">
+                                        <i class="fas fa-book nav-icon"></i>
+                                        <p>Registro de Asientos</p>
+                                    </a>
+                                </li>
+                            }
+
+                            @if (await _permisos.TienePermiso("CON_REP_VER"))
+                            {
+                                <li class="nav-item">
+                                    <a href="/Contabilidad/ReportesFinancieros" class="nav-link @((controllerName == "Contabilidad" && actionName == "ReportesFinancieros") ? "active" : "")">
+                                        <i class="fas fa-chart-line nav-icon"></i>
+                                        <p>Reportes Financieros</p>
                                     </a>
                                 </li>
                             }

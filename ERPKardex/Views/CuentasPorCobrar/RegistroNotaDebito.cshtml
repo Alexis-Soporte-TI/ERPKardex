@@ -1,0 +1,224 @@
+﻿@{
+    ViewData["Title"] = "Nueva Nota de Débito (Ventas)";
+}
+
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index: 9999; background: rgba(0,0,0,0.5);">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4 border-left-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between">
+                    <h5 class="m-0 font-weight-bold"><i class="fas fa-file-invoice-dollar"></i> Emitir Nota de Débito</h5>
+                    <span class="badge badge-light text-info align-self-center">AUMENTA DEUDA DEL CLIENTE</span>
+                </div>
+
+                <div class="card-body">
+                    <div class="row mb-3 p-3 bg-light rounded border mx-1">
+                        <div class="col-12 mb-2"><label class="font-weight-bold text-dark">1. Factura o Boleta Afectada</label></div>
+                        <div class="col-md-9">
+                            <div class="input-group">
+                                <input type="text" id="txt_DocSeleccionado" class="form-control font-weight-bold text-info bg-white" readonly placeholder="Buscar factura..." onclick="$('#modalDocumentos').modal('show')">
+                                <div class="input-group-append">
+                                    <button class="btn btn-dark" type="button" onclick="$('#modalDocumentos').modal('show')">
+                                        <i class="fas fa-search"></i> BUSCAR
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="hdn_DocRefId">
+                            <input type="hidden" id="hdn_MonedaId">
+                            <input type="hidden" id="hdn_SaldoRef">
+                        </div>
+                        <div class="col-md-3 text-right">
+                            <small class="text-muted d-block">Saldo Actual:</small>
+                            <span class="font-weight-bold h5 text-dark" id="lbl_Saldo">0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="font-weight-bold">Serie y Número (*)</label>
+                            <div class="input-group">
+                                <input type="text" id="txt_Serie" class="form-control text-center text-uppercase" placeholder="FD01" maxlength="4">
+                                <input type="text" id="txt_Numero" class="form-control text-center" placeholder="0000123" maxlength="10">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="font-weight-bold">Fecha de Emisión (*)</label>
+                            <input type="date" id="txt_FechaEmision" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" onchange="buscarTipoCambio()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small font-weight-bold">Tipo de Cambio</label>
+                            <input type="text" id="txtTCRef" class="form-control bg-light font-weight-bold text-center" readonly>
+                            <small class="text-muted d-block mt-1" id="msgTC"></small>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="row mb-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="font-weight-bold text-info h6">Monto Adicional (ND)</label>
+                            <input type="number" id="txt_Monto" class="form-control form-control-lg font-weight-bold text-center border-info text-info" step="0.01" min="0">
+                            <small class="text-muted text-center d-block mt-1">Este monto se sumará a la deuda.</small>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="font-weight-bold">Motivo / Sustento de N.D.</label>
+                            <textarea id="txt_Observacion" class="form-control" rows="2" placeholder="Ej: Cobro por penalidad, flete adicional..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer text-right">
+                    <a href="/CuentasPorCobrar/IndexNotas" class="btn btn-secondary mr-2">Cancelar</a>
+                    <button class="btn btn-info px-5 font-weight-bold text-white" onclick="guardar()">
+                        <i class="fas fa-save"></i> GUARDAR NOTA DE DÉBITO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDocumentos" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title font-weight-bold">Buscar Factura del Cliente</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label>Seleccionar Cliente:</label>
+                        <select id="cbx_FiltroCliente" class="form-control select2-basic w-100"></select>
+                    </div>
+                </div>
+                <table class="table table-hover table-bordered table-sm text-center bg-white" id="tbl_Busqueda">
+                    <thead class="bg-secondary text-white">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Documento</th>
+                            <th>Moneda</th>
+                            <th>Total</th>
+                            <th>Saldo Actual</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td colspan="6" class="py-4 text-muted">Seleccione un cliente para ver facturas.</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function() {
+            $('.select2-basic').select2({ theme: 'bootstrap4', dropdownParent: $('#modalDocumentos') });
+            cargarClientes();
+            buscarTipoCambio();
+
+            $('#cbx_FiltroCliente').on('select2:select', function(e){
+                let cliId = $(this).val();
+                listarDocumentos(cliId);
+            });
+        });
+
+        function buscarTipoCambio() {
+            $.get('/TipoCambio/GetTcPorFecha?fecha=' + $('#txt_FechaEmision').val(), function(res) {
+                if (res.status) {
+                    $('#txtTCRef').val(res.valor.toFixed(3));
+                    $('#msgTC').html('<i class="fas fa-check text-success"></i> T.C. encontrado').removeClass('text-danger').addClass('text-success');
+                } else {
+                    $('#txtTCRef').val('0.000');
+                    $('#msgTC').html('<i class="fas fa-exclamation-triangle"></i> ' + res.message).removeClass('text-muted').addClass('text-danger font-weight-bold');
+                }
+            });
+        }
+
+        function cargarClientes() {
+            $.get('/OrdenPedido/GetCombosRegistro', function(res) {
+                if(res.status) {
+                    let html = '<option value="">-- BUSCAR CLIENTE --</option>';
+                    res.clientes.forEach(x => html += `<option value="${x.id}">${x.tipoDocumentoIdentidad}: ${x.numeroDocumento} - ${x.razonSocial}</option>`);
+                    $('#cbx_FiltroCliente').html(html);
+                }
+            });
+        }
+
+        function listarDocumentos(cliId) {
+            $('#tbl_Busqueda tbody').html('<tr><td colspan="6"><i class="fas fa-spinner fa-spin"></i> Buscando...</td></tr>');
+            // Nota de Débito también se aplica a facturas con saldo > 0 (o incluso = 0, pero usaremos el mismo método por ahora)
+            $.get('/CuentasPorCobrar/BuscarFacturasCliente?clienteId=' + cliId, function(res) {
+                let html = '';
+                if(res.status && res.data.length > 0) {
+                    res.data.forEach(x => {
+                        html += `<tr>
+                            <td>${x.fecha}</td>
+                            <td class="font-weight-bold text-dark">${x.serie}-${x.numero}</td>
+                            <td>${x.monedaId == 1 ? 'PEN' : 'USD'}</td>
+                            <td>${x.total.toFixed(2)}</td>
+                            <td class="font-weight-bold text-info">${x.saldo.toFixed(2)}</td>
+                            <td><button class="btn btn-sm btn-info font-weight-bold" onclick="seleccionar(${x.id}, '${x.serie}-${x.numero}', ${x.saldo}, ${x.monedaId})">APLICAR AQUÍ</button></td>
+                        </tr>`;
+                    });
+                } else html = '<tr><td colspan="6" class="text-muted">No hay facturas vigentes.</td></tr>';
+                $('#tbl_Busqueda tbody').html(html);
+            });
+        }
+
+        function seleccionar(id, doc, saldo, moneda) {
+            $('#hdn_DocRefId').val(id);
+            $('#txt_DocSeleccionado').val(doc);
+            $('#hdn_SaldoRef').val(saldo);
+            $('#lbl_Saldo').text(saldo.toFixed(2));
+            $('#hdn_MonedaId').val(moneda);
+            $('#modalDocumentos').modal('hide');
+        }
+
+        function guardar() {
+            let refId = $('#hdn_DocRefId').val();
+            let monto = parseFloat($('#txt_Monto').val());
+
+            if(!refId) return toastr.warning("Seleccione una factura.");
+            if(!$('#txt_Serie').val() || !$('#txt_Numero').val()) return toastr.warning("Complete serie y número.");
+            if(isNaN(monto) || monto <= 0) return toastr.warning("Monto inválido.");
+
+            let doc = {
+                DocumentoReferenciaId: parseInt(refId),
+                MonedaId: parseInt($('#hdn_MonedaId').val()),
+                PeriodoContableId: PeriodoManager.getActual(),
+                Serie: $('#txt_Serie').val().toUpperCase(),
+                Numero: $('#txt_Numero').val(),
+                FechaEmision: $('#txt_FechaEmision').val(),
+                TipoCambio: parseFloat($('#txtTCRef').val()),
+                Total: monto,
+                Observacion: $('#txt_Observacion').val()
+            };
+
+            Swal.fire({
+                title: "¿Registrar ND?",
+                text: "Se sumará este cargo a la deuda del cliente.",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#36b9cc",
+                confirmButtonText: "Sí, Registrar"
+            }).then((result) => {
+                if(result.isConfirmed) {
+                    $('#efec-cargando').removeClass('d-none');
+                    $.post('/CuentasPorCobrar/GuardarNotaCreditoDebito', { doc: doc, codigoTipoDoc: 'ND' }, function(res) {
+                        $('#efec-cargando').addClass('d-none');
+                        if(res.status) Swal.fire("Éxito", res.message, "success").then(() => location.href = '/CuentasPorCobrar/IndexNotas');
+                        else Swal.fire("Error", res.message, "error");
+                    });
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,362 @@
+﻿@{
+    ViewData["Title"] = "Nuevo Pedido de Venta";
+}
+
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index: 9999; background: rgba(0,0,0,0.5);">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4 border-left-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between">
+                    <h5 class="m-0 font-weight-bold"><i class="fas fa-shopping-cart"></i> Generar Pedido de Venta</h5>
+                    <span class="badge badge-light text-dark align-self-center">Estado: GENERADO</span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="font-weight-bold text-primary">1. Empresa (Vendedora)</label>
+                            <select id="cbx_Empresa" class="form-control select2-basic"></select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="font-weight-bold text-primary">2. Cliente (*)</label>
+                            <select id="cbx_Cliente" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="small text-muted">Moneda</label>
+                            <select id="cbx_Moneda" class="form-control select2-basic"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small text-muted">Condición de Pago</label>
+                            <select id="cbx_CondicionPago" class="form-control select2-basic">
+                                <option value="CONTADO">CONTADO</option>
+                                <option value="CREDITO 15 DIAS">CREDITO 15 DIAS</option>
+                                <option value="CREDITO 30 DIAS">CREDITO 30 DIAS</option>
+                                <option value="CREDITO 45 DIAS">CREDITO 45 DIAS</option>
+                                <option value="CREDITO 60 DIAS">CREDITO 60 DIAS</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small text-muted">Lugar de Entrega</label>
+                            <input type="text" id="txt_LugarEntrega" class="form-control bg-white">
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="small text-muted">Sucursal Despacho</label>
+                            <select id="cbx_Sucursal" class="form-control select2-basic"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small text-muted">Almacén Despacho</label>
+                            <select id="cbx_Almacen" class="form-control select2-basic"></select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <input type="text" id="txt_Observacion" class="form-control" placeholder="Observaciones del pedido...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4 border-left-info">
+                <div class="card-body py-2">
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label class="small font-weight-bold">Agregar Producto</label>
+                            <select id="cbx_ProductoBuscador" class="form-control"></select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small font-weight-bold">Cantidad</label>
+                            <input type="number" id="txt_CantAdd" class="form-control text-center font-weight-bold" step="1" min="1" value="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="small font-weight-bold">Precio Unitario</label>
+                            <input type="number" id="txt_PrecioAdd" class="form-control text-right font-weight-bold text-primary" step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-info btn-block font-weight-bold" onclick="agregarProducto()">
+                                <i class="fas fa-plus"></i> AGREGAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-5">
+                <div class="card-header py-2 bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Detalle de Productos</h6>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="chk_IncluyeIgv" checked onchange="calcularTotales()">
+                        <label class="custom-control-label font-weight-bold text-white" for="chk_IncluyeIgv">Precios Incluyen IGV</label>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped mb-0 text-center" id="tbl_Detalle">
+                            <thead class="thead-dark small">
+                                <tr>
+                                    <th width="5%">Ítem</th>
+                                    <th width="8%">Cant.</th>
+                                    <th width="8%">U.M.</th>
+                                    <th width="45%" class="text-left">Descripción</th>
+                                    <th width="12%">P. Unitario</th>
+                                    <th width="12%">Importe</th>
+                                    <th width="10%">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="filaVacia"><td colspan="7" class="text-muted py-3">Aún no se han agregado productos.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="row justify-content-end">
+                        <div class="col-md-4">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <td class="text-right font-weight-bold text-muted">SUB TOTAL:</td>
+                                    <td width="40%"><input type="text" id="txt_SubTotal" class="form-control text-right font-weight-bold bg-white" readonly value="0.00"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-right font-weight-bold text-muted">IGV (18%):</td>
+                                    <td><input type="text" id="txt_Igv" class="form-control text-right font-weight-bold bg-white" readonly value="0.00"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-right font-weight-bold h5 text-dark">TOTAL:</td>
+                                    <td><input type="text" id="txt_Total" class="form-control border-primary text-primary text-right font-weight-bold h5 mb-0" readonly value="0.00"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-right mb-5">
+                <button class="btn btn-secondary btn-lg mr-2" onclick="window.location.href='/OrdenPedido/Index'"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="btn btn-primary btn-lg font-weight-bold shadow" onclick="guardar()"><i class="fas fa-save"></i> GUARDAR PEDIDO</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let LISTA_PRODUCTOS = [];
+
+        $(document).ready(function () {
+            // Carga de combos con tu misma estructura del backend
+            $.get('/OrdenPedido/GetCombosRegistro', function(res) {
+                if(res.status) {
+                    let htmlEmp = '';
+                    res.empresas.forEach(x => { htmlEmp += `<option value="${x.id}">${x.razonSocial}</option>`; });
+                    $('#cbx_Empresa').html(htmlEmp);
+
+                    let htmlCli = '<option value="">-- Seleccione --</option>';
+                    res.clientes.forEach(x => { htmlCli += `<option value="${x.id}">${x.tipoDocumentoIdentidad} ${x.numeroDocumento} - ${x.razonSocial}</option>`; });
+                    $('#cbx_Cliente').html(htmlCli);
+
+                    let htmlMon = '';
+                    res.monedas.forEach(x => { htmlMon += `<option value="${x.id}">${x.simbolo} - ${x.nombre}</option>`; });
+                    $('#cbx_Moneda').html(htmlMon);
+
+                    let htmlSuc = '';
+                    res.sucursales.forEach(x => { htmlSuc += `<option value="${x.id}">${x.nombre}</option>`; });
+                    $('#cbx_Sucursal').html(htmlSuc);
+
+                    let htmlAlm = '';
+                    res.almacenes.forEach(x => { htmlAlm += `<option value="${x.id}">${x.nombre}</option>`; });
+                    $('#cbx_Almacen').html(htmlAlm);
+
+                    $('.select2-basic').select2({ theme: 'bootstrap4' });
+                }
+            });
+
+            $('#cbx_ProductoBuscador').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Buscar producto por descripción comercial o código...',
+                allowClear: true,
+                ajax: {
+                    url: '/OrdenPedido/GetProductosSelect2',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { q: params.term }; },
+                    processResults: function (data) { return { results: data.items }; }
+                }
+            });
+        });
+
+        function agregarProducto() {
+            let prodData = $('#cbx_ProductoBuscador').select2('data')[0];
+            let cant = parseFloat($('#txt_CantAdd').val());
+            let precio = parseFloat($('#txt_PrecioAdd').val());
+
+            if(!prodData) return toastr.warning("Seleccione un producto");
+            if(isNaN(cant) || cant <= 0) return toastr.warning("Cantidad inválida");
+            if(isNaN(precio) || precio <= 0) return toastr.warning("Precio inválido");
+
+            if(LISTA_PRODUCTOS.some(x => x.ProductoId == prodData.id)) {
+                return toastr.warning("El producto ya está agregado.");
+            }
+
+            LISTA_PRODUCTOS.push({
+                ProductoId: parseInt(prodData.id),
+                Descripcion: prodData.descripcion,
+                UnidadMedida: prodData.unidad,
+                Cantidad: cant,
+                PrecioUnitario: precio,
+                Total: cant * precio
+            });
+
+            $('#cbx_ProductoBuscador').val(null).trigger('change');
+            $('#txt_CantAdd').val('1');
+            $('#txt_PrecioAdd').val('');
+
+            dibujarTabla();
+        }
+
+        function removerItem(id) {
+            LISTA_PRODUCTOS = LISTA_PRODUCTOS.filter(x => x.ProductoId !== id);
+            dibujarTabla();
+        }
+
+        function actualizarMonto(id, tipo, val) {
+            let item = LISTA_PRODUCTOS.find(x => x.ProductoId === id);
+            if(item) {
+                let num = parseFloat(val) || 0;
+                if(tipo === 'cant') item.Cantidad = num;
+                if(tipo === 'precio') item.PrecioUnitario = num;
+                item.Total = item.Cantidad * item.PrecioUnitario;
+                dibujarTabla();
+            }
+        }
+
+        function dibujarTabla() {
+            let html = '';
+            if(LISTA_PRODUCTOS.length === 0) {
+                html = '<tr id="filaVacia"><td colspan="7" class="text-muted py-3">Aún no se han agregado productos.</td></tr>';
+            } else {
+                LISTA_PRODUCTOS.forEach((x, i) => {
+                    html += `<tr>
+                        <td class="align-middle font-weight-bold">${(i+1).toString().padStart(3,'0')}</td>
+                        <td><input type="number" class="form-control form-control-sm text-center font-weight-bold" value="${x.Cantidad}" onchange="actualizarMonto(${x.ProductoId}, 'cant', this.value)"></td>
+                        <td class="align-middle">${x.UnidadMedida}</td>
+                        <td class="text-left align-middle font-weight-bold text-dark small">${x.Descripcion}</td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm text-right" value="${x.PrecioUnitario.toFixed(2)}" onchange="actualizarMonto(${x.ProductoId}, 'precio', this.value)"></td>
+                        <td class="align-middle font-weight-bold">${x.Total.toFixed(2)}</td>
+                        <td class="align-middle"><button class="btn btn-sm btn-danger" onclick="removerItem(${x.ProductoId})"><i class="fas fa-trash"></i></button></td>
+                    </tr>`;
+                });
+            }
+            $('#tbl_Detalle tbody').html(html);
+            calcularTotales();
+        }
+
+        function calcularTotales() {
+            let sumatoriaBase = 0;
+            LISTA_PRODUCTOS.forEach(x => sumatoriaBase += x.Total);
+
+            let incluyeIgv = $('#chk_IncluyeIgv').is(':checked');
+            let subtotal = 0, igv = 0, total = 0;
+
+            if(sumatoriaBase > 0) {
+                if(incluyeIgv) {
+                    subtotal = sumatoriaBase / 1.18;
+                    igv = sumatoriaBase - subtotal;
+                    total = sumatoriaBase;
+                } else {
+                    subtotal = sumatoriaBase;
+                    igv = subtotal * 0.18;
+                    total = subtotal + igv;
+                }
+            }
+
+            $('#txt_SubTotal').val(subtotal.toFixed(2));
+            $('#txt_Igv').val(igv.toFixed(2));
+            $('#txt_Total').val(total.toFixed(2));
+        }
+
+        function guardar() {
+            if (LISTA_PRODUCTOS.length === 0) return toastr.warning("Debe agregar al menos un producto al pedido.");
+            if (!$('#cbx_Cliente').val()) return toastr.warning("Debe seleccionar un Cliente.");
+
+            // Usamos la misma estructura de cabecera de tu OrdenCompra original
+            let cabecera = {
+                EmpresaId: $('#cbx_Empresa').val(),
+                ClienteId: $('#cbx_Cliente').val(),
+                MonedaId: $('#cbx_Moneda').val(),
+                CondicionPago: $('#cbx_CondicionPago').val(),
+                SucursalId: $('#cbx_Sucursal').val(),
+                AlmacenId: $('#cbx_Almacen').val(),
+                IncluyeIgv: $('#chk_IncluyeIgv').is(':checked'),
+                TotalAfecto: parseFloat($('#txt_SubTotal').val()),
+                TotalInafecto: 0,
+                IgvTotal: parseFloat($('#txt_Igv').val()),
+                Total: parseFloat($('#txt_Total').val()),
+                Observacion: $('#txt_Observacion').val(),
+                LugarEntrega: $('#txt_LugarEntrega').val()
+            };
+
+            let incluyeIgv = $('#chk_IncluyeIgv').is(':checked');
+            let detalles = LISTA_PRODUCTOS.map(x => ({
+                ProductoId: x.ProductoId,
+                Descripcion: x.Descripcion,
+                UnidadMedida: x.UnidadMedida,
+                Cantidad: x.Cantidad,
+                PrecioUnitario: incluyeIgv ? (x.PrecioUnitario / 1.18) : x.PrecioUnitario,
+                Total: x.Total
+            }));
+
+            Swal.fire({
+                title: "Confirmar Registro",
+                text: "¿Está seguro de registrar este pedido de venta?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                cancelButtonText: "Cancelar",
+                confirmButtonText: "Sí, Registrar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#efec-cargando').removeClass('d-none');
+                    $.ajax({
+                        url: '/OrdenPedido/GuardarPedido',
+                        type: 'POST',
+                        data: {
+                            orden: cabecera,
+                            detallesJson: JSON.stringify(detalles)
+                        },
+                        success: function(res) {
+                            $('#efec-cargando').addClass('d-none');
+                            if(res.status) {
+                                Swal.fire("Éxito", res.message, "success").then(() => {
+                                    window.location.href = '/OrdenPedido/Index';
+                                });
+                            } else {
+                                Swal.fire("Error", res.message, "error");
+                            }
+                        },
+                        error: function() {
+                            $('#efec-cargando').addClass('d-none');
+                            toastr.error("Error de conexión");
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

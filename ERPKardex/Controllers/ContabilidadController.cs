@@ -150,6 +150,119 @@ namespace ERPKardex.Controllers
         }
 
         // =========================================================================================
+        // AUTOMATIZACIÓN DE VENTAS (CUENTAS POR COBRAR)
+        // =========================================================================================
+
+        [HttpGet]
+        public async Task<JsonResult> GetVentasPendientes()
+        {
+            // Traemos facturas de ventas que NO tienen un asiento vinculado
+            var contabilizadosIds = await _context.AsientosContables
+                .Where(a => a.TablaReferencia == "documento_cobrar" && a.Estado == "REGISTRADO")
+                .Select(a => a.IdReferencia)
+                .ToListAsync();
+
+            var pendientes = await _context.DocumentosCobrar
+                .Where(d => d.EmpresaId == EmpresaUsuarioId && !contabilizadosIds.Contains(d.Id))
+                .Select(d => new
+                {
+                    id = d.Id,
+                    cliente = _context.Clientes.FirstOrDefault(c => c.Id == d.ClienteId).RazonSocial,
+                    documento = d.Serie + "-" + d.Numero,
+                    fecha = d.FechaEmision.ToString("dd/MM/yyyy"),
+                    total = d.Total
+                }).ToListAsync();
+
+            return Json(new { status = true, data = pendientes });
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GenerarBorradorDocumentoCobrar(int documentoCobrarId)
+        {
+            try
+            {
+                // Buscamos la factura de venta operativa
+                var documento = await _context.DocumentosCobrar
+                    .FirstOrDefaultAsync(d => d.Id == documentoCobrarId && d.EmpresaId == EmpresaUsuarioId);
+
+                if (documento == null)
+                    return Json(new { status = false, message = "Factura de venta no encontrada." });
+
+                // Obtenemos el origen "VENTAS" (Ej: '01' o '14', asumiendo que tienes uno configurado)
+                // Si no tienes uno específico, puedes ajustarlo. Usaremos "14" como ejemplo estándar contable de ventas.
+                var origenVentas = await _context.OrigenesAsiento.FirstOrDefaultAsync(o => o.Codigo == "14" || o.Descripcion.Contains("VENTAS"));
+
+                // Armamos el ViewModel en memoria
+                var borrador = new AsientoViewModel
+                {
+                    EmpresaId = EmpresaUsuarioId,
+                    PeriodoId = 0,
+                    OrigenAsientoId = origenVentas?.Id ?? 0,
+                    FechaContable = documento.FechaEmision,
+                    MonedaId = documento.MonedaId ?? 1,
+                    Glosa = $"Provisión Venta {documento.Serie}-{documento.Numero}",
+                    IdReferencia = documento.Id, // <-- Vital para que el front sepa
+                    Detalles = new List<DetalleAsientoViewModel>()
+                };
+
+                // LÍNEA 1: CUENTA POR COBRAR CLIENTE (DEBE) -> Total de la factura
+                // Buscar cuenta 1212 o similar
+                var cuentaCobrar = await _context.CuentasContables.FirstOrDefaultAsync(c => c.Codigo.StartsWith("1212") && c.EmpresaId == EmpresaUsuarioId);
+
+                borrador.Detalles.Add(new DetalleAsientoViewModel
+                {
+                    CuentaContableId = cuentaCobrar?.Id ?? 0,
+                    ClienteId = documento.ClienteId, // Ahora es Cliente, no Proveedor
+                    SerieDocumento = documento.Serie,
+                    NumeroDocumento = documento.Numero,
+                    FechaEmision = documento.FechaEmision,
+                    DebeSoles = documento.Total ?? 0,
+                    HaberSoles = 0,
+                    GlosaDetalle = "Por cobrar al cliente"
+                });
+
+                // LÍNEA 2: IGV (HABER) -> Si tiene IGV
+                if ((documento.MontoIgv ?? 0) > 0)
+                {
+                    var cuentaIgv = await _context.CuentasContables.FirstOrDefaultAsync(c => c.Codigo == "40111" && c.EmpresaId == EmpresaUsuarioId);
+
+                    borrador.Detalles.Add(new DetalleAsientoViewModel
+                    {
+                        CuentaContableId = cuentaIgv?.Id ?? 0,
+                        ClienteId = documento.ClienteId,
+                        SerieDocumento = documento.Serie,
+                        NumeroDocumento = documento.Numero,
+                        FechaEmision = documento.FechaEmision,
+                        DebeSoles = 0,
+                        HaberSoles = documento.MontoIgv ?? 0,
+                        GlosaDetalle = "IGV de ventas"
+                    });
+                }
+
+                // LÍNEA 3: INGRESO POR VENTA (HABER) -> Base imponible
+                var cuentaIngreso = await _context.CuentasContables.FirstOrDefaultAsync(c => c.Codigo.StartsWith("70") && c.EmpresaId == EmpresaUsuarioId);
+
+                borrador.Detalles.Add(new DetalleAsientoViewModel
+                {
+                    CuentaContableId = cuentaIngreso?.Id ?? 0,
+                    ClienteId = documento.ClienteId,
+                    SerieDocumento = documento.Serie,
+                    NumeroDocumento = documento.Numero,
+                    FechaEmision = documento.FechaEmision,
+                    DebeSoles = 0,
+                    HaberSoles = documento.SubTotal ?? 0,
+                    GlosaDetalle = "Ingreso de la venta"
+                });
+
+                return Json(new { status = true, data = borrador });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = "Error al generar borrador de venta: " + ex.Message });
+            }
+        }
+
+        // =========================================================================================
         // 4. POST: Guardar el asiento final (Ya sea manual o venido de un borrador editado)
         // =========================================================================================
         [HttpPost]

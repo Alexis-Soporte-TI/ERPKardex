@@ -1,0 +1,101 @@
+﻿@{
+    ViewData["Title"] = "Órdenes de Pedido";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Bandeja de Órdenes de Pedido (Ventas)</h5>
+            <a href="/OrdenPedido/Registrar" class="btn btn-sm btn-success font-weight-bold">
+                <i class="fas fa-plus"></i> Nuevo Pedido
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered" id="tbl_Ordenes" width="100%">
+                    <thead class="thead-light text-center">
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha</th>
+                            <th>Empresa</th>
+                            <th>Cliente</th>
+                            <th>Moneda</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            cargarOrdenes();
+        });
+
+        function cargarOrdenes() {
+            $('#tbl_Ordenes tbody').html('<tr><td colspan="8" class="text-center">Cargando...</td></tr>');
+            // Nota: El backend debe devolver la data sin filtros de fecha, tal cual lo hace tu OrdenCompra
+            $.get('/OrdenPedido/GetOrdenesData', function(res) {
+                let html = '';
+                if(res.status && res.data.length > 0) {
+                    res.data.forEach(x => {
+                        let btnAnular = (x.estado === 'Generado' || x.estado === 'Aprobado')
+                            ? `<button class="btn btn-sm btn-danger mr-1" onclick="anular(${x.id})" title="Anular"><i class="fas fa-ban"></i></button>`
+                            : '';
+
+                        html += `<tr>
+                            <td class="text-center font-weight-bold">${x.numero}</td>
+                            <td class="text-center">${x.fecha}</td>
+                            <td>${x.empresa}</td>
+                            <td>${x.cliente}</td>
+                            <td class="text-center">${x.moneda}</td>
+                            <td class="text-right">${x.total.toFixed(2)}</td>
+                            <td class="text-center"><span class="badge ${x.colorEstado}">${x.estado}</span></td>
+                            <td class="text-center">
+                                ${btnAnular}
+                                <button class="btn btn-sm btn-secondary" onclick="fct_Imprimir(${x.id})" title="Imprimir"><i class="fas fa-print"></i></button>
+                            </td>
+                        </tr>`;
+                    });
+                } else {
+                    html = '<tr><td colspan="8" class="text-center text-muted">No hay pedidos registrados.</td></tr>';
+                }
+                $('#tbl_Ordenes tbody').html(html);
+            });
+        }
+
+        function anular(id) {
+            Swal.fire({
+                title: "¿Anular Pedido?",
+                text: "El pedido pasará a estado Anulado.",
+                icon: "error",
+                showCancelButton: true,
+                confirmButtonText: "Sí, Anular",
+                confirmButtonColor: "#dc3545",
+                reverseButtons: true,
+                cancelButtonText: "Cancelar",
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/OrdenPedido/CambiarEstadoPedido', { id: id, accion: 'Anular' }, function(res) {
+                        if(res.status) {
+                            Swal.fire("Anulado", res.message, "success");
+                            cargarOrdenes();
+                        } else {
+                            Swal.fire("Error", res.message, "error");
+                        }
+                    });
+                }
+            });
+        }
+
+        function fct_Imprimir(id) {
+            window.open('/OrdenPedido/Imprimir?id=' + id, '_blank');
+        }
+    </script>
+}

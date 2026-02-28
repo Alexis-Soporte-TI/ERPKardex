@@ -1,0 +1,101 @@
+﻿@{
+    ViewData["Title"] = "Gestión de Anticipos de Clientes";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-3 mb-3"><label>Desde</label><input type="date" id="txtFechaIni" class="form-control" value="@DateTime.Now.AddDays(-60).ToString("yyyy-MM-dd")"></div>
+                <div class="col-md-3 mb-3"><label>Hasta</label><input type="date" id="txtFechaFin" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")"></div>
+                <div class="col-md-4 mb-3"><label>Cliente</label><select id="cbx_ClienteFiltro" class="form-control w-100"></select></div>
+                <div class="col-md-2 mb-3"><button class="btn btn-warning btn-block text-dark font-weight-bold" onclick="listarAnticipos()"><i class="fas fa-search"></i> Buscar</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-warning">Listado de Anticipos Recibidos</h6>
+            <a href="/CuentasPorCobrar/RegistroAnticipo" class="btn btn-warning btn-sm font-weight-bold text-dark">
+                <i class="fas fa-hand-holding-usd"></i> Nuevo Anticipo
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tbl_Anticipos">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Documento</th>
+                            <th>Cliente</th>
+                            <th>Pedido Ref.</th>
+                            <th class="text-right">Total Pedido</th>
+                            <th class="text-right">Monto del Anticipo</th>
+                            <th class="text-right text-success">Monto Aplicado</th>
+                            <th class="text-right text-danger">Saldo Disponible</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Carga de combo de clientes (Asumiendo ruta de OrdenPedido u otra general)
+            $.ajax({
+                url: '/OrdenPedido/GetCombosRegistro', // Ajusta si tienes una ruta general en CuentasPorCobrar
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    const clientesTransformados = data.clientes.map(x => ({
+                        id: x.id,
+                        text: x.tipoDocumentoIdentidad + ': ' + x.numeroDocumento + ' - ' + x.razonSocial
+                    }));
+
+                    $('#cbx_ClienteFiltro').select2({
+                        theme: 'bootstrap4',
+                        placeholder: "Todos los clientes",
+                        allowClear: true,
+                        data: clientesTransformados
+                    });
+
+                    $('#cbx_ClienteFiltro').val(null).trigger('change');
+                }
+            });
+            listarAnticipos();
+        });
+
+        function listarAnticipos() {
+            let ini = $('#txtFechaIni').val(); let fin = $('#txtFechaFin').val(); let cli = $('#cbx_ClienteFiltro').val();
+            $('#tbl_Anticipos tbody').html('<tr><td colspan="9" class="text-center">Cargando...</td></tr>');
+
+            $.get(`/CuentasPorCobrar/GetAnticiposData?fechaInicio=${ini}&fechaFin=${fin}&clienteId=${cli}`, function(res) {
+                let html = '';
+                if(res.status && res.data.length > 0) {
+                    res.data.forEach(x => {
+                        let estadoTexto = x.estado;
+
+                        html += `<tr>
+                            <td>${x.fecha}</td>
+                            <td class="font-weight-bold">${x.documento}</td>
+                            <td>${x.cliente}</td>
+                            <td><small>${x.referencia}</small></td>
+                            <td class="text-right font-weight-bold">${x.moneda} ${x.totalOrden.toFixed(2)}</td>
+                            <td class="text-right font-weight-bold">${x.moneda} ${x.total.toFixed(2)}</td>
+                            <td class="text-right font-weight-bold text-success">${x.moneda} ${x.montoUsado.toFixed(2)}</td>
+                            <td class="text-right font-weight-bold text-danger">${x.moneda} ${x.saldo.toFixed(2)}</td>
+                            <td class="text-center"><span class="badge ${x.colorEstado}">${estadoTexto}</span></td>
+                        </tr>`;
+                    });
+                } else { html = '<tr><td colspan="9" class="text-center">No hay anticipos.</td></tr>'; }
+                $('#tbl_Anticipos tbody').html(html);
+            });
+        }
+    </script>
+}

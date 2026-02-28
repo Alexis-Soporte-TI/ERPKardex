@@ -13,34 +13,33 @@
         <div class="col-lg-12">
 
             <div class="card shadow mb-4 border-left-primary">
-                <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="m-0 font-weight-bold"><i class="fas fa-book"></i> Registro de Asiento Contable</h5>
-                    <button class="btn btn-sm btn-warning font-weight-bold shadow-sm" onclick="abrirModalProvisiones()">
-                        <i class="fas fa-magic"></i> Jalar Provisión (Doc. por Pagar)
-                    </button>
+                    <div>
+                        <button class="btn btn-sm btn-info font-weight-bold shadow-sm mr-2" onclick="abrirModalVentas()">
+                            <i class="fas fa-hand-holding-usd"></i> Jalar Venta (CxC)
+                        </button>
+                        <button class="btn btn-sm btn-warning font-weight-bold shadow-sm" onclick="abrirModalProvisiones()">
+                            <i class="fas fa-shopping-cart"></i> Jalar Compra (CxP)
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card-body">
                     <input type="hidden" id="hdn_EmpresaId" value="@ViewBag.EmpresaId" />
 
                     <div class="row mb-3">
-                        <div class="col-md-3">
-                            <label class="font-weight-bold text-dark">Periodo Contable (*)</label>
-                            <select id="cbx_Periodo" class="form-control select2-basic">
-                                <option value="">-- Seleccione --</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="font-weight-bold text-dark">Origen (*)</label>
                             <select id="cbx_Origen" class="form-control select2-basic">
                                 <option value="">-- Seleccione --</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="font-weight-bold text-dark">Fecha Contable (*)</label>
                             <input type="date" id="txt_FechaContable" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="font-weight-bold text-dark">Moneda (*)</label>
                             <select id="cbx_Moneda" class="form-control select2-basic"></select>
                         </div>
@@ -49,104 +48,70 @@
                     <div class="row mb-2">
                         <div class="col-md-12">
                             <label class="font-weight-bold text-dark">Glosa / Concepto General (*)</label>
-                            <input type="text" id="txt_Glosa" class="form-control" placeholder="Describa el motivo del asiento (Ej: Provisión de planilla, Ajuste de caja...)">
+                            <input type="text" id="txt_Glosa" class="form-control" placeholder="Ej: Provisión de planilla de sueldos mes actual...">
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="card shadow mb-5">
-                <div class="card-header py-2 bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold">Detalle del Asiento (Partida Doble)</h6>
-                    <button type="button" class="btn btn-sm btn-warning font-weight-bold" onclick="agregarLinea()">
-                        <i class="fas fa-plus"></i> AGREGAR LÍNEA
-                    </button>
-                </div>
-                <div class="card-body p-0">
+                    <hr />
+
+                    <div class="d-flex justify-content-between mb-2 mt-4">
+                        <h6 class="font-weight-bold">Detalle del Asiento (Debe = Haber)</h6>
+                        <button class="btn btn-sm btn-dark font-weight-bold" onclick="agregarLinea()"><i class="fas fa-plus"></i> Nueva Línea</button>
+                    </div>
+
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped mb-0 text-center" id="tbl_Detalle">
-                            <thead class="thead-dark small">
+                        <table class="table table-bordered table-sm text-center mb-0" id="tbl_Asiento">
+                            <thead class="thead-light">
                                 <tr>
-                                    <th width="3%">#</th>
-                                    <th width="40%">Cuenta Contable</th>
-                                    <th width="17%" class="bg-primary text-white">DEBE (S/)</th>
-                                    <th width="17%" class="bg-success text-white">HABER (S/)</th>
-                                    <th width="18%">Glosa Específica</th>
-                                    <th width="5%"></th>
+                                    <th width="35%" class="text-left">Cuenta Contable</th>
+                                    <th width="30%">Glosa Detalle</th>
+                                    <th width="15%">Debe</th>
+                                    <th width="15%">Haber</th>
+                                    <th width="5%">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="tbl_Body">
                             </tbody>
-                            <tfoot class="bg-light font-weight-bold">
+                            <tfoot class="bg-light">
                                 <tr>
-                                    <td colspan="2" class="text-right h5 mb-0 align-middle">TOTALES:</td>
-                                    <td>
-                                        <input type="text" id="lbl_SumaDebe" class="form-control text-right font-weight-bold text-primary bg-white border-0" readonly value="0.00" style="font-size: 1.1em;">
-                                    </td>
-                                    <td>
-                                        <input type="text" id="lbl_SumaHaber" class="form-control text-right font-weight-bold text-success bg-white border-0" readonly value="0.00" style="font-size: 1.1em;">
-                                    </td>
-                                    <td colspan="2" class="align-middle">
-                                        <span id="lbl_Cuadre" class="badge badge-danger p-2 w-100" style="font-size: 1em;">DESCUADRADO</span>
-                                    </td>
+                                    <th colspan="2" class="text-right align-middle">TOTALES:</th>
+                                    <th><input type="text" id="txt_TotalDebe" class="form-control font-weight-bold text-right" readonly value="0.00"></th>
+                                    <th><input type="text" id="txt_TotalHaber" class="form-control font-weight-bold text-right" readonly value="0.00"></th>
+                                    <th id="lbl_Cuadre" class="align-middle text-success font-weight-bold"><i class="fas fa-check-circle"></i> OK</th>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                </div>
-            </div>
 
-            <div class="card shadow mb-5 border-left-info">
-                <div class="card-header py-2 bg-info text-white d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold"><i class="fas fa-history"></i> Últimos Asientos del Periodo Seleccionado</h6>
-                    <button class="btn btn-sm btn-light text-info" onclick="cargarHistorial()" title="Actualizar">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                        <table class="table table-sm table-hover table-striped mb-0 text-center" id="tbl_Historial">
-                            <thead class="bg-light sticky-top">
-                                <tr>
-                                    <th>N° Asiento</th>
-                                    <th>Fecha</th>
-                                    <th>Origen</th>
-                                    <th class="text-left">Glosa</th>
-                                    <th class="text-right">Total Debe</th>
-                                    <th class="text-right">Total Haber</th>
-                                    <th>Estado</th>
-                                    <th>Ver</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbl_BodyHistorial">
-                                <tr><td colspan="8" class="text-muted py-3">Seleccione un Periodo Contable para ver el historial...</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="mt-4 text-right">
+                        <button class="btn btn-secondary mr-2" onclick="location.reload()"><i class="fas fa-times"></i> Cancelar</button>
+                        <button class="btn btn-primary font-weight-bold shadow-sm" onclick="guardarAsiento()"><i class="fas fa-save"></i> GUARDAR ASIENTO</button>
                     </div>
-                </div>
-            </div>
 
-            <div class="fixed-bottom bg-white border-top p-3 text-right shadow" style="opacity: 0.95;">
-                <button type="button" class="btn btn-info mr-2" onclick="location.reload()">Limpiar Formulario</button>
-                <button type="button" class="btn btn-success px-5 font-weight-bold" id="btnGuardar" onclick="confirmarGuardado()" disabled>
-                    <i class="fas fa-save"></i> GUARDAR ASIENTO
-                </button>
+                </div>
             </div>
 
         </div>
     </div>
 </div>
-<div class="modal fade" id="modalProvisiones" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+
+<div class="modal fade" id="modalProvisiones" tabindex="-1">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title font-weight-bold">Facturas Pendientes de Contabilizar</h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            <div class="modal-header bg-warning text-dark py-2">
+                <h6 class="modal-title font-weight-bold">Facturas de Compra sin Contabilizar</h6>
+                <button type="button" class="close text-dark" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body p-0">
-                <table class="table table-hover mb-0 text-center">
-                    <thead class="bg-light">
-                        <tr><th>Acción</th><th>Proveedor</th><th>Documento</th><th>Fecha</th><th>Total</th></tr>
+            <div class="modal-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover table-striped mb-0 text-center">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Acción</th>
+                            <th class="text-left">Proveedor</th>
+                            <th>Documento</th>
+                            <th>Fecha</th>
+                            <th>Total</th>
+                        </tr>
                     </thead>
                     <tbody id="tbodyProvisiones"></tbody>
                 </table>
@@ -155,19 +120,25 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalVerAsiento" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content border-info">
+<div class="modal fade" id="modalVentas" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
             <div class="modal-header bg-info text-white py-2">
-                <h6 class="modal-title font-weight-bold" id="lblVerAsientoTitulo">Detalle de Asiento</h6>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                <h6 class="modal-title font-weight-bold">Facturas de Venta sin Contabilizar</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body p-0">
-                <table class="table table-sm table-striped text-center mb-0">
-                    <thead class="bg-light text-dark">
-                        <tr><th>Cuenta</th><th class="text-primary">Debe</th><th class="text-success">Haber</th><th>Glosa</th></tr>
+            <div class="modal-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover table-striped mb-0 text-center">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Acción</th>
+                            <th class="text-left">Cliente</th>
+                            <th>Documento</th>
+                            <th>Fecha</th>
+                            <th>Total</th>
+                        </tr>
                     </thead>
-                    <tbody id="tbodyVerAsiento"></tbody>
+                    <tbody id="tbodyVentas"></tbody>
                 </table>
             </div>
         </div>
@@ -176,123 +147,57 @@
 
 @section Scripts {
     <script>
-        let LISTA_CUENTAS = [];
         let CONTADOR_FILAS = 0;
+        let CUENTAS_CACHE = []; // Para no pedir las cuentas en cada fila
 
         $(document).ready(function() {
-            // Inicializar Select2 como en tu plantilla
-            $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' });
+            $('.select2-basic').select2({ theme: 'bootstrap4' });
 
-            cargarCatalogos();
+            // Cargar datos de cabecera
+            $.get('/Contabilidad/GetDatosCabecera', function(res) {
+                    let htmlO = '<option value="">-- Seleccione --</option>';
+                    res.origenes.forEach(x => htmlO += `<option value="${x.id}">${x.texto}</option>`);
+                    $('#cbx_Origen').html(htmlO);
 
-            $('#cbx_Periodo').on('change', function() {
-                cargarHistorial();
+                    let htmlM = '';
+                    res.monedas.forEach(x => htmlM += `<option value="${x.id}">${x.texto}</option>`);
+                    $('#cbx_Moneda').html(htmlM);
+            });
+
+            // Cargar cuentas en caché para usarlas en las filas
+            $.get('/Contabilidad/GetCuentas', function(res) {
+                CUENTAS_CACHE = res;
+                agregarLinea();
+                agregarLinea();
             });
         });
 
-        // Función que consume el endpoint y dibuja la tabla
-        function cargarHistorial() {
-            let periodoId = $('#cbx_Periodo').val();
-            if(!periodoId) {
-                $('#tbl_BodyHistorial').html('<tr><td colspan="8" class="text-muted py-3">Seleccione un Periodo Contable para ver el historial...</td></tr>');
-                return;
-            }
-            
-            $.get('/Contabilidad/GetAsientosRecientes?periodoId=' + periodoId, function(res) {
-                if(res.status) {
-                    let html = '';
-                    if(res.data.length > 0) {
-                        res.data.forEach(x => {
-                            let badgeClass = x.estado === 'REGISTRADO' ? 'badge-success' : 'badge-danger';
-                            html += `
-                                    <tr>
-                                        <td class="font-weight-bold text-primary">${x.numero}</td>
-                                        <td>${x.fecha}</td>
-                                        <td><span class="badge badge-secondary">${x.origen}</span></td>
-                                        <td class="text-left small">${x.glosa}</td>
-                                        <td class="text-right font-weight-bold">${x.debe.toFixed(2)}</td>
-                                        <td class="text-right font-weight-bold">${x.haber.toFixed(2)}</td>
-                                        <td><span class="badge ${badgeClass}">${x.estado}</span></td>
-                                        <td>
-                                            <button class="btn btn-xs btn-info" onclick="verAsiento(${x.id})" title="Ver Detalle">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                        });
-                    } else {
-                        html = '<tr><td colspan="8" class="text-muted py-3">No hay asientos registrados en este periodo.</td></tr>';
-                    }
-                    $('#tbl_BodyHistorial').html(html);
-                }
-            });
-        }
-
-        function cargarCatalogos() {
-            $('#efec-cargando').removeClass('d-none');
-
-            // 1. Cargar Periodos, Orígenes y Monedas
-            $.get('/Contabilidad/GetDatosCabecera', function(res) {
-                res.periodos.forEach(x => $('#cbx_Periodo').append(`<option value="${x.id}">${x.texto}</option>`));
-                res.origenes.forEach(x => $('#cbx_Origen').append(`<option value="${x.id}">${x.texto}</option>`));
-
-                let htmlMonedas = '';
-                res.monedas.forEach(x => htmlMonedas += `<option value="${x.id}">${x.texto}</option>`);
-                $('#cbx_Moneda').html(htmlMonedas);
-            });
-
-            // 2. Cargar Cuentas Contables en memoria
-            $.get('/Contabilidad/GetCuentas', function(res) {
-                LISTA_CUENTAS = res;
-                $('#efec-cargando').addClass('d-none');
-
-                // Agregamos 2 líneas por defecto al abrir la pantalla
-                agregarLinea();
-                agregarLinea();
-            });
-        }
-
         function agregarLinea() {
             CONTADOR_FILAS++;
-            let idx = CONTADOR_FILAS;
+            let idFila = CONTADOR_FILAS;
 
-            let htmlCuentas = '<option value="">-- Buscar Cuenta --</option>';
-            LISTA_CUENTAS.forEach(c => {
-                htmlCuentas += `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`;
-            });
+            let opts = '<option value="0">-- Buscar Cuenta --</option>';
+            CUENTAS_CACHE.forEach(c => opts += `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`);
 
             let tr = `
-                <tr id="tr_linea_${idx}">
-                    <td class="align-middle font-weight-bold">${idx}</td>
-                    <td class="text-left align-middle">
-                        <select class="form-control select2-cuentas cbx-cuenta" id="cuenta_${idx}">
-                            ${htmlCuentas}
-                        </select>
-                    </td>
-                    <td>
-                        <input type="number" class="form-control form-control-sm text-right input-debe font-weight-bold text-primary" value="0.00" min="0" step="0.01" onchange="calcularCuadre()" onkeyup="calcularCuadre()">
-                    </td>
-                    <td>
-                        <input type="number" class="form-control form-control-sm text-right input-haber font-weight-bold text-success" value="0.00" min="0" step="0.01" onchange="calcularCuadre()" onkeyup="calcularCuadre()">
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm input-glosa-detalle" placeholder="Opcional">
-                    </td>
-                    <td class="align-middle">
-                        <button class="btn btn-xs btn-danger" onclick="eliminarLinea(${idx})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
+            <tr id="tr_linea_${idFila}">
+                <td class="text-left">
+                    <select class="form-control select2-cuenta" id="cuenta_${idFila}">
+                        ${opts}
+                    </select>
+                </td>
+                <td><input type="text" class="form-control input-glosa-detalle" placeholder="Opcional"></td>
+                <td><input type="number" class="form-control text-right input-debe" value="0.00" step="0.01" min="0" onchange="calcularCuadre()"></td>
+                <td><input type="number" class="form-control text-right input-haber" value="0.00" step="0.01" min="0" onchange="calcularCuadre()"></td>
+                <td><button class="btn btn-sm btn-outline-danger" onclick="removerLinea(${idFila})"><i class="fas fa-trash"></i></button></td>
+            </tr>`;
 
             $('#tbl_Body').append(tr);
-
-            // Inicializamos el select2 dinámico a la fila recién creada
-            $(`#cuenta_${idx}`).select2({ theme: 'bootstrap4', width: '100%' });
+            $(`#cuenta_${idFila}`).select2({ theme: 'bootstrap4' });
         }
 
-        function eliminarLinea(idx) {
-            $(`#tr_linea_${idx}`).remove();
+        function removerLinea(idFila) {
+            $(`#tr_linea_${idFila}`).remove();
             calcularCuadre();
         }
 
@@ -300,146 +205,21 @@
             let totalDebe = 0;
             let totalHaber = 0;
 
-            $(".input-debe").each(function () {
-                totalDebe += parseFloat($(this).val()) || 0;
-            });
+            $('.input-debe').each(function() { totalDebe += (parseFloat($(this).val()) || 0); });
+            $('.input-haber').each(function() { totalHaber += (parseFloat($(this).val()) || 0); });
 
-            $(".input-haber").each(function () {
-                totalHaber += parseFloat($(this).val()) || 0;
-            });
+            $('#txt_TotalDebe').val(totalDebe.toFixed(2));
+            $('#txt_TotalHaber').val(totalHaber.toFixed(2));
 
-            $("#lbl_SumaDebe").val(totalDebe.toFixed(2));
-            $("#lbl_SumaHaber").val(totalHaber.toFixed(2));
-
-            let cuadreBtn = $("#btnGuardar");
-            let cuadreLbl = $("#lbl_Cuadre");
-
-            if(totalDebe === totalHaber && totalDebe > 0) {
-                cuadreLbl.removeClass("badge-danger").addClass("badge-success").text("ASIENTO CUADRADO");
-                cuadreBtn.prop("disabled", false);
+            if(totalDebe > 0 && totalHaber > 0 && Math.abs(totalDebe - totalHaber) < 0.01) {
+                $('#lbl_Cuadre').html('<i class="fas fa-check-circle"></i> OK').removeClass('text-danger').addClass('text-success');
+                $('#txt_TotalDebe, #txt_TotalHaber').removeClass('border-danger text-danger').addClass('border-success text-success');
             } else {
-                cuadreLbl.removeClass("badge-success").addClass("badge-danger").text("DESCUADRADO");
-                cuadreBtn.prop("disabled", true);
+                $('#lbl_Cuadre').html('<i class="fas fa-times-circle"></i> X').removeClass('text-success').addClass('text-danger');
+                $('#txt_TotalDebe, #txt_TotalHaber').removeClass('border-success text-success').addClass('border-danger text-danger');
             }
         }
 
-        function confirmarGuardado() {
-            // Validaciones básicas Toastr heredadas de tu plantilla
-            if(!$('#cbx_Periodo').val()) return toastr.warning("Seleccione el Periodo Contable");
-            if(!$('#cbx_Origen').val()) return toastr.warning("Seleccione el Origen del Asiento");
-            if(!$('#txt_FechaContable').val()) return toastr.warning("Ingrese la fecha contable");
-            if(!$('#txt_Glosa').val()) return toastr.warning("Ingrese una glosa o concepto general");
-
-            Swal.fire({
-                title: "Confirmar Registro",
-                text: "¿Está seguro de guardar este asiento contable?",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonColor: "#28a745",
-                cancelButtonColor: "#d33",
-                reverseButtons: true,
-                cancelButtonText: "Cancelar",
-                confirmButtonText: "Sí, Guardar"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    ejecutarGuardado();
-                }
-            });
-        }
-
-        function ejecutarGuardado() {
-            let detalles = [];
-            let errorCuentas = false;
-
-            $("#tbl_Body tr").each(function () {
-                let cuentaId = $(this).find(".cbx-cuenta").val();
-                let debe = parseFloat($(this).find(".input-debe").val()) || 0;
-                let haber = parseFloat($(this).find(".input-haber").val()) || 0;
-                let glosaLin = $(this).find(".input-glosa-detalle").val();
-
-                if (!cuentaId && (debe > 0 || haber > 0)) {
-                    errorCuentas = true;
-                    return false; // rompe el bucle
-                }
-
-                if (cuentaId && (debe > 0 || haber > 0)) {
-                    detalles.push({
-                        CuentaContableId: parseInt(cuentaId),
-                        DebeSoles: debe,
-                        HaberSoles: haber,
-                        GlosaDetalle: glosaLin,
-                        IdReferencia: $('#hdn_IdReferencia').val()
-                    });
-                }
-            });
-
-            if(errorCuentas) return toastr.error("Debe seleccionar una cuenta contable para cada línea con monto.");
-            if(detalles.length < 2) return toastr.warning("Un asiento debe tener al menos dos líneas (Partida Doble).");
-
-            let modelo = {
-                PeriodoId: parseInt($('#cbx_Periodo').val()),
-                OrigenAsientoId: parseInt($('#cbx_Origen').val()),
-                FechaContable: $('#txt_FechaContable').val(),
-                MonedaId: parseInt($('#cbx_Moneda').val()),
-                Glosa: $('#txt_Glosa').val(),
-                Detalles: detalles
-            };
-
-            $('#efec-cargando').removeClass('d-none');
-
-            $.ajax({
-                url: '/Contabilidad/GuardarAsiento',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(modelo),
-                success: function(res) {
-                    $('#efec-cargando').addClass('d-none');
-                    if(res.status) {
-                        Swal.fire("Éxito", res.message + " N° " + res.asiento, "success").then(() => {
-                            // En vez de reload, limpiamos solo el detalle y la glosa
-                            $('#txt_Glosa').val('');
-                            $('#tbl_Body').empty();
-                            CONTADOR_FILAS = 0;
-                            agregarLinea();
-                            agregarLinea();
-                            calcularCuadre();
-
-                            // Y ACTUALIZAMOS EL HISTORIAL MÁGICAMENTE
-                            cargarHistorial();
-                        });
-                    } else {
-                        Swal.fire("Error", res.message, "error");
-                    }
-                },
-                error: function() {
-                    $('#efec-cargando').addClass('d-none');
-                    toastr.error("Error de conexión al guardar.");
-                }
-            });
-        }
-        // Funciones para el Ojito
-        function verAsiento(id) {
-            $.get('/Contabilidad/GetAsientoCompleto?id=' + id, function(res) {
-                if(res.status) {
-                    $('#lblVerAsientoTitulo').text('Asiento N° ' + res.cabecera.numeroAsiento);
-                    let html = '';
-                    res.detalles.forEach(d => {
-                        html += `<tr>
-                            <td class="text-left"><small>${d.cuentaNombre}</small></td>
-                            <td class="font-weight-bold text-primary">${d.debe.toFixed(2)}</td>
-                            <td class="font-weight-bold text-success">${d.haber.toFixed(2)}</td>
-                            <td><small>${d.glosa || '-'}</small></td>
-                        </tr>`;
-                    });
-                    $('#tbodyVerAsiento').html(html);
-                    $('#modalVerAsiento').modal('show');
-                } else {
-                    toastr.error("No se pudo cargar el asiento.");
-                }
-            });
-        }
-
-        // Funciones para Automatizar (Jalar Provisión)
         function abrirModalProvisiones() {
             $('#efec-cargando').removeClass('d-none');
             $.get('/Contabilidad/GetProvisionesPendientes', function(res) {
@@ -465,49 +245,165 @@
             });
         }
 
+        function abrirModalVentas() {
+            $('#efec-cargando').removeClass('d-none');
+            $.get('/Contabilidad/GetVentasPendientes', function(res) {
+                $('#efec-cargando').addClass('d-none');
+                if(res.status) {
+                    let html = '';
+                    if(res.data.length > 0) {
+                        res.data.forEach(x => {
+                            html += `<tr>
+                                <td><button class="btn btn-sm btn-info" onclick="jalarBorradorVenta(${x.id})"><i class="fas fa-check"></i> Contabilizar</button></td>
+                                <td class="text-left small font-weight-bold">${x.cliente}</td>
+                                <td class="font-weight-bold">${x.documento}</td>
+                                <td>${x.fecha}</td>
+                                <td class="font-weight-bold text-success">${x.total.toFixed(2)}</td>
+                            </tr>`;
+                        });
+                    } else {
+                        html = '<tr><td colspan="5" class="text-muted p-4">No hay facturas de venta pendientes.</td></tr>';
+                    }
+                    $('#tbodyVentas').html(html);
+                    $('#modalVentas').modal('show');
+                }
+            });
+        }
+
         function jalarBorrador(id) {
             $('#modalProvisiones').modal('hide');
             $('#efec-cargando').removeClass('d-none');
-
-            // Usamos el endpoint que armamos antes en el Controller
             $.get('/Contabilidad/GenerarBorradorDocumentoPagar?documentoPagarId=' + id, function(res) {
-                $('#efec-cargando').addClass('d-none');
-                if(res.status) {
-                    let d = res.data;
+                procesarRespuestaBorrador(res, 'documento_pagar');
+            });
+        }
 
-                    // Llenamos la cabecera
-                    $('#txt_FechaContable').val(d.fechaContable.split('T')[0]);
-                    $('#txt_Glosa').val(d.glosa);
-                    $('#cbx_Origen').val(d.origenAsientoId).trigger('change');
+        function jalarBorradorVenta(id) {
+            $('#modalVentas').modal('hide');
+            $('#efec-cargando').removeClass('d-none');
+            $.get('/Contabilidad/GenerarBorradorDocumentoCobrar?documentoCobrarId=' + id, function(res) {
+                procesarRespuestaBorrador(res, 'documento_cobrar');
+            });
+        }
 
-                    // Ocultamos un campo en el formulario para saber a qué documento hace referencia
-                    if ($('#hdn_IdReferencia').length === 0) {
-                        $('#hdn_EmpresaId').after(`<input type="hidden" id="hdn_IdReferencia" value="${d.idReferencia}">`);
-                        $('#hdn_EmpresaId').after(`<input type="hidden" id="hdn_TablaReferencia" value="documento_pagar">`);
-                    } else {
-                        $('#hdn_IdReferencia').val(d.idReferencia);
-                    }
+        function procesarRespuestaBorrador(res, tablaRef) {
+            $('#efec-cargando').addClass('d-none');
+            if(res.status) {
+                let d = res.data;
 
-                    // Limpiamos la tabla y llenamos los detalles precargados
-                    $('#tbl_Body').empty();
-                    CONTADOR_FILAS = 0;
+                $('#txt_FechaContable').val(d.fechaContable.split('T')[0]);
+                $('#txt_Glosa').val(d.glosa);
+                $('#cbx_Origen').val(d.origenAsientoId).trigger('change');
 
-                    d.detalles.forEach(det => {
-                        agregarLinea();
-                        let ultimaFila = CONTADOR_FILAS;
-                        // Si encontraste la cuenta en el backend, se setea, sino queda en blanco para que el contador elija
-                        if(det.cuentaContableId > 0) {
-                            $(`#cuenta_${ultimaFila}`).val(det.cuentaContableId).trigger('change');
-                        }
-                        $(`#tr_linea_${ultimaFila} .input-debe`).val(det.debeSoles.toFixed(2));
-                        $(`#tr_linea_${ultimaFila} .input-haber`).val(det.haberSoles.toFixed(2));
-                        $(`#tr_linea_${ultimaFila} .input-glosa-detalle`).val(det.glosaDetalle);
-                    });
-
-                    calcularCuadre();
-                    toastr.success("Borrador cargado. Complete las cuentas faltantes.");
+                if ($('#hdn_IdReferencia').length === 0) {
+                    $('#hdn_EmpresaId').after(`<input type="hidden" id="hdn_IdReferencia" value="${d.idReferencia}">`);
+                    $('#hdn_EmpresaId').after(`<input type="hidden" id="hdn_TablaReferencia" value="${tablaRef}">`);
                 } else {
-                    toastr.error(res.message);
+                    $('#hdn_IdReferencia').val(d.idReferencia);
+                    $('#hdn_TablaReferencia').val(tablaRef);
+                }
+
+                $('#tbl_Body').empty();
+                CONTADOR_FILAS = 0;
+
+                d.detalles.forEach(det => {
+                    agregarLinea();
+                    let ultimaFila = CONTADOR_FILAS;
+                    if(det.cuentaContableId > 0) {
+                        $(`#cuenta_${ultimaFila}`).val(det.cuentaContableId).trigger('change');
+                    }
+                    $(`#tr_linea_${ultimaFila} .input-debe`).val(det.debeSoles.toFixed(2));
+                    $(`#tr_linea_${ultimaFila} .input-haber`).val(det.haberSoles.toFixed(2));
+                    $(`#tr_linea_${ultimaFila} .input-glosa-detalle`).val(det.glosaDetalle);
+                });
+
+                calcularCuadre();
+                toastr.success("Borrador cargado. Complete las cuentas faltantes.");
+            } else {
+                toastr.error(res.message);
+            }
+        }
+
+        function guardarAsiento() {
+            // USAMOS EL PERIODOMANAGER GLOBAL EN LUGAR DEL COMBO
+            let idPeriodo = PeriodoManager ? PeriodoManager.getActual() : null;
+
+            if(!idPeriodo) return toastr.warning("No hay un Periodo Contable activo definido.");
+            if(!$('#cbx_Origen').val()) return toastr.warning("Seleccione Origen.");
+            if(!$('#txt_FechaContable').val()) return toastr.warning("Ingrese fecha.");
+            if(!$('#cbx_Moneda').val()) return toastr.warning("Seleccione Moneda.");
+            if(!$('#txt_Glosa').val().trim()) return toastr.warning("Ingrese una glosa general.");
+
+            let totalDebe = parseFloat($('#txt_TotalDebe').val());
+            let totalHaber = parseFloat($('#txt_TotalHaber').val());
+
+            if(totalDebe === 0 || totalHaber === 0) return toastr.error("El asiento no tiene montos.");
+            if(Math.abs(totalDebe - totalHaber) >= 0.01) return Swal.fire("Error", "El asiento está descuadrado.", "error");
+
+            let detalles = [];
+            let hayError = false;
+
+            $('#tbl_Body tr').each(function() {
+                let idSelect = $(this).find('.select2-cuenta').attr('id');
+                let cuentaId = $(`#${idSelect}`).val();
+                let glosaDet = $(this).find('.input-glosa-detalle').val();
+                let debe = parseFloat($(this).find('.input-debe').val()) || 0;
+                let haber = parseFloat($(this).find('.input-haber').val()) || 0;
+
+                if (cuentaId == "0" && (debe > 0 || haber > 0)) {
+                    hayError = true;
+                    $(this).addClass('bg-danger text-white');
+                } else {
+                    $(this).removeClass('bg-danger text-white');
+                    if (debe > 0 || haber > 0) {
+                        detalles.push({
+                            CuentaContableId: parseInt(cuentaId),
+                            GlosaDetalle: glosaDet || $('#txt_Glosa').val(),
+                            DebeSoles: debe,
+                            HaberSoles: haber,
+                            DebeDolares: 0,
+                            HaberDolares: 0
+                        });
+                    }
+                }
+            });
+
+            if (hayError) return toastr.error("Faltan asignar cuentas contables en algunas líneas.");
+            if (detalles.length < 2) return toastr.error("Un asiento debe tener al menos 2 cuentas (partida doble).");
+
+            let cabecera = {
+                PeriodoId: parseInt(idPeriodo),
+                OrigenAsientoId: parseInt($('#cbx_Origen').val()),
+                FechaContable: $('#txt_FechaContable').val(),
+                MonedaId: parseInt($('#cbx_Moneda').val()),
+                Glosa: $('#txt_Glosa').val(),
+                Detalles: detalles,
+                IdReferencia: $('#hdn_IdReferencia').val() ? parseInt($('#hdn_IdReferencia').val()) : null,
+                TablaReferencia: $('#hdn_TablaReferencia').val() ? $('#hdn_TablaReferencia').val() : null
+            };
+
+            Swal.fire({
+                title: "¿Guardar Asiento Contable?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Sí, guardar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#efec-cargando').removeClass('d-none');
+                    $.ajax({
+                        url: '/Contabilidad/GuardarAsiento',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(cabecera),
+                        success: function(res) {
+                            $('#efec-cargando').addClass('d-none');
+                            if(res.status) {
+                                Swal.fire("Éxito", res.message, "success").then(() => location.reload());
+                            } else {
+                                Swal.fire("Error", res.message, "error");
+                            }
+                        }
+                    });
                 }
             });
         }

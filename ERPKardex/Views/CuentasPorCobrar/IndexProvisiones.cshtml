@@ -1,0 +1,242 @@
+﻿@{
+    ViewData["Title"] = "Gestión de Facturación (Por Cobrar)";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros de Búsqueda</h6>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-3 mb-3">
+                    <label>Desde</label>
+                    <input type="date" id="txtFechaIni" class="form-control" value="@DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label>Hasta</label>
+                    <input type="date" id="txtFechaFin" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Cliente</label>
+                    <select id="cbx_ClienteFiltro" class="form-control w-100"></select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <button class="btn btn-primary btn-block" onclick="listarDocumentos()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Listado de Comprobantes Emitidos</h6>
+            <a href="/CuentasPorCobrar/RegistroProvision" class="btn btn-primary btn-sm font-weight-bold">
+                <i class="fas fa-file-invoice"></i> Nueva Factura / Boleta
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tbl_Data">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Documento</th>
+                            <th>Cliente</th>
+                            <th>Nro. Pedido</th>
+                            <th class="text-center">Moneda</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-right">Saldo por Cobrar</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalle" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title m-0"><i class="fas fa-info-circle"></i> Detalle de Facturación</h6>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body bg-light" id="cuerpoModal">
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Asumiendo misma ruta para traer clientes
+            $.ajax({
+                url: '/OrdenPedido/GetCombosRegistro',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    if(data.status){
+                        const clientesTransformados = data.clientes.map(x => ({
+                            id: x.id,
+                            text: x.tipoDocumentoIdentidad + ': ' + x.numeroDocumento + ' - ' + x.razonSocial
+                        }));
+
+                        $('#cbx_ClienteFiltro').select2({
+                            theme: 'bootstrap4',
+                            placeholder: "Todos los clientes",
+                            allowClear: true,
+                            data: clientesTransformados
+                        });
+                        $('#cbx_ClienteFiltro').val(null).trigger('change');
+                    }
+                }
+            });
+
+            listarDocumentos();
+        });
+
+        function listarDocumentos() {
+            let ini = $('#txtFechaIni').val();
+            let fin = $('#txtFechaFin').val();
+            let cli = $('#cbx_ClienteFiltro').val();
+
+            $('#tbl_Data tbody').html('<tr><td colspan="10" class="text-center">Cargando...</td></tr>');
+
+            $.get(`/CuentasPorCobrar/GetProvisionesData?fechaInicio=${ini}&fechaFin=${fin}&clienteId=${cli}`, function(res) {
+                let html = '';
+                if(res.status && res.data.length > 0) {
+                    res.data.forEach(x => {
+                        let colorSaldo = x.saldo > 0 ? "text-danger" : "text-success";
+                        html += `<tr>
+                            <td>${x.fecha}</td>
+                            <td class="text-center font-weight-bold">${x.tipoDoc}</td>
+                            <td class="font-weight-bold">${x.documento}</td>
+                            <td><small>${x.numeroDocumento}</small><br>${x.cliente}</td>
+                            <td class="text-center">${x.referencia}</td>
+                            <td class="text-center font-weight-bold">${x.moneda}</td>
+                            <td class="text-right">${x.total.toFixed(2)}</td>
+                            <td class="text-right font-weight-bold ${colorSaldo}">${x.saldo.toFixed(2)}</td>
+                            <td class="text-center"><span class="badge ${x.colorEstado}">${x.estado}</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-info" onclick="verDetalle(${x.id})" title="Ver Detalle"><i class="fas fa-eye"></i></button>
+                                <button class="btn btn-sm btn-secondary" onclick="imprimir(${x.id})" title="Imprimir"><i class="fas fa-print"></i></button>
+                            </td>
+                        </tr>`;
+                    });
+                } else { html = '<tr><td colspan="10" class="text-center">No hay comprobantes emitidos.</td></tr>'; }
+                $('#tbl_Data tbody').html(html);
+            });
+        }
+
+        function imprimir(id) {
+            window.open('/CuentasPorCobrar/ImprimirProvision/' + id, '_blank');
+        }
+
+        function verDetalle(id) {
+            $('#cuerpoModal').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
+            $('#modalDetalle').modal('show');
+
+            $.get('/CuentasPorCobrar/GetProvisionDetalleJson?id=' + id, function(res) {
+                if(!res.status) {
+                    $('#cuerpoModal').html(`<div class="alert alert-danger">${res.message}</div>`);
+                    return;
+                }
+
+                let cab = res.cabecera;
+                let det = res.detalles;
+
+                // 3. Construir la cabecera del Modal
+                let html = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Cliente</small>
+                        <strong>${cab.ruc} - ${cab.cliente}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Comprobante</small>
+                        <strong class="text-primary">${cab.documento}</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Fecha</small>
+                        <strong>${cab.fecha}</strong>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Observación</small>
+                        <span>${cab.obs}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block">Referencia (Origen)</small>
+                        <span class="badge badge-dark">${cab.referencia}</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered bg-white text-center">
+                        <thead class="bg-secondary text-white">
+                            <tr>
+                                <th width="10%">Ítem</th>
+                                <th width="45%" class="text-left">Producto</th>
+                                <th width="10%">U.M.</th>
+                                <th width="10%">Cant.</th>
+                                <th width="10%">Precio</th>
+                                <th width="15%">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                if(det.length > 0) {
+                    det.forEach(d => {
+                        html += `
+                            <tr>
+                                <td>${d.item}</td>
+                                <td class="text-left">${d.producto}</td>
+                                <td>${d.unidad}</td>
+                                <td>${d.cantidad.toFixed(2)}</td>
+                                <td>${d.precio.toFixed(2)}</td>
+                                <td class="font-weight-bold">${d.importe.toFixed(2)}</td>
+                            </tr>`;
+                    });
+                } else {
+                    html += `<tr><td colspan="6" class="text-center">Sin detalles</td></tr>`;
+                }
+
+                html += `</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">SubTotal:</td>
+                                <td class="text-right">${cab.moneda} ${cab.subTotal.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">IGV:</td>
+                                <td class="text-right">${cab.moneda} ${cab.igv.toFixed(2)}</td>
+                            </tr>
+                            <tr class="bg-primary text-white">
+                                <td colspan="5" class="text-right font-weight-bold">TOTAL:</td>
+                                <td class="text-right font-weight-bold">${cab.moneda} ${cab.total.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>`;
+
+                $('#cuerpoModal').html(html);
+            }).fail(function() {
+                $('#cuerpoModal').html('<div class="alert alert-danger">Error de servidor.</div>');
+            });
+        }
+    </script>
+}

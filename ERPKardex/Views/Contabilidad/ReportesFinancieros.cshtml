@@ -21,13 +21,13 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-muted disabled" href="#" tabindex="-1" aria-disabled="true">
-                <i class="fas fa-file-invoice-dollar"></i> Flujo de Efectivo (Próximamente)
+            <a class="nav-link text-primary" id="flujo-tab" data-toggle="tab" href="#flujo" role="tab">
+                <i class="fas fa-file-invoice-dollar"></i> Flujo de Efectivo
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-muted disabled" href="#" tabindex="-1" aria-disabled="true">
-                <i class="fas fa-chart-pie"></i> Ratios (Próximamente)
+            <a class="nav-link text-primary" id="ratios-tab" data-toggle="tab" href="#ratios" role="tab">
+                <i class="fas fa-chart-pie"></i> Ratios Financieros
             </a>
         </li>
     </ul>
@@ -37,134 +37,172 @@
             <div class="row align-items-center">
                 <input type="hidden" id="hdn_EmpresaId" value="@ViewBag.EmpresaId" />
                 <div class="col-md-3 d-flex align-items-center">
-                    <label class="mr-2 mb-0 text-muted font-weight-bold">Periodo:</label>
-                    <select id="cbx_Periodo" class="form-control form-control-sm border-primary"></select>
+                    <label class="mr-2 mb-0 text-muted font-weight-bold">Desde:</label>
+                    <input type="date" id="txtFechaIni" class="form-control form-control-sm border-primary" value="@DateTime.Now.ToString("yyyy-01-01")">
+                </div>
+                <div class="col-md-3 d-flex align-items-center">
+                    <label class="mr-2 mb-0 text-muted font-weight-bold">Hasta:</label>
+                    <input type="date" id="txtFechaFin" class="form-control form-control-sm border-primary" value="@DateTime.Now.ToString("yyyy-MM-dd")">
                 </div>
                 <div class="col-md-2">
-                    <button class="btn btn-sm btn-outline-secondary w-100 font-weight-bold" onclick="cargarReportes()">
-                        <i class="fas fa-search"></i> Buscar
-                    </button>
+                    <button class="btn btn-sm btn-primary btn-block font-weight-bold" onclick="cargarReportes()"><i class="fas fa-sync-alt"></i> Generar Reportes</button>
                 </div>
-                <div class="col-md-7 text-right">
-                    <button class="btn btn-sm btn-primary font-weight-bold" onclick="window.print()">
-                        <i class="fas fa-download"></i> Descargar PDF
-                    </button>
+                <div class="col-md-4 text-right">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
                 </div>
             </div>
         </div>
 
-        <div class="card-body p-0">
+        <div class="card-body p-4">
             <div class="tab-content" id="misReportesTabContent">
 
                 <div class="tab-pane fade show active" id="balance" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <tbody>
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> A. Activos</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 1.1 Activos Corrientes</td>
-                                    <td class="text-right" id="val_ActivoCorriente">0.00</td>
+                    <h5 class="text-center font-weight-bold text-dark mb-4 border-bottom pb-2">BALANCE GENERAL</h5>
+                    <div class="row">
+                        <div class="col-md-6 border-right">
+                            <h6 class="font-weight-bold text-primary border-bottom pb-1">ACTIVOS</h6>
+                            <table class="table table-sm table-borderless mt-2">
+                                <tr><td>Activos Corrientes</td><td class="text-right font-weight-bold" id="val_ActivoCorriente">0.00</td></tr>
+                                <tr><td>Activos No Corrientes</td><td class="text-right font-weight-bold" id="val_ActivoNoCorriente">0.00</td></tr>
+                                <tr class="border-top border-primary">
+                                    <td class="font-weight-bold text-primary">TOTAL ACTIVOS</td>
+                                    <td class="text-right font-weight-bold h6 mb-0 text-primary" id="val_TotalActivos">0.00</td>
                                 </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 1.2 Activos No Corrientes</td>
-                                    <td class="text-right" id="val_ActivoNoCorriente">0.00</td>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-danger border-bottom pb-1">PASIVOS</h6>
+                            <table class="table table-sm table-borderless mt-2 mb-4">
+                                <tr><td>Pasivos Corrientes</td><td class="text-right font-weight-bold" id="val_PasivoCorriente">0.00</td></tr>
+                                <tr><td>Pasivos No Corrientes</td><td class="text-right font-weight-bold" id="val_PasivoNoCorriente">0.00</td></tr>
+                                <tr class="border-top border-danger">
+                                    <td class="font-weight-bold text-danger">TOTAL PASIVOS</td>
+                                    <td class="text-right font-weight-bold text-danger" id="val_TotalPasivos">0.00</td>
                                 </tr>
-                                <tr class="bg-primary text-white font-weight-bold h6">
-                                    <td class="pl-3">Total Activos</td>
-                                    <td class="text-right" id="val_TotalActivos">0.00</td>
-                                </tr>
+                            </table>
 
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> B. Pasivos</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 2.1 Pasivos Corrientes</td>
-                                    <td class="text-right" id="val_PasivoCorriente">0.00</td>
+                            <h6 class="font-weight-bold text-info border-bottom pb-1">PATRIMONIO NETO</h6>
+                            <table class="table table-sm table-borderless mt-2">
+                                <tr><td>Capital y Reservas</td><td class="text-right font-weight-bold" id="val_PatrimonioNeto">0.00</td></tr>
+                                <tr><td>Resultados del Ejercicio</td><td class="text-right font-weight-bold" id="val_UtilidadBalance">0.00</td></tr>
+                                <tr class="border-top border-info border-bottom">
+                                    <td class="font-weight-bold text-dark h6 mb-0">TOTAL PASIVO Y PATRIMONIO</td>
+                                    <td class="text-right font-weight-bold h6 mb-0 text-dark" id="val_TotalPasivoPatrimonio">0.00</td>
                                 </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 2.2 Pasivos No Corrientes</td>
-                                    <td class="text-right" id="val_PasivoNoCorriente">0.00</td>
-                                </tr>
-                                <tr class="font-weight-bold h6" style="background-color: #e9ecef;">
-                                    <td class="pl-3">Total Pasivos</td>
-                                    <td class="text-right" id="val_TotalPasivos">0.00</td>
-                                </tr>
-
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> C. Patrimonio</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 3.1 Capital y Reservas</td>
-                                    <td class="text-right" id="val_PatrimonioNeto">0.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 3.2 Resultado del Ejercicio</td>
-                                    <td class="text-right font-weight-bold text-success" id="val_UtilidadBalance">0.00</td>
-                                </tr>
-                                <tr class="font-weight-bold h6">
-                                    <td class="pl-3">Total Pasivo y Patrimonio</td>
-                                    <td class="text-right" id="val_TotalPasivoPatrimonio">0.00</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="resultados" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <tbody>
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> A. Ingresos</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 1.1 Ventas Netas</td>
-                                    <td class="text-right" id="val_VentasNetas">0.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 1.2 Otros Ingresos Operativos</td>
-                                    <td class="text-right" id="val_OtrosIngresos">0.00</td>
-                                </tr>
-                                <tr class="bg-primary text-white font-weight-bold h6">
-                                    <td class="pl-3">Total Ingresos</td>
-                                    <td class="text-right" id="val_TotalIngresos">0.00</td>
-                                </tr>
+                    <h5 class="text-center font-weight-bold text-dark mb-4 border-bottom pb-2">ESTADO DE RESULTADOS INTEGRALES</h5>
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <table class="table table-hover table-sm border">
+                                <thead class="bg-light">
+                                    <tr><th colspan="2" class="text-primary"><i class="fas fa-plus-circle"></i> Ingresos Operativos</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pl-4">Ventas Netas</td><td class="text-right font-weight-bold" id="val_VentasNetas">0.00</td></tr>
+                                    <tr><td class="pl-4">Otros Ingresos Operativos</td><td class="text-right font-weight-bold" id="val_OtrosIngresos">0.00</td></tr>
+                                    <tr class="bg-light"><td class="font-weight-bold text-dark">Total Ingresos Brutos</td><td class="text-right font-weight-bold text-dark" id="val_TotalIngresos">0.00</td></tr>
+                                </tbody>
 
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> B. Costos de Ventas</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 2.1 Costo de Ventas</td>
-                                    <td class="text-right text-danger" id="val_CostoVentas">0.00</td>
-                                </tr>
-                                <tr class="font-weight-bold" style="background-color: #e9ecef;">
-                                    <td class="pl-3">Utilidad Bruta</td>
-                                    <td class="text-right" id="val_UtilidadBruta">0.00</td>
-                                </tr>
+                                <thead class="bg-light border-top">
+                                    <tr><th colspan="2" class="text-danger"><i class="fas fa-minus-circle"></i> Costos Operativos</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pl-4">Costo de Ventas</td><td class="text-right font-weight-bold text-danger" id="val_CostoVentas">0.00</td></tr>
+                                    <tr class="bg-light"><td class="font-weight-bold text-info">UTILIDAD BRUTA</td><td class="text-right font-weight-bold text-info" id="val_UtilidadBruta">0.00</td></tr>
+                                </tbody>
 
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> C. Gastos Generales y Administrativos</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 3.1 Gastos de Ventas</td>
-                                    <td class="text-right text-danger" id="val_GastosVentas">0.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 3.2 Gastos Administrativos</td>
-                                    <td class="text-right text-danger" id="val_GastosAdministrativos">0.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 3.3 Gastos Financieros</td>
-                                    <td class="text-right text-danger" id="val_GastosFinancieros">0.00</td>
-                                </tr>
-                                <tr class="font-weight-bold h6" style="background-color: #e9ecef;">
-                                    <td class="pl-3">Total Gastos Operativos</td>
-                                    <td class="text-right text-danger" id="val_TotalGastos">0.00</td>
-                                </tr>
+                                <thead class="bg-light border-top">
+                                    <tr><th colspan="2" class="text-danger"><i class="fas fa-minus-circle"></i> Gastos de Operación</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pl-4">Gastos de Ventas</td><td class="text-right font-weight-bold text-danger" id="val_GastosVentas">0.00</td></tr>
+                                    <tr><td class="pl-4">Gastos Administrativos</td><td class="text-right font-weight-bold text-danger" id="val_GastosAdministrativos">0.00</td></tr>
+                                    <tr><td class="pl-4">Gastos Financieros</td><td class="text-right font-weight-bold text-danger" id="val_GastosFinancieros">0.00</td></tr>
+                                    <tr class="bg-light"><td class="font-weight-bold text-dark">Total Gastos Operativos</td><td class="text-right font-weight-bold text-danger" id="val_TotalGastos">0.00</td></tr>
+                                </tbody>
 
-                                <tr class="bg-light text-dark font-weight-bold"><td colspan="2"><i class="fas fa-caret-right"></i> D. Otros Gastos / Ingresos Netos</td></tr>
-                                <tr>
-                                    <td class="pl-4 text-muted"><i class="fas fa-caret-right"></i> 4.1 Otros Gastos (No Deducibles)</td>
-                                    <td class="text-right text-danger" id="val_OtrosGastosNetos">0.00</td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="bg-success text-white font-weight-bold h5">
-                                <tr>
-                                    <td class="pl-3 py-3">UTILIDAD NETA DEL EJERCICIO</td>
-                                    <td class="text-right py-3" id="val_UtilidadNeta">0.00</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                <thead class="bg-light border-top">
+                                    <tr><th colspan="2" class="text-secondary"><i class="fas fa-exchange-alt"></i> Otros Conceptos</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pl-4">Otros Ingresos / Gastos Netos</td><td class="text-right font-weight-bold" id="val_OtrosGastosNetos">0.00</td></tr>
+                                </tbody>
+
+                                <tfoot class="bg-dark text-white">
+                                    <tr>
+                                        <td class="font-weight-bold h5 mb-0 py-2">UTILIDAD NETA DEL EJERCICIO</td>
+                                        <td class="text-right font-weight-bold h5 mb-0 py-2" id="val_UtilidadNeta">0.00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="flujo" role="tabpanel">
+                    <h5 class="text-center font-weight-bold text-dark mb-4 border-bottom pb-2">ESTADO DE FLUJO DE EFECTIVO (MÉTODO INDIRECTO)</h5>
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <p class="small text-muted text-center mb-3">Nota: El flujo de efectivo se estima conciliando la Utilidad Neta con las variaciones del capital de trabajo.</p>
+                            <table class="table table-hover table-sm border">
+                                <thead class="bg-light">
+                                    <tr><th colspan="2" class="text-dark"><i class="fas fa-coins"></i> Actividades de Operación</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pl-4 font-weight-bold">Utilidad Neta (Según EERR)</td><td class="text-right font-weight-bold text-success" id="val_FlujoUtilidad">0.00</td></tr>
+                                    <tr><td class="pl-4 text-muted">Ajustes a la utilidad (Depreciación, etc.)</td><td class="text-right font-weight-bold text-muted">No medible</td></tr>
+                                    <tr><td class="pl-4">Variación en Cuentas por Cobrar (Activo Corriente)</td><td class="text-right font-weight-bold text-danger" id="val_FlujoCxC">- 0.00</td></tr>
+                                    <tr><td class="pl-4">Variación en Cuentas por Pagar (Pasivo Corriente)</td><td class="text-right font-weight-bold text-success" id="val_FlujoCxP">+ 0.00</td></tr>
+                                </tbody>
+                                <tfoot class="bg-light border-top">
+                                    <tr>
+                                        <td class="font-weight-bold h6 text-dark py-2">EFECTIVO NETO DE OPERACIÓN ESTIMADO</td>
+                                        <td class="text-right font-weight-bold h6 text-primary py-2" id="val_FlujoOperativo">0.00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="ratios" role="tabpanel">
+                    <h5 class="text-center font-weight-bold text-dark mb-4 border-bottom pb-2">ANÁLISIS DE RATIOS FINANCIEROS</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light mb-3 border-info">
+                                <div class="card-body text-center">
+                                    <h6 class="font-weight-bold text-info">LIQUIDEZ GENERAL</h6>
+                                    <h3 class="font-weight-bold text-dark my-3" id="ratio_Liquidez">0.00</h3>
+                                    <p class="small text-muted mb-0">Activo C. / Pasivo C.</p>
+                                    <small class="text-info">Mide la capacidad de pago a corto plazo. (> 1.0 es ideal)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light mb-3 border-success">
+                                <div class="card-body text-center">
+                                    <h6 class="font-weight-bold text-success">MARGEN DE UTILIDAD NETA</h6>
+                                    <h3 class="font-weight-bold text-dark my-3" id="ratio_MargenNeta">0.00 %</h3>
+                                    <p class="small text-muted mb-0">Utilidad Neta / Ventas Totales</p>
+                                    <small class="text-success">Porcentaje de ganancia por cada sol vendido.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light mb-3 border-danger">
+                                <div class="card-body text-center">
+                                    <h6 class="font-weight-bold text-danger">ENDEUDAMIENTO TOTAL</h6>
+                                    <h3 class="font-weight-bold text-dark my-3" id="ratio_Endeudamiento">0.00 %</h3>
+                                    <p class="small text-muted mb-0">Pasivo Total / Activo Total</p>
+                                    <small class="text-danger">Porcentaje de la empresa financiado por terceros.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -174,63 +212,60 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // Variables globales para calcular Ratios
+        let g_ActivoCorriente = 0;
+        let g_PasivoCorriente = 0;
+        let g_ActivoTotal = 0;
+        let g_PasivoTotal = 0;
+        let g_Ventas = 0;
+        let g_UtilidadNeta = 0;
+
         $(document).ready(function() {
-            cargarCombos();
+            cargarReportes();
         });
 
-        // Formateador de moneda (Ej: 1,500.00)
-        const formatMoney = (amount) => {
-            return parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        };
+        function cargarReportes() {
+            $('#efec-cargando').removeClass('d-none');
 
-        function cargarCombos() {
-            // Reutilizamos el endpoint que ya tienes para traer los periodos
-            $.get('/Contabilidad/GetDatosCabecera', function(res) {
-                if(res.periodos && res.periodos.length > 0) {
-                    res.periodos.forEach(x => $('#cbx_Periodo').append(`<option value="${x.id}">${x.texto}</option>`));
-                    // Cargar reporte automáticamente con el primer periodo disponible
-                    cargarReportes();
-                } else {
-                    $('#cbx_Periodo').html('<option value="">Sin periodos abiertos</option>');
-                }
+            let ini = $('#txtFechaIni').val();
+            let fin = $('#txtFechaFin').val();
+
+            let pBalance = $.get(`/Contabilidad/GenerarBalanceGeneral?fechaInicio=${ini}&fechaFin=${fin}`);
+            let pResultados = $.get(`/Contabilidad/GenerarEstadoResultados?fechaInicio=${ini}&fechaFin=${fin}`);
+
+            $.when(pBalance, pResultados).done(function(resBal, resRes) {
+                $('#efec-cargando').addClass('d-none');
+
+                if(resBal[0].status) pintarBalance(resBal[0].data);
+                else toastr.error("Error al cargar Balance.");
+
+                if(resRes[0].status) pintarResultados(resRes[0].data);
+                else toastr.error("Error al cargar EERR.");
+
+                // Una vez pintados, calculamos Ratios y Flujo
+                calcularRatios();
+                calcularFlujoEfectivo();
+
+            }).fail(function() {
+                $('#efec-cargando').addClass('d-none');
+                toastr.error("Fallo de conexión con el servidor.");
             });
         }
 
-        function cargarReportes() {
-            let periodoId = $('#cbx_Periodo').val();
-            if(!periodoId) {
-                toastr.warning("Seleccione un periodo contable válido.");
-                return;
-            }
-
-            $('#efec-cargando').removeClass('d-none');
-
-            // Hacemos las dos peticiones AJAX en paralelo
-            $.when(
-                $.get('/Contabilidad/GenerarBalanceGeneral?periodoId=' + periodoId),
-                $.get('/Contabilidad/GenerarEstadoResultados?periodoId=' + periodoId)
-            ).done(function(resBalance, resResultados) {
-                $('#efec-cargando').addClass('d-none');
-
-                // Validamos respuestas ($.when devuelve un array [data, statusText, jqXHR])
-                let dataBalance = resBalance[0];
-                let dataResultados = resResultados[0];
-
-                if(dataBalance.status && dataResultados.status) {
-                    pintarBalance(dataBalance.data);
-                    pintarResultados(dataResultados.data);
-                    toastr.success("Reportes actualizados correctamente.");
-                } else {
-                    toastr.error("Error al procesar los cálculos contables.");
-                }
-            }).fail(function() {
-                $('#efec-cargando').addClass('d-none');
-                toastr.error("Error de conexión al servidor.");
-            });
+        function formatMoney(amount) {
+            if(amount === null || amount === undefined) amount = 0;
+            return parseFloat(amount).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function pintarBalance(d) {
+            // Guardamos para ratios
+            g_ActivoCorriente = d.activosCorrientes;
+            g_PasivoCorriente = d.pasivosCorrientes;
+            g_ActivoTotal = d.totalActivos;
+            g_PasivoTotal = d.totalPasivos;
+
             $('#val_ActivoCorriente').text(formatMoney(d.activosCorrientes));
             $('#val_ActivoNoCorriente').text(formatMoney(d.activosNoCorrientes));
             $('#val_TotalActivos').text(formatMoney(d.totalActivos));
@@ -243,13 +278,17 @@
             $('#val_UtilidadBalance').text(formatMoney(d.utilidadDelEjercicio));
             $('#val_TotalPasivoPatrimonio').text(formatMoney(d.totalPasivoYPatrimonio));
 
-            // Alerta visual si el balance está descuadrado (Principio contable)
-            if (d.totalActivos.toFixed(2) !== d.totalPasivoYPatrimonio.toFixed(2)) {
-                toastr.warning("Atención: El Balance General presenta descuadres. Revise los asientos manuales.");
+            let diff = Math.abs(d.totalActivos - d.totalPasivoYPatrimonio);
+            if (diff > 0.10) {
+                toastr.warning("Atención: El Balance General presenta descuadres.");
             }
         }
 
         function pintarResultados(d) {
+            // Guardamos para ratios
+            g_Ventas = d.ventasNetas;
+            g_UtilidadNeta = d.utilidadNeta;
+
             $('#val_VentasNetas').text(formatMoney(d.ventasNetas));
             $('#val_OtrosIngresos').text(formatMoney(d.otrosIngresos));
             $('#val_TotalIngresos').text(formatMoney(d.totalIngresos));
@@ -266,12 +305,44 @@
 
             $('#val_UtilidadNeta').text(formatMoney(d.utilidadNeta));
 
-            // Cambiar color si hay pérdida
             if(d.utilidadNeta < 0) {
                 $('#val_UtilidadNeta').removeClass('text-white').addClass('text-danger bg-white px-2 rounded');
             } else {
                 $('#val_UtilidadNeta').removeClass('text-danger bg-white px-2 rounded').addClass('text-white');
             }
+        }
+
+        function calcularRatios() {
+            // 1. Liquidez (Activo Corriente / Pasivo Corriente)
+            let liquidez = 0;
+            if(g_PasivoCorriente > 0) liquidez = g_ActivoCorriente / g_PasivoCorriente;
+            $('#ratio_Liquidez').text(liquidez.toFixed(2));
+
+            // 2. Margen Neto (Utilidad Neta / Ventas)
+            let margen = 0;
+            if(g_Ventas > 0) margen = (g_UtilidadNeta / g_Ventas) * 100;
+            $('#ratio_MargenNeta').text(margen.toFixed(2) + " %");
+
+            // 3. Endeudamiento (Pasivo Total / Activo Total)
+            let endeuda = 0;
+            if(g_ActivoTotal > 0) endeuda = (g_PasivoTotal / g_ActivoTotal) * 100;
+            $('#ratio_Endeudamiento').text(endeuda.toFixed(2) + " %");
+        }
+
+        function calcularFlujoEfectivo() {
+            // Conciliación básica
+            $('#val_FlujoUtilidad').text(formatMoney(g_UtilidadNeta));
+
+            // Asumimos que los activos corrientes (menos efectivo, pero aquí es aproximado) restan liquidez
+            let flujoActivo = g_ActivoCorriente * -1;
+            $('#val_FlujoCxC').text(formatMoney(flujoActivo));
+
+            // Los pasivos corrientes suman liquidez (dinero que aún no se paga)
+            let flujoPasivo = g_PasivoCorriente;
+            $('#val_FlujoCxP').text(formatMoney(flujoPasivo));
+
+            let flujoOperativo = g_UtilidadNeta + flujoActivo + flujoPasivo;
+            $('#val_FlujoOperativo').text(formatMoney(flujoOperativo));
         }
     </script>
 }

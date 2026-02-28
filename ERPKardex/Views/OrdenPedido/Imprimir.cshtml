@@ -1,0 +1,268 @@
+﻿@model ERPKardex.Models.OrdenPedido
+@{
+    Layout = null;
+
+    var empresa = ViewBag.Empresa as ERPKardex.Models.Empresa;
+    var cliente = ViewBag.Cliente as ERPKardex.Models.Cliente;
+    var moneda = ViewBag.Moneda as ERPKardex.Models.Moneda;
+    var usuario = ViewBag.Usuario as ERPKardex.Models.Usuario; // Tal como lo usas en el tuyo
+    var detalles = ViewBag.Detalles as IEnumerable<dynamic>;
+    var estado = ViewBag.Estado as string;
+
+    // Datos del Aprobador
+    var aprobadorNombre = ViewBag.AprobadorNombre as string;
+    var aprobadorCargo = ViewBag.AprobadorCargo as string;
+    var fechaResolucion = ViewBag.FechaResolucion as DateTime?;
+
+    string simbolo = moneda?.Simbolo ?? "S/.";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>OP @Model.Numero</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            color: #000;
+        }
+
+        .box-border {
+            border: 1px solid #000;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .table-bordered th, .table-bordered td {
+            border: 1px solid #000 !important;
+            padding: 4px;
+            vertical-align: middle;
+        }
+
+        .cabecera-title {
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #f2f2f2;
+            border: 1px solid #000;
+            text-align: center;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .logo-img {
+            max-height: 70px;
+        }
+
+        .estado-sello {
+            border: 3px solid;
+            padding: 5px 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            transform: rotate(-10deg);
+            opacity: 0.5;
+        }
+
+        .estado-Aprobado {
+            color: green;
+            border-color: green;
+        }
+
+        .estado-Anulado {
+            color: red;
+            border-color: red;
+        }
+
+        .estado-Generado {
+            color: #f39c12;
+            border-color: #f39c12;
+        }
+    </style>
+</head>
+<body class="bg-white p-3">
+
+    <div class="container-fluid">
+        <div class="row mb-3 pb-2 border-bottom border-dark">
+            <div class="col-8">
+                <div class="d-flex align-items-center">
+                    <img src="~/img/logo.jpg" alt="Logo" class="logo-img mr-3" onerror="this.style.display='none'" />
+                    <div>
+                        <h5 class="m-0 font-weight-bold">@(empresa?.RazonSocial ?? "EMPRESA SIN REGISTRAR")</h5>
+                        <div class="small">
+                            RUC: @(empresa?.Ruc ?? "---")<br />
+                            @(empresa?.Direccion ?? "")
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4 text-right">
+                <div class="cabecera-title">
+                    ORDEN DE PEDIDO<br />
+                    <span class="text-danger" style="font-size:16px;">N° @(Model.Numero ?? "---")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3 box-border">
+            <div class="col-7 border-right border-dark">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><th width="20%">CLIENTE:</th><td>@(cliente?.RazonSocial ?? "")</td></tr>
+                    <tr><th>RUC / DNI:</th><td>@(cliente?.NumeroDocumento ?? "")</td></tr>
+                    <tr><th>DIRECCIÓN:</th><td>@(cliente?.Direccion ?? "---")</td></tr>
+                    <tr><th>LUGAR ENTREGA:</th><td>@(Model.LugarEntrega ?? "---")</td></tr>
+                </table>
+            </div>
+            <div class="col-5">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><th width="40%">FECHA EMISIÓN:</th><td>@(Model.FechaEmision?.ToString("dd/MM/yyyy") ?? "")</td></tr>
+                    <tr><th>MONEDA:</th><td>@(moneda?.Nombre ?? "")</td></tr>
+                    <tr><th>CONDICIÓN:</th><td>@(Model.CondicionPago ?? "")</td></tr>
+                    <tr><th>OBSERVACIÓN:</th><td>@(Model.Observacion ?? "---")</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <table class="table table-bordered text-center table-sm mb-4">
+            <thead class="bg-light">
+                <tr>
+                    <th width="5%">Ítem</th>
+                    <th width="10%">Cant.</th>
+                    <th width="8%">U.M.</th>
+                    <th width="47%" class="text-left">Descripción del Producto</th>
+                    <th width="15%">Precio Unit. (@simbolo)</th>
+                    <th width="15%">Importe (@simbolo)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (detalles != null && detalles.Any())
+                {
+                    foreach (var item in detalles)
+                    {
+                        <tr>
+                            <td>@item.Item</td>
+                            <td class="font-weight-bold text-primary">@Convert.ToDecimal(item.Cantidad).ToString("0.00")</td>
+                            <td>@item.UnidadMedida</td>
+                            <td class="text-left font-weight-bold">@item.Descripcion</td>
+                            <td class="text-right">@Convert.ToDecimal(item.PrecioUnitario).ToString("N2")</td>
+                            <td class="text-right">@Convert.ToDecimal(item.Total).ToString("N2")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-muted">No se encontraron ítems en este pedido.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="row">
+            <div class="col-8">
+                <div class="mt-4">
+                    <p class="font-weight-bold mb-1 border-bottom border-dark d-inline-block">TÉRMINOS Y CONDICIONES:</p>
+                    <ul class="small text-muted pl-3">
+                        <li>La mercadería viaja por cuenta y riesgo del comprador.</li>
+                        <li>Las devoluciones solo se aceptarán dentro de los 7 días de emitido.</li>
+                        <li>Esta orden de pedido está sujeta a verificación de stock en almacén.</li>
+                    </ul>
+                </div>
+
+                @if (!string.IsNullOrEmpty(estado))
+                {
+                    <div class="estado-sello estado-@estado.Replace(" ", "") mt-2">
+                        @estado
+                    </div>
+                }
+            </div>
+            <div class="col-4">
+                <table class="table table-bordered table-sm">
+                    <tr>
+                        <th class="bg-light text-right w-50">SUB TOTAL</th>
+                        <td class="text-right w-50">@simbolo @Convert.ToDecimal(Model.TotalAfecto).ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light text-right">IGV (18%)</th>
+                        <td class="text-right">@simbolo @Convert.ToDecimal(Model.IgvTotal).ToString("N2")</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-dark text-white text-right h6 mb-0">TOTAL</th>
+                        <td class="text-right font-weight-bold h6 mb-0">@simbolo @Convert.ToDecimal(Model.Total).ToString("N2")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="row mt-5 pt-5">
+            <div class="col-6 text-center">
+                <div class="border-top border-dark w-75 mx-auto pt-1">
+                    <strong>PREPARADO POR</strong><br>
+                    @if (usuario != null)
+                    {
+                        <span class="text-uppercase small font-weight-bold">@usuario.Nombre</span>
+                        <br>
+                        <span class="small text-muted">@usuario.Cargo</span>
+                    }
+                    else
+                    {
+                        <span class="small text-muted">Área de Ventas</span>
+                    }
+                </div>
+            </div>
+            <div class="col-6 text-center">
+                <div class="border-top border-dark w-75 mx-auto pt-1">
+                    <strong>
+                        @{
+                            string tituloFirma = "AUTORIZADO POR";
+                            if (!string.IsNullOrEmpty(estado))
+                            {
+                                var st = estado.ToUpper();
+                                if (st.Contains("ANULADO") || st.Contains("RECHAZADO")) tituloFirma = "RECHAZADO/ANULADO POR";
+                            }
+                        }
+                        @tituloFirma
+                    </strong>
+                    <br>
+
+                    @if (!string.IsNullOrEmpty(aprobadorNombre))
+                    {
+                        <span class="text-uppercase small font-weight-bold">@aprobadorNombre</span>
+                        <br>
+                        @if (!string.IsNullOrEmpty(aprobadorCargo))
+                        {
+                            <span class="small text-muted">@aprobadorCargo</span>
+                            <br>
+                        }
+
+                        @if (fechaResolucion.HasValue)
+                        {
+                            <span class="small">Fecha: @fechaResolucion.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                        }
+                    }
+                    else
+                    {
+                        @* Si no hay aprobador aún (ej. en Borrador o Generado), mostramos el genérico *@
+                        <small class="text-muted">Gerencia de Ventas</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed-bottom text-center small text-muted mb-2 no-print">
+            ERPKardex - Impreso el @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function(){ window.print(); }, 800);
+        }
+    </script>
+</body>
+</html>
