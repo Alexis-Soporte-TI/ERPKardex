@@ -22,7 +22,7 @@ namespace ERPKardex.Controllers
 
         public IActionResult Index() => View();
         public IActionResult Vehiculos() => View();
-        public IActionResult Movimientos() => View();
+        //public IActionResult Movimientos() => View();
         public IActionResult MovimientosComputo() => View();
         public IActionResult MovimientosVehiculos() => View();
 
