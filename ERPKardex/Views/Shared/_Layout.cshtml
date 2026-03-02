@@ -320,11 +320,23 @@
 
                             bool isInvOpen = (controllerName == "IngresoSalidaAlm") || (controllerName == "Producto" && actionName == "Index");
 
+                            
+
                             <li class="nav-item @(isInvOpen ? "menu-open" : "")">
-                                <a href="#" class="nav-link @(isInvOpen ? "active" : "")">
-                                    <i class="nav-icon fas fa-warehouse"></i>
-                                    <p>Control de Inventario <i class="right fas fa-angle-left"></i></p>
-                                </a>
+                                @if (await _permisos.TienePermiso("SUP_INV_MOV_VER") ||
+                                await _permisos.TienePermiso("SUP_INV_MOV_VALORIZAR") ||
+                                await _permisos.TienePermiso("SUP_INV_STOCK_VER") ||
+                                await _permisos.TienePermiso("SUP_INV_KARDEX_VER")
+                                )
+                                {
+                                    <a href="#" class="nav-link @(isInvOpen ? "active" : "")">
+                                        <i class="nav-icon fas fa-warehouse"></i>
+                                        <p>Control de Inventario <i class="right fas fa-angle-left"></i></p>
+                                    </a>
+
+                                }
+
+                               
                                 <ul class="nav nav-treeview">
                                     @if (await _permisos.TienePermiso("SUP_INV_MOV_VER"))
                                     {
