@@ -153,7 +153,7 @@
                         data: null, className: "text-center",
                         render: function (data) {
                             let botonesGestion = '';
-                            if(data.estado === 'Pendiente' && && auditarReqs) {
+                            if(data.estado === 'Pendiente' && auditarReqs) {
                                 botonesGestion = `
                                 <button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')">
                                     <i class="bi bi-check-lg"></i>
