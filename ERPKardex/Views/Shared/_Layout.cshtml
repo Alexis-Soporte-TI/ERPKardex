@@ -608,7 +608,7 @@
                             }
                         }
 
-                        @* @if (await _permisos.TienePermiso("MOD_ACTIVOS"))
+                        @if (await _permisos.TienePermiso("MOD_ACTIVOS"))
                         {
                             <li class="nav-header font-weight-bold">MÓDULO ACTIVO FIJO</li>
 
@@ -626,49 +626,29 @@
                                     </p>
                                 </a>
                                 <ul class="nav nav-treeview">
-            
-                                    @if (await _permisos.TienePermiso("ACT_DASH_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/Activo/Dashboard" class="nav-link @(isActivoController && actionName == "Dashboard" ? "active" : "")">
-                                                <i class="nav-icon fas fa-tachometer-alt text-danger"></i>
-                                                <p>Dashboard</p>
-                                            </a>
-                                        </li>
-                                    }
 
                                     @if (await _permisos.TienePermiso("ACT_COMPUTO_VER"))
                                     {
                                         <li class="nav-item">
-                                            <a href="/Activo/Index" class="nav-link @(isActivoController && actionName == "Index" ? "active" : "")">
-                                                <i class="fas fa-laptop nav-icon text-primary"></i>
-                                                <p>Inventario Cómputo</p>
-                                            </a>
-                                        </li>
-                                    }
-
-                                    @if (await _permisos.TienePermiso("ACT_FLOTA_VER"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/Activo/Vehiculos" class="nav-link @(isActivoController && actionName == "Vehiculos" ? "active" : "")">
-                                                <i class="fas fa-truck nav-icon text-warning"></i>
-                                                <p>Flota Vehicular</p>
-                                            </a>
-                                        </li>
-                                    }
-
-                                    @if (await _permisos.TienePermiso("ACT_MOV"))
-                                    {
-                                        <li class="nav-item">
-                                            <a href="/Activo/Movimientos" class="nav-link @(isActivoController && actionName == "Movimientos" ? "active" : "")">
-                                                <i class="fas fa-exchange-alt nav-icon text-warning"></i>
+                                            <a href="/Activo/Computo" class="nav-link @(isActivoController && actionName == "Index" ? "active" : "")">
+                                                <i class="fas fa-laptop nav-icon text-warning"></i>
                                                 <p>Movimientos</p>
+                                            </a>
+                                        </li>
+                                    }
+
+                                    @if (await _permisos.TienePermiso("ACT_MOVIMIENTOS_COMPUTO"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Activo/MovimientosComputo" class="nav-link @(isActivoController && actionName == "MovimientosComputo" ? "active" : "")">
+                                                <i class="nav-icon fas fa-exchange-alt text-danger"></i>
+                                                <p>Dashboard</p>
                                             </a>
                                         </li>
                                     }
                                 </ul>
                             </li>
-                        } *@
+                        }
 
                     </ul>
                 </nav>
