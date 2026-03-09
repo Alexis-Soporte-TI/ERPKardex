@@ -646,6 +646,26 @@
                                             </a>
                                         </li>
                                     }
+
+                                    @if (await _permisos.TienePermiso("ACT_FLOTA_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Activo/Vehiculos" class="nav-link @(isActivoController && actionName == "Vehiculos" ? "active" : "")">
+                                                <i class="fas fa-truck nav-icon text-warning"></i>
+                                                <p>Flota Vehicular</p>
+                                            </a>
+                                        </li>
+                                    }
+
+                                    @if (await _permisos.TienePermiso("ACT_MOVIMIENTOS_FLOTA"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Activo/MovimientosVehiculos" class="nav-link @(isActivoController && actionName == "MovimientosVehiculos" ? "active" : "")">
+                                                <i class="fas fa-truck-moving nav-icon text-danger"></i>
+                                                <p>Movimientos de Flota</p>
+                                            </a>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
                         }

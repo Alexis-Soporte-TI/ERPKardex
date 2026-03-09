@@ -104,6 +104,7 @@ namespace ERPKardex.Controllers
                     usuarioExistente.Cargo = cargo;
                     usuarioExistente.Email = email;
                     usuarioExistente.Telefono = telefono;
+                    usuarioExistente.Estado = true; // En caso de que estuviera dado de baja globalmente, lo reactivamos
 
                     // Solo actualizamos password si escribieron algo
                     if (!string.IsNullOrEmpty(password)) usuarioExistente.Password = password;
@@ -264,6 +265,64 @@ namespace ERPKardex.Controllers
         {
             var roles = await _context.TipoUsuarios.Where(x => x.Estado == true).ToListAsync();
             return Json(new { status = true, data = roles });
+        }
+        // =====================================================================
+        // 3. ELIMINACIÓN Y DAR DE BAJA
+        // =====================================================================
+
+        [HttpPost]
+        public async Task<JsonResult> RemoverDeEmpresa(int idVinculo)
+        {
+            try
+            {
+                var vinculo = await _context.EmpresaUsuarios.FindAsync(idVinculo);
+                if (vinculo == null) return Json(new { status = false, message = "Vínculo no encontrado." });
+
+                // Soft delete: Desactivar solo el vínculo con esta empresa
+                vinculo.Estado = false;
+                _context.EmpresaUsuarios.Update(vinculo);
+                await _context.SaveChangesAsync();
+
+                // Limpiamos la caché del menú para que se le cierre el acceso
+                _permisoService.LimpiarCacheUsuario(idVinculo);
+
+                return Json(new { status = true, message = "Usuario removido de la empresa exitosamente." });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> DesactivarUsuarioGlobal(string dni)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Dni == dni);
+                if (usuario == null) return Json(new { status = false, message = "Usuario no encontrado." });
+
+                // 1. Desactivamos al usuario maestro (Estado = false / 0)
+                usuario.Estado = false;
+                _context.Usuarios.Update(usuario);
+
+                // 2. Por seguridad, también desactivamos TODOS sus vínculos en cualquier empresa
+                var vinculos = await _context.EmpresaUsuarios.Where(v => v.UsuarioId == usuario.Id).ToListAsync();
+                foreach (var v in vinculos)
+                {
+                    v.Estado = false;
+                    _context.EmpresaUsuarios.Update(v);
+                    _permisoService.LimpiarCacheUsuario(v.Id);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Json(new { status = true, message = "El usuario fue dado de baja del sistema globalmente." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Json(new { status = false, message = ex.Message });
+            }
         }
     }
 }

@@ -254,8 +254,14 @@
                             <td>${contacto}</td>
                             <td class="text-center">${badge} ${u.rol}</td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-primary" onclick="fct_Editar(${u.idVinculo}, '${u.dni}', '${u.nombre}', '${u.cargo||''}', '${u.email||''}', '${u.telefono||''}', '${u.rol}', ${u.empresaId})">
+                                <button class="btn btn-sm btn-outline-primary mb-1" title="Editar Acceso / Permisos" onclick="fct_Editar(${u.idVinculo}, '${u.dni}', '${u.nombre}', '${u.cargo||''}', '${u.email||''}', '${u.telefono||''}', '${u.rol}', ${u.empresaId})">
                                     <i class="fas fa-cog"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning mb-1 ml-1" title="Remover de esta Empresa" onclick="fct_RemoverEmpresa(${u.idVinculo})">
+                                    <i class="fas fa-user-minus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger mb-1 ml-1" title="Dar de baja global" onclick="fct_DesactivarGlobal('${u.dni}')">
+                                    <i class="fas fa-trash-alt"></i>
                                 </button>
                             </td>
                         </tr>`;
@@ -414,5 +420,54 @@
         function fct_Toggle(idVinculo, idPermiso, activo) {
             $.post('/Seguridad/TogglePermiso', { idVinculo, idPermiso, activar: activo });
         }
+
+        function fct_RemoverEmpresa(idVinculo) {
+            Swal.fire({
+                title: '¿Quitar acceso a la empresa?',
+                text: "El usuario ya no tendrá acceso a esta empresa, pero seguirá existiendo en el sistema.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f6c23e', // Color Warning
+                cancelButtonColor: '#858796',
+                confirmButtonText: 'Sí, quitar acceso',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Seguridad/RemoverDeEmpresa', { idVinculo: idVinculo }, function(res) {
+                        if (res.status) {
+                            Swal.fire('Removido', res.message, 'success');
+                            fct_Listar();
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function fct_DesactivarGlobal(dni) {
+            Swal.fire({
+                title: '¿Dar de baja globalmente?',
+                text: "Se bloqueará el acceso a este usuario en TODAS las empresas. Esta acción es drástica.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b', // Color Danger
+                cancelButtonColor: '#858796',
+                confirmButtonText: 'Sí, dar de baja',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Seguridad/DesactivarUsuarioGlobal', { dni: dni }, function(res) {
+                        if (res.status) {
+                            Swal.fire('Dado de baja', res.message, 'success');
+                            fct_Listar();
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
     </script>
 }
