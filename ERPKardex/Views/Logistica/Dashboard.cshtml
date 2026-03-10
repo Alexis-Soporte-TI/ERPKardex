@@ -137,7 +137,7 @@
     <script>
         $(document).ready(function () {
             // Cargar Empresas
-            $.get('/Activo/GetEmpresas', function (res) {
+            $.get('/Logistica/GetEmpresas', function (res) {
                 if (res.status) {
                     res.data.forEach(e => $('#cbxEmpresaDash').append(`<option value="${e.id}">${e.nombre}</option>`));
                 }

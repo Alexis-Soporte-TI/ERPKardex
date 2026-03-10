@@ -19,6 +19,30 @@ namespace ERPKardex.Controllers
         }
 
         [HttpGet]
+        public async Task<JsonResult> GetEmpresas()
+        {
+            try
+            {
+                var esGlobal = EsAdminGlobal;
+
+                var data = await _context.Empresas
+                    .Where(e => e.Estado == true)
+                    .OrderBy(e => e.Nombre)
+                    .Select(e => new { e.Id, e.Nombre, e.Ruc })
+                    .ToListAsync();
+
+                if (!esGlobal)
+                {
+                    var miEmpresaId = EmpresaUsuarioId;
+                    data = data.Where(e => e.Id == miEmpresaId).ToList();
+                }
+
+                return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        [HttpGet]
         public async Task<JsonResult> GetDashboardData(int? empresaId, int? monedaId, DateTime? fechaInicio, DateTime? fechaFin)
         {
             try
