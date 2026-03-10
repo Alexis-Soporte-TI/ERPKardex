@@ -647,7 +647,7 @@
                                         </li>
                                     }
 
-                                    @if (await _permisos.TienePermiso("ACT_FLOTA_VER"))
+                                    @* @if (await _permisos.TienePermiso("ACT_FLOTA_VER"))
                                     {
                                         <li class="nav-item">
                                             <a href="/Activo/Vehiculos" class="nav-link @(isActivoController && actionName == "Vehiculos" ? "active" : "")">
@@ -665,7 +665,7 @@
                                                 <p>Movimientos de Flota</p>
                                             </a>
                                         </li>
-                                    }
+                                    } *@
                                 </ul>
                             </li>
                         }
