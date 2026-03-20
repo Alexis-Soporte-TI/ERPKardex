@@ -9,6 +9,9 @@
                 <h4 class="m-0 text-dark"><i class="fas fa-laptop mr-2"></i>Activos de Cómputo</h4>
             </div>
             <div class="col-sm-6 text-right">
+                <button class="btn btn-success mr-2" onclick="exportarExcel()">
+                    <i class="fas fa-file-excel mr-1"></i> Exportar a Excel
+                </button>
                 <button class="btn btn-primary" onclick="abrirModalActivo(0)">
                     <i class="fas fa-plus mr-1"></i> Nuevo Activo
                 </button>
@@ -210,6 +213,8 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <script>
         const TIPO_CODIGO = 'COMPUTO';
         let tipoActivoIdComputo = 0;
@@ -489,6 +494,49 @@
             document.getElementById('modalDetalleTitulo').textContent = `Detalle: ${a.codigo}`;
             document.getElementById('detalleContenido').innerHTML = html;
             $('#modalDetalle').modal('show');
+        }
+
+        // ======================== EXPORTAR EXCEL ========================
+        function exportarExcel() {
+            let tablaOriginal = document.getElementById("tblActivos");
+
+            // 1. Clonar la tabla para no modificar la vista del usuario
+            let tablaClon = tablaOriginal.cloneNode(true);
+
+            // 2. Remover la última columna (Acciones) de la cabecera
+            let ths = tablaClon.querySelectorAll('thead tr th');
+            if (ths.length > 0) {
+                ths[ths.length - 1].remove();
+            }
+
+            // 3. Remover la última columna de los datos
+            let trs = tablaClon.querySelectorAll('tbody tr');
+            let hayDatos = false;
+
+            trs.forEach(tr => {
+                let tds = tr.querySelectorAll('td');
+                // Si tiene más de 1 columna, es una fila de datos reales
+                if (tds.length > 1) {
+                    tds[tds.length - 1].remove();
+                    hayDatos = true;
+                }
+            });
+
+            // Si la tabla está vacía o dice "Cargando..."
+            if (!hayDatos) {
+                alert("No hay datos para exportar.");
+                return;
+            }
+
+            // 4. Convertir la tabla HTML a un libro de Excel
+            let wb = XLSX.utils.table_to_book(tablaClon, { sheet: "Activos" });
+
+            // 5. Generar un nombre de archivo con la fecha actual
+            let fecha = new Date().toISOString().slice(0, 10);
+            let nombreArchivo = `Activos_Computo_${fecha}.xlsx`;
+
+            // 6. Descargar el archivo
+            XLSX.writeFile(wb, nombreArchivo);
         }
     </script>
 }
