@@ -305,6 +305,11 @@ namespace ERPKardex.Controllers
                         det.FechaRegistro = DateTime.Now;
                         det.EmpresaId = EmpresaUsuarioId;
 
+                        if (det.Cantidad <= 0)
+                        {
+                            throw new Exception("ERROR: las cantidades de los detalles no pueden ser 0.");
+                        }
+
                         // Si es ingreso, calculamos los totales basados en la Cantidad Real * Precio Factura
                         if (cabecera.TipoMovimiento == true)
                         {
