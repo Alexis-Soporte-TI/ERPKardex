@@ -346,8 +346,21 @@ namespace ERPKardex.Controllers
                             _context.StockAlmacenes.Add(stock);
                         }
 
-                        if (cabecera.TipoMovimiento == true) stock.StockActual += det.Cantidad ?? 0;
-                        else stock.StockActual -= det.Cantidad ?? 0;
+                        if (cabecera.TipoMovimiento == true)
+                        {
+                            stock.StockActual += det.Cantidad ?? 0;
+                        }
+                        else if (cabecera.TipoMovimiento == false)
+                        {
+                            if (stock.StockActual >= det.Cantidad)
+                            {
+                                stock.StockActual -= det.Cantidad ?? 0;
+                            }
+                            else
+                            {
+                                throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}.");
+                            }
+                        }
 
                         stock.UltimaActualizacion = DateTime.Now;
 
