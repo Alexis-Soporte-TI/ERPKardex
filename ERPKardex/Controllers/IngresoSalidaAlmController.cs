@@ -433,6 +433,33 @@ namespace ERPKardex.Controllers
 
         #endregion
 
+        #region APROBACIÓN/RECHAZO DE MOVIMIENTOS
+        // CAMBIAR ESTADO (Aprobar/Rechazar)
+        [HttpPost]
+        public JsonResult CambiarEstado(int id, string nombreEstado)
+        {
+            try
+            {
+                var usuarioId = UsuarioActualId; // Usamos propiedad base
+                var estadoDb = _context.Estados.FirstOrDefault(e => e.Nombre == nombreEstado && e.Tabla == "INGRESOSALIDAALM");
+
+                // Aprobado o Rechazado, según el nombreEstado que venga
+                if (estadoDb == null) return Json(new { status = false, message = "Estado no configurado." });
+
+                var ingresosalidaalm = _context.IngresoSalidaAlms.Find(id);
+                if (ingresosalidaalm == null) return Json(new { status = false, message = "No encontrado." });
+
+                ingresosalidaalm.EstadoId = estadoDb.Id;
+                ingresosalidaalm.UsuarioAprobadorId = usuarioId;
+                ingresosalidaalm.FechaAprobacion = DateTime.Now;
+                _context.SaveChanges();
+
+                return Json(new { status = true, message = $"Movimiento {nombreEstado} correctamente." });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+        #endregion
+
         #region API: ANULACIÓN DE MOVIMIENTO (NUEVO)
 
         [HttpPost]

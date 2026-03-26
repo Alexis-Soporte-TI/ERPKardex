@@ -282,6 +282,8 @@
                         let btns = '';
                         btns += `<button class="btn btn-sm btn-secondary" onclick="fct_Imprimir(${data.id})" title="Imprimir Formato"><i class="fas fa-print"></i></button>`;
                         btns += `<button class="btn btn-sm btn-info" onclick="verDetalle(${data.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>`
+                        btns += `<button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')"><i class="bi bi-check-lg"></i></button>`;
+                        btns += `<button class="btn btn-sm btn-danger" title="Rechazar" onclick="cambiarEstado(${data.id}, 'Rechazado')"><i class="bi bi-x-lg"></i></button>`;
                         // btns += `<button class="btn btn-sm btn-danger" onclick="anular(${data.id})" title="Anular"><i class="fas fa-times"></i></button>`;
                         return btns;
                     },
@@ -354,6 +356,36 @@
     
     function fct_Imprimir(id) {
         window.open('/IngresoSalidaAlm/Imprimir?id=' + id, '_blank');
+    }
+
+    // --- APROBAR / RECHAZAR ---
+    function cambiarEstado(id, nuevoEstadoNombre) {
+        // nuevoEstadoNombre debe ser "Aprobado" o "Rechazado"
+        let accion = nuevoEstadoNombre === "Aprobado" ? "Aprobar" : "Rechazar";
+        let color = nuevoEstadoNombre === "Aprobado" ? "#28a745" : "#dc3545";
+        
+        Swal.fire({
+            title: `¿${accion} Requerimiento?`,
+            icon: "warning",
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonColor: color,
+            confirmButtonText: `Sí, ${accion}`,
+            cancelButtonText: "Revisar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Nota: Enviamos 'nombreEstado' en lugar de 'estadoId'
+                $.post('/IngresoSalidaAlm/CambiarEstado', { id: id, nombreEstado: nuevoEstadoNombre }, function(res) {
+                    if(res.status) {
+                        Swal.fire("Éxito", res.message, "success");
+                        // Recargar tabla correspondiente
+                        $('#tbl_Movimientos').DataTable().ajax.reload();
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                });
+            }
+        });
     }
 
     function anular(id) {

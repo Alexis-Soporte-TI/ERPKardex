@@ -36,6 +36,10 @@ namespace ERPKardex.Models
         public string? TablaReferencia { get; set; }
         [Column("estado_id")]
         public int? EstadoId { get; set; }
+        [Column("usuario_aprobador")]
+        public int? UsuarioAprobador { get; set; }
+        [Column("fecha_aprobacion")]
+        public DateTime? FechaAprobacion { get; set; }
         [Column("usuario_id")]
         public int? UsuarioId { get; set; }
         [Column("fecha_registro")]
