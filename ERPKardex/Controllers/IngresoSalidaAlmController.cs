@@ -231,10 +231,10 @@ namespace ERPKardex.Controllers
                     string codigoDoc = (cabecera.TipoMovimiento == true) ? "IALM" : "SALM";
 
                     // Estados necesarios
-                    var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
+                    var estadoPendiente = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "INGRESOSALIDAALM");
                     var estadoAnulado = _context.Estados.FirstOrDefault(e => e.Nombre == "Anulado" && e.Tabla == "INGRESOSALIDAALM"); // Para validación
 
-                    if (estadoAprobado == null) throw new Exception("Estado 'Aprobado' no configurado para almacén.");
+                    if (estadoPendiente == null) throw new Exception("Estado 'Pendiente' no configurado para almacén.");
 
                     var tipoDocInterno = _context.TiposDocumentoInterno.FirstOrDefault(t => t.Codigo == codigoDoc && t.Estado == true);
                     if (tipoDocInterno == null) throw new Exception($"Tipo documento interno '{codigoDoc}' no existe.");
@@ -278,7 +278,7 @@ namespace ERPKardex.Controllers
 
                     cabecera.TipoDocumentoInternoId = tipoDocInterno.Id;
                     cabecera.Numero = $"{codigoDoc}-{correlativo.ToString("D10")}";
-                    cabecera.EstadoId = estadoAprobado.Id;
+                    cabecera.EstadoId = estadoPendiente.Id;
 
                     // Guardamos cabecera para obtener ID
                     _context.IngresoSalidaAlms.Add(cabecera);
@@ -336,33 +336,33 @@ namespace ERPKardex.Controllers
 
                         _context.DIngresoSalidaAlms.Add(det);
 
-                        // B. Actualizar Kardex/Stock (Lógica Estándar)
-                        var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+                        //// B. Actualizar Kardex/Stock (Lógica Estándar)
+                        //var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
 
-                        if (stock == null)
-                        {
-                            if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
-                            stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
-                            _context.StockAlmacenes.Add(stock);
-                        }
+                        //if (stock == null)
+                        //{
+                        //    if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
+                        //    stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                        //    _context.StockAlmacenes.Add(stock);
+                        //}
 
-                        if (cabecera.TipoMovimiento == true)
-                        {
-                            stock.StockActual += det.Cantidad ?? 0;
-                        }
-                        else if (cabecera.TipoMovimiento == false)
-                        {
-                            if (stock.StockActual >= det.Cantidad)
-                            {
-                                stock.StockActual -= det.Cantidad ?? 0;
-                            }
-                            else
-                            {
-                                throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}.");
-                            }
-                        }
+                        //if (cabecera.TipoMovimiento == true)
+                        //{
+                        //    stock.StockActual += det.Cantidad ?? 0;
+                        //}
+                        //else if (cabecera.TipoMovimiento == false)
+                        //{
+                        //    if (stock.StockActual >= det.Cantidad)
+                        //    {
+                        //        stock.StockActual -= det.Cantidad ?? 0;
+                        //    }
+                        //    else
+                        //    {
+                        //        throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}.");
+                        //    }
+                        //}
 
-                        stock.UltimaActualizacion = DateTime.Now;
+                        //stock.UltimaActualizacion = DateTime.Now;
 
                         //// C. Actualizar ÍTEM de la Orden (DORDEN)
                         //if (cabecera.TipoMovimiento == true && det.IdReferencia != null && det.TablaReferencia == "DORDENCOMPRA")
@@ -421,7 +421,7 @@ namespace ERPKardex.Controllers
                     //}
 
                     transaction.Commit();
-                    return Json(new { status = true, message = "Movimiento registrado correctamente. Stock y Orden actualizados." });
+                    return Json(new { status = true, message = "Movimiento registrado correctamente." });
                 }
                 catch (Exception ex)
                 {
@@ -438,25 +438,77 @@ namespace ERPKardex.Controllers
         [HttpPost]
         public JsonResult CambiarEstado(int id, string nombreEstado)
         {
-            try
+            using (var transaction = _context.Database.BeginTransaction())
             {
-                var usuarioId = UsuarioActualId; // Usamos propiedad base
-                var estadoDb = _context.Estados.FirstOrDefault(e => e.Nombre == nombreEstado && e.Tabla == "INGRESOSALIDAALM");
+                try
+                {
+                    var usuarioId = UsuarioActualId;
+                    var estadoDb = _context.Estados.FirstOrDefault(e => e.Nombre == nombreEstado && e.Tabla == "INGRESOSALIDAALM");
 
-                // Aprobado o Rechazado, según el nombreEstado que venga
-                if (estadoDb == null) return Json(new { status = false, message = "Estado no configurado." });
+                    if (estadoDb == null) return Json(new { status = false, message = "Estado no configurado." });
 
-                var ingresosalidaalm = _context.IngresoSalidaAlms.Find(id);
-                if (ingresosalidaalm == null) return Json(new { status = false, message = "No encontrado." });
+                    var cabecera = _context.IngresoSalidaAlms.Find(id);
+                    if (cabecera == null) return Json(new { status = false, message = "Movimiento no encontrado." });
 
-                ingresosalidaalm.EstadoId = estadoDb.Id;
-                ingresosalidaalm.UsuarioAprobadorId = usuarioId;
-                ingresosalidaalm.FechaAprobacion = DateTime.Now;
-                _context.SaveChanges();
+                    // Validación de seguridad: Evitar reprocesar si ya está en ese estado (Evita duplicar stock)
+                    if (cabecera.EstadoId == estadoDb.Id)
+                        return Json(new { status = false, message = $"El movimiento ya se encuentra en estado {nombreEstado}." });
 
-                return Json(new { status = true, message = $"Movimiento {nombreEstado} correctamente." });
+                    // =================================================================================
+                    // ACTUALIZACIÓN DE STOCK (SOLO SI SE ESTÁ APROBANDO)
+                    // =================================================================================
+                    if (nombreEstado == "Aprobado")
+                    {
+                        var detalles = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == id).ToList();
+
+                        foreach (var det in detalles)
+                        {
+                            var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+
+                            if (stock == null)
+                            {
+                                if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
+                                stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                                _context.StockAlmacenes.Add(stock);
+                            }
+
+                            if (cabecera.TipoMovimiento == true) // Es Ingreso
+                            {
+                                stock.StockActual += det.Cantidad ?? 0;
+                            }
+                            else if (cabecera.TipoMovimiento == false) // Es Salida
+                            {
+                                if (stock.StockActual >= det.Cantidad)
+                                {
+                                    stock.StockActual -= det.Cantidad ?? 0;
+                                }
+                                else
+                                {
+                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}");
+                                }
+                            }
+
+                            stock.UltimaActualizacion = DateTime.Now;
+                        }
+                    }
+
+                    // Cambiamos estado de la cabecera
+                    cabecera.EstadoId = estadoDb.Id;
+                    cabecera.UsuarioAprobador = usuarioId;
+                    cabecera.FechaAprobacion = DateTime.Now;
+
+                    _context.SaveChanges();
+                    transaction.Commit();
+
+                    string msgExtra = (nombreEstado == "Aprobado") ? " y Kardex actualizado." : ".";
+                    return Json(new { status = true, message = $"Movimiento {nombreEstado} correctamente{msgExtra}" });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return Json(new { status = false, message = ex.Message });
+                }
             }
-            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
         }
         #endregion
 

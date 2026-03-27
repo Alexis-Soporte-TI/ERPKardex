@@ -1,7 +1,9 @@
 ﻿@using System.Security.Claims
+@inject ERPKardex.Services.IPermisoService _permisos
+
 @{
     ViewData["Title"] = "Movimientos de Almacén";
-    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+    var auditarMovimientos = await _permisos.TienePermiso("BTN_INGRESOSALIDAALM_APROBAR");
 }
 <div class="card d-none" id="efec-cargando">
     <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark">
@@ -79,6 +81,8 @@
 </div>
 <script>
     var dtMovimientos;
+    
+    let auditarMovs = '@auditarMovimientos' === 'True' ? true : false;
 
     $(document).ready(function () {
         // $('body').addClass('sidebar-collapse');
@@ -279,16 +283,35 @@
                     data: null,
                     orderable: false,
                     render: function (data) {
-                        let btns = '';
-                        btns += `<button class="btn btn-sm btn-secondary" onclick="fct_Imprimir(${data.id})" title="Imprimir Formato"><i class="fas fa-print"></i></button>`;
-                        btns += `<button class="btn btn-sm btn-info" onclick="verDetalle(${data.id})" title="Ver Detalles"><i class="fas fa-eye"></i></button>`
-                        btns += `<button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')"><i class="bi bi-check-lg"></i></button>`;
-                        btns += `<button class="btn btn-sm btn-danger" title="Rechazar" onclick="cambiarEstado(${data.id}, 'Rechazado')"><i class="bi bi-x-lg"></i></button>`;
+                        let botonesGestion = '';
+                        if(data.estado === 'Pendiente' && auditarMovs) {
+                            botonesGestion = `
+                            <button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" title="Rechazar" onclick="cambiarEstado(${data.id}, 'Rechazado')">
+                                <i class="bi bi-x-lg"></i>
+                            </button>`;
+                        }
+
+                        return `
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-secondary" title="Imprimir Formato" onclick="fct_Imprimir(${data.id})">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-sm btn-info" title="Ver Detalle" onclick="verDetalle(${data.id})">
+                                <i class="bi bi-eye-fill"></i>
+                            </button>
+                            ${botonesGestion}
+                        </div>`;
+
                         // btns += `<button class="btn btn-sm btn-danger" onclick="anular(${data.id})" title="Anular"><i class="fas fa-times"></i></button>`;
-                        return btns;
                     },
                     className: 'text-center'
                 }
+            ],
+            order: [
+                [0, 'desc'],
             ],
             columnDefs: [
                 {
@@ -365,7 +388,7 @@
         let color = nuevoEstadoNombre === "Aprobado" ? "#28a745" : "#dc3545";
         
         Swal.fire({
-            title: `¿${accion} Requerimiento?`,
+            title: `¿${accion} Movimiento?`,
             icon: "warning",
             showCancelButton: true,
             reverseButtons: true,
