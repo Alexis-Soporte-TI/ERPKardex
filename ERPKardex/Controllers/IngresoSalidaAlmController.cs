@@ -1094,40 +1094,87 @@ namespace ERPKardex.Controllers
         {
             try
             {
-                var productosData = (from pro in _context.Productos
-                                     where pro.Estado == true
-                                     join disa in _context.DIngresoSalidaAlms on pro.Id equals disa.ProductoId
-                                     join isa in _context.IngresoSalidaAlms on disa.IngresoSalidaAlmId equals isa.Id
-                                     where isa.AlmacenId == almacenId
-                                     where isa.TipoMovimiento == true // Solo Entradas para mostrar el proveedor y doc asociado
-                                     join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
-                                     from td in joinDoc.DefaultIfEmpty()
-                                     join ent in _context.Proveedores on isa.ProveedorId equals ent.Id into joinEnt
-                                     from ent in joinEnt.DefaultIfEmpty()
-                                     join tdi in _context.TiposDocumentoIdentidad on ent.TipoDocumentoIdentidadId equals tdi.Id into joinTdi
-                                     from tdi in joinTdi.DefaultIfEmpty()
-                                     where pro.EmpresaId == EmpresaUsuarioId // <--- CAMBIO AQUÍ
-                                     select new
-                                     {
-                                         pro.Codigo,
-                                         pro.CodGrupo,
-                                         pro.DescripcionGrupo,
-                                         pro.DescripcionComercial,
-                                         pro.CodSubgrupo,
-                                         pro.DescripcionSubgrupo,
-                                         pro.DescripcionProducto,
-                                         pro.CodUnidadMedida,
-                                         disa.Cantidad,
-                                         Proveedor = ((tdi.Descripcion ?? "") + ": " + (ent.NumeroDocumento ?? "") + " - " + (ent.RazonSocial ?? "")) ?? "Sin Proveedor",
-                                         TipoDocumento = td != null ? td.Descripcion : "S/D",
-                                         Documento = (isa.SerieDocumento ?? "") + " - " + (isa.NumeroDocumento ?? ""),
-                                     }).ToList();
+                // 1. Obtener el estado Aprobado
+                var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
+                int idAprobado = estadoAprobado?.Id ?? -1;
 
-                return Json(new { data = productosData, message = "Productos retornados exitosamente.", status = true });
+                // 2. Calcular el Costo Promedio Ponderado de Entradas (CORREGIDO PARA EF CORE)
+                // Paso A: Proyectamos las operaciones básicas antes de agrupar para que SQL lo entienda bien
+                var queryCostos = from d in _context.DIngresoSalidaAlms
+                                  join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
+                                  where c.EmpresaId == EmpresaUsuarioId
+                                     && c.TipoMovimiento == true
+                                     && c.EstadoId == idAprobado
+                                     && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
+                                  select new
+                                  {
+                                      ProductoId = d.ProductoId,
+                                      Cantidad = d.Cantidad ?? 0,
+                                      CostoTotalLinea = (d.Cantidad ?? 0) * (d.Precio ?? 0)
+                                  };
+
+                // Paso B: Agrupamos y hacemos las sumas (Esto sí se traduce perfecto a SQL)
+                var totalesAgrupados = queryCostos
+                    .GroupBy(x => x.ProductoId)
+                    .Select(g => new
+                    {
+                        ProductoId = g.Key,
+                        TotalCant = g.Sum(x => x.Cantidad),
+                        TotalCosto = g.Sum(x => x.CostoTotalLinea)
+                    })
+                    .ToList(); // <-- Clave: Lo traemos a la memoria de C#
+
+                // Paso C: Hacemos la división final de forma segura en memoria y armamos el diccionario
+                var costosPromedio = totalesAgrupados.ToDictionary(
+                    x => x.ProductoId,
+                    x => x.TotalCant > 0 ? x.TotalCosto / x.TotalCant : 0
+                );
+
+                // 3. Consultar la tabla de StockAlmacenes que tiene el SALDO REAL ACTUAL
+                var queryStock = from sa in _context.StockAlmacenes
+                                 join p in _context.Productos on sa.ProductoId equals p.Id
+                                 where sa.EmpresaId == EmpresaUsuarioId
+                                    && p.Estado == true
+                                    && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
+                                 select new
+                                 {
+                                     p.Id,
+                                     p.Codigo,
+                                     p.CodGrupo,
+                                     p.DescripcionGrupo,
+                                     p.DescripcionComercial,
+                                     p.CodSubgrupo,
+                                     p.DescripcionSubgrupo,
+                                     p.DescripcionProducto,
+                                     p.CodUnidadMedida,
+                                     StockReal = sa.StockActual
+                                 };
+
+                var listaStockBD = queryStock.ToList();
+
+                // 4. Armar la respuesta cruzando el Stock Real con su Costo Promedio calculado
+                var reporte = listaStockBD.Select(s => new
+                {
+                    s.Codigo,
+                    s.CodGrupo,
+                    s.DescripcionGrupo,
+                    s.DescripcionComercial,
+                    s.CodSubgrupo,
+                    s.DescripcionSubgrupo,
+                    s.DescripcionProducto,
+                    s.CodUnidadMedida,
+                    Cantidad = s.StockReal,
+
+                    PrecioUnitario = costosPromedio.ContainsKey(s.Id) ? Math.Round(costosPromedio[s.Id], 4) : 0,
+
+                    ValorizacionTotal = Math.Round((s.StockReal * (costosPromedio.ContainsKey(s.Id) ? costosPromedio[s.Id] : 0)).Value, 2)
+                }).OrderBy(x => x.DescripcionProducto).ToList();
+
+                return Json(new { data = reporte, message = "Reporte de stock generado exitosamente.", status = true });
             }
             catch (Exception ex)
             {
-                return Json(new ApiResponse { data = null, message = ex.Message, status = false });
+                return Json(new { data = (object)null, message = ex.Message, status = false });
             }
         }
 
