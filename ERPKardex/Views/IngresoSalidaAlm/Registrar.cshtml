@@ -98,6 +98,10 @@
                             <div class="col-md-4 mb-3" id="div_InputSalida_Act">
                                 <label>Actividad</label><select id="cbx_Actividad" class="form-control select2-busqueda"></select>
                             </div>
+                            <div class="col-md-4 mb-3" id="div_InputSalida_PedInt">
+                                <label>Pedido Interno</label>
+                                <input type="text" id="txt_PedidoInterno" class="form-control">
+                            </div>
                             <div class="col-md-4 mb-3">
                                 <button id="btn_AgregarDetalle" type="button" class="btn btn-primary btn-block font-weight-bold">
                                     <i class="bi bi-plus-circle"></i> AÑADIR ITEM
@@ -120,6 +124,7 @@
                                     <th>U.M.</th>
                                     <th class="col-salida">Centro Costo</th>
                                     <th class="col-salida">Actividad</th>
+                                    <th class="col-salida">Pedido Interno</th>
                                     <th>Acción</th>
                                 </tr>
                             </thead>
@@ -172,7 +177,7 @@
 
                 // Ocultar columnas de costos (Entrada no lleva CC ni Actividad)
                 $('.col-salida').addClass('d-none');
-                $('#div_InputSalida_CC, #div_InputSalida_Act').addClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_Act, #div_InputSalida_PedInt').addClass('d-none');
 
             } else if (tipo === "0") { // SALIDA
                 // $('#div_DocRef').addClass('d-none'); // Salida interna no suele llevar Guia de proveedor
@@ -181,7 +186,7 @@
 
                 // Mostrar columnas de costos
                 $('.col-salida').removeClass('d-none');
-                $('#div_InputSalida_CC, #div_InputSalida_Act').removeClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_Act, #div_InputSalida_PedInt').removeClass('d-none');
             } else {
                  // Si no selecciona nada
                  $('.col-salida').removeClass('d-none');
@@ -230,11 +235,13 @@
             // VALIDACION: Solo pedimos CC y Actividad si es SALIDA (0)
             let nombreCC = "";
             let nombreAct = "";
+            let pedidoInterno = "";  
 
             if(tipoMov === "0") { // Salida
                 if(!ccId || !actId) return toastr.warning("Centro de Costo y Actividad son obligatorios para SALIDAS.");
                 nombreCC = $("#cbx_CentroCosto option:selected").text();
                 nombreAct = $("#cbx_Actividad option:selected").text();
+                pedidoInterno = $("#txt_PedidoInterno").val();
             } else {
                 // Entrada: Limpiamos por si acaso, no se guardan
                 ccId = null; actId = null;
@@ -249,6 +256,7 @@
                 FechaVencimiento: fVen,
                 CentroCostoId: ccId, NombreCentroCosto: nombreCC,
                 ActividadId: actId, NombreActividad: nombreAct,
+                PedidoInterno: pedidoInterno,
                 IdReferencia: null, TablaReferencia: null
             });
             fct_RenderDetalle(); $("#txt_DetCantidad").val("0.00");
@@ -325,7 +333,7 @@
 
             // Renderizado condicional de columnas CC y Actividad
             if (!esEntrada) {
-                h += `<td class="align-middle">${d.NombreCentroCosto}</td><td class="align-middle">${d.NombreActividad}</td>`;
+                h += `<td class="align-middle">${d.NombreCentroCosto}</td><td class="align-middle">${d.NombreActividad}</td><td class="align-middle">${d.PedidoInterno}</td>`;
             } else {
                 // Mantenemos las celdas ocultas para no romper la estructura de la tabla si el CSS falla
                 h += `<td class="d-none"></td><td class="d-none"></td>`;
