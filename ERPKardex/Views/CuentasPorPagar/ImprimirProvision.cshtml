@@ -174,20 +174,36 @@
         </table>
 
         <div class="row justify-content-end mb-4">
-            <div class="col-5">
+            <div class="col-6">
                 <table class="table table-sm table-bordered mb-0">
                     <tr>
-                        <td class="bg-light font-weight-bold text-right">SUBTOTAL:</td>
-                        <td class="text-right">@simbolo @((Model.SubTotal ).ToString("N2"))</td>
+                        <td class="bg-light font-weight-bold text-right">BASE IMPONIBLE:</td>
+                        <td class="text-right">@simbolo @((Model.SubTotal).ToString("N2"))</td>
                     </tr>
                     <tr>
-                        <td class="bg-light font-weight-bold text-right">I.G.V. (18%):</td>
-                        <td class="text-right">@simbolo @((Model.MontoIgv ).ToString("N2"))</td>
+                        <td class="bg-light font-weight-bold text-right">I.G.V.:</td>
+                        <td class="text-right">@simbolo @((Model.MontoIgv).ToString("N2"))</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-light font-weight-bold text-right">ADQ. NO GRAVADA:</td>
+                        <td class="text-right">@simbolo @((Model.MontoInafecto).ToString("N2"))</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-light font-weight-bold text-right">I.S.C.:</td>
+                        <td class="text-right">@simbolo @((Model.MontoIsc).ToString("N2"))</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-light font-weight-bold text-right">I.C.B.P.E.R.:</td>
+                        <td class="text-right">@simbolo @((Model.MontoIcbper).ToString("N2"))</td>
+                    </tr>
+                    <tr>
+                        <td class="bg-light font-weight-bold text-right">OTROS TRIBUTOS:</td>
+                        <td class="text-right">@simbolo @((Model.OtrosTributos).ToString("N2"))</td>
                     </tr>
                     <tr>
                         <td class="bg-light font-weight-bold text-right" style="font-size: 1.1em;">TOTAL:</td>
                         <td class="text-right font-weight-bold" style="font-size: 1.1em;">
-                            @simbolo @((Model.Total ).ToString("N2"))
+                            @simbolo @((Model.Total).ToString("N2"))
                         </td>
                     </tr>
                     <tr>

@@ -28,6 +28,9 @@ namespace ERPKardex.Models
         [Column("subtotal")] public decimal SubTotal { get; set; } = 0;
         [Column("monto_igv")] public decimal MontoIgv { get; set; } = 0;
         [Column("monto_inafecto")] public decimal MontoInafecto { get; set; } = 0;
+        [Column("monto_isc")] public decimal MontoIsc { get; set; } = 0;
+        [Column("monto_icbper")] public decimal MontoIcbper { get; set; } = 0;
+        [Column("otros_tributos")] public decimal OtrosTributos { get; set; } = 0;
         [Column("total")] public decimal Total { get; set; } = 0;
         [Column("saldo")] public decimal? Saldo { get; set; } = 0;
         [Column("monto_usado")] public decimal? MontoUsado { get; set; } = 0;

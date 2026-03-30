@@ -33,9 +33,14 @@
     <div class="card shadow">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Listado de Documentos por Pagar</h6>
-            <a href="/CuentasPorPagar/RegistroProvision" class="btn btn-success btn-sm font-weight-bold">
-                <i class="fas fa-plus"></i> Nueva Provisión
-            </a>
+            <div>
+                <button onclick="exportarExcel()" class="btn btn-outline-success btn-sm font-weight-bold mr-2">
+                    <i class="fas fa-file-excel"></i> Exportar
+                </button>
+                <a href="/CuentasPorPagar/RegistroProvision" class="btn btn-success btn-sm font-weight-bold">
+                    <i class="fas fa-plus"></i> Nueva Provisión
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -79,6 +84,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         $(document).ready(function() {
             cargarComboProveedores();
@@ -209,16 +215,32 @@
                 } else {
                     html += `<tr><td colspan="6" class="text-center">Sin detalles</td></tr>`;
                 }
-
+                
                 html += `</tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="5" class="text-right font-weight-bold">SubTotal:</td>
+                                <td colspan="5" class="text-right font-weight-bold">Base Imponible:</td>
                                 <td class="text-right">${cab.moneda} ${cab.subTotal.toFixed(2)}</td>
                             </tr>
                             <tr>
                                 <td colspan="5" class="text-right font-weight-bold">IGV:</td>
                                 <td class="text-right">${cab.moneda} ${cab.igv.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">No Gravada:</td>
+                                <td class="text-right">${cab.moneda} ${cab.inafecto.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">ISC:</td>
+                                <td class="text-right">${cab.moneda} ${cab.isc.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">ICBPER:</td>
+                                <td class="text-right">${cab.moneda} ${cab.icbper.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" class="text-right font-weight-bold">Otros Tributos:</td>
+                                <td class="text-right">${cab.moneda} ${cab.otros.toFixed(2)}</td>
                             </tr>
                             <tr class="bg-primary text-white">
                                 <td colspan="5" class="text-right font-weight-bold">TOTAL:</td>
@@ -233,6 +255,29 @@
             }).fail(function() {
                 $('#cuerpoModal').html('<div class="alert alert-danger">Error de servidor.</div>');
             });
+        }
+
+        function exportarExcel() {
+            // Validar que hay datos
+            let filas = $('#tbl_Provisiones tbody tr').length;
+            if (filas === 0 || $('#tbl_Provisiones tbody tr td').attr('colspan')) {
+            toastr.warning("No hay datos para exportar.");
+            return;
+            }
+
+            // 1. Clonar la tabla para no afectar la interfaz visual del usuario
+            let tablaOriginal = document.getElementById("tbl_Provisiones");
+            let tablaClon = tablaOriginal.cloneNode(true);
+
+            // 2. Remover la última columna (índice 8) que es "Acciones" tanto de cabecera como de cuerpo
+            $(tablaClon).find('th:last-child, td:last-child').remove();
+
+            // 3. Crear el libro y la hoja usando SheetJS
+            let wb = XLSX.utils.table_to_book(tablaClon, { sheet: "Provisiones" });
+
+            // 4. Descargar el archivo
+            let fecha = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `Provisiones_${fecha}.xlsx`);
         }
     </script>
 }

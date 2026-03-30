@@ -109,17 +109,34 @@
 
                         <div class="col-12 mt-3">
                             <div class="row justify-content-end">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="input-group input-group-sm mb-1">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 100px;">Subtotal</span></div>
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">Base Imponible</span></div>
                                         <input type="text" id="txt_SubTotal" class="form-control text-right" readonly value="0.00">
                                     </div>
                                     <div class="input-group input-group-sm mb-1">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 100px;">IGV</span></div>
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">IGV</span></div>
                                         <input type="text" id="txt_Igv" class="form-control text-right" readonly value="0.00">
                                     </div>
+        
+                                    <div class="input-group input-group-sm mb-1">
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">No Gravada</span></div>
+                                        <input type="number" id="txt_Inafecto" class="form-control text-right valor-adicional" value="0.00" step="0.01" min="0">
+                                    </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">ISC</span></div>
+                                        <input type="number" id="txt_Isc" class="form-control text-right valor-adicional" value="0.00" step="0.01" min="0">
+                                    </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">ICBPER</span></div>
+                                        <input type="number" id="txt_Icbper" class="form-control text-right valor-adicional" value="0.00" step="0.01" min="0">
+                                    </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold" style="width: 130px;">Otros Tributos</span></div>
+                                        <input type="number" id="txt_Otros" class="form-control text-right valor-adicional" value="0.00" step="0.01" min="0">
+                                    </div>
                                     <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold bg-dark text-white" style="width: 100px;">TOTAL</span></div>
+                                        <div class="input-group-prepend"><span class="input-group-text font-weight-bold bg-dark text-white" style="width: 130px;">TOTAL</span></div>
                                         <input type="text" id="txt_TotalPagar" class="form-control font-weight-bold text-right text-dark border-dark" readonly value="0.00">
                                     </div>
                                 </div>
@@ -169,6 +186,8 @@
                 TASA_IGV = Number($(this).val());
                 recalcularTotal();
             });
+
+            $('.valor-adicional').on('input', function() { recalcularTotal(); });
         });
         
         function buscarTipoCambio() {
@@ -275,14 +294,25 @@
         function recalcularTotal() {
             let subtotal = 0;
             $('.txt-subtotal').each(function() { subtotal += parseFloat($(this).text()); });
+    
             let tipo = $('#cbx_TipoDocumento').val();
             let tasaIGV = (tipo === 'RH') ? 0 : TASA_IGV;
             let igv = subtotal * tasaIGV;
-            let total = subtotal + igv;
+
+            // Leer nuevos campos
+            let inafecto = parseFloat($('#txt_Inafecto').val()) || 0;
+            let isc = parseFloat($('#txt_Isc').val()) || 0;
+            let icbper = parseFloat($('#txt_Icbper').val()) || 0;
+            let otros = parseFloat($('#txt_Otros').val()) || 0;
+
+            // Nueva fórmula de total
+            let total = subtotal + igv + inafecto + isc + icbper + otros;
+    
             $('#txt_SubTotal').val(subtotal.toFixed(2));
             $('#txt_Igv').val(igv.toFixed(2));
             $('#txt_TotalPagar').val(total.toFixed(2));
         }
+
         $('#cbx_TipoDocumento').change(function() { recalcularTotal(); });
 
         function guardarProvision() {
@@ -315,8 +345,12 @@
                 OrdenServicioId: ($('input[name="optOrigen"]:checked').val() === 'OS') ? parseInt(ordenId) : null,
                 Serie: $('#txt_Serie').val(),
                 Numero: $('#txt_Numero').val(),
-                SubTotal: parseFloat($('#txt_SubTotal').val()),
-                MontoIgv: parseFloat($('#txt_Igv').val()),
+                SubTotal: parseFloat($('#txt_SubTotal').val()) || 0,
+                MontoIgv: parseFloat($('#txt_Igv').val()) || 0,
+                MontoInafecto: parseFloat($('#txt_Inafecto').val()) || 0,
+                MontoIsc: parseFloat($('#txt_Isc').val()) || 0,
+                MontoIcbper: parseFloat($('#txt_Icbper').val()) || 0,
+                OtrosTributos: parseFloat($('#txt_Otros').val()) || 0,
                 Total: total,
                 FechaEmision: $('#txt_FechaEmision').val(),
                 FechaVencimiento: $('#txt_FechaVencimiento').val(), // <--- ENVIAMOS FECHA VENC

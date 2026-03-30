@@ -151,8 +151,13 @@ namespace ERPKardex.Controllers
                                     ruc = p.NumeroDocumento,
                                     fecha = d.FechaEmision.Value.ToString("dd/MM/yyyy"),
                                     moneda = m.Simbolo,
+                                    // SECCIÓN ACTUALIZADA: Todos los importes
                                     subTotal = d.SubTotal,
                                     igv = d.MontoIgv,
+                                    inafecto = d.MontoInafecto, // Valor No Gravado
+                                    isc = d.MontoIsc,
+                                    icbper = d.MontoIcbper,
+                                    otros = d.OtrosTributos,
                                     total = d.Total,
                                     obs = d.Observacion ?? "-",
                                     referencia = oc != null ? "O/C: " + oc.Numero : (os != null ? "O/S: " + os.Numero : "-")
@@ -534,8 +539,17 @@ namespace ERPKardex.Controllers
                                        select d.Total).Sum();
                     }
 
-                    if (doc.Total > ((totalOrden - totalPrevio) + 1m))
-                        throw new Exception("Monto excede saldo pendiente de la orden.");
+                    //if (doc.Total > ((totalOrden - totalPrevio) + 1m))
+                    //    throw new Exception("Monto excede saldo pendiente de la orden.");
+
+                    // Calculamos cuánto es el valor real de los productos pedidos (Subtotal + IGV)
+                    decimal montoBaseProvision = doc.SubTotal + doc.MontoIgv;
+
+                    // Comparamos solo la base contra el saldo de la orden (mantenemos tu margen de 1 sol)
+                    if (montoBaseProvision > ((totalOrden - totalPrevio) + 1m))
+                    {
+                        throw new Exception("El monto base de los productos (Subtotal + IGV) excede el saldo pendiente de la orden. Los cargos adicionales sí están permitidos.");
+                    }
 
                     // 3. Guardar Cabecera
                     var estadoInicial = _context.Estados.FirstOrDefault(x => x.Tabla == "DOCUMENTO_PAGAR" && x.Nombre == "Por Pagar");
@@ -545,6 +559,11 @@ namespace ERPKardex.Controllers
                     doc.FechaRegistro = DateTime.Now;
                     //doc.FechaEmision = DateTime.Now;
                     doc.EstadoId = estadoInicial.Id;
+
+                    // RECALCULAR TOTAL POR SEGURIDAD (Backend)
+                    doc.Total = doc.SubTotal + doc.MontoIgv + doc.MontoInafecto + doc.MontoIsc + doc.MontoIcbper + doc.OtrosTributos;
+
+                    // EL SALDO INICIAL ES EL TOTAL RECALCULADO
                     doc.Saldo = doc.Total;
                     doc.TipoDocumentoInternoId = _context.TiposDocumentoInterno.First(x => x.Codigo == codigoTipoDoc).Id;
 
