@@ -231,10 +231,10 @@ namespace ERPKardex.Controllers
                     string codigoDoc = (cabecera.TipoMovimiento == true) ? "IALM" : "SALM";
 
                     // Estados necesarios
-                    var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
+                    var estadoPendiente = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "INGRESOSALIDAALM");
                     var estadoAnulado = _context.Estados.FirstOrDefault(e => e.Nombre == "Anulado" && e.Tabla == "INGRESOSALIDAALM"); // Para validación
 
-                    if (estadoAprobado == null) throw new Exception("Estado 'Aprobado' no configurado para almacén.");
+                    if (estadoPendiente == null) throw new Exception("Estado 'Pendiente' no configurado para almacén.");
 
                     var tipoDocInterno = _context.TiposDocumentoInterno.FirstOrDefault(t => t.Codigo == codigoDoc && t.Estado == true);
                     if (tipoDocInterno == null) throw new Exception($"Tipo documento interno '{codigoDoc}' no existe.");
@@ -278,7 +278,7 @@ namespace ERPKardex.Controllers
 
                     cabecera.TipoDocumentoInternoId = tipoDocInterno.Id;
                     cabecera.Numero = $"{codigoDoc}-{correlativo.ToString("D10")}";
-                    cabecera.EstadoId = estadoAprobado.Id;
+                    cabecera.EstadoId = estadoPendiente.Id;
 
                     // Guardamos cabecera para obtener ID
                     _context.IngresoSalidaAlms.Add(cabecera);
@@ -336,33 +336,33 @@ namespace ERPKardex.Controllers
 
                         _context.DIngresoSalidaAlms.Add(det);
 
-                        // B. Actualizar Kardex/Stock (Lógica Estándar)
-                        var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+                        //// B. Actualizar Kardex/Stock (Lógica Estándar)
+                        //var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
 
-                        if (stock == null)
-                        {
-                            if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
-                            stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
-                            _context.StockAlmacenes.Add(stock);
-                        }
+                        //if (stock == null)
+                        //{
+                        //    if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
+                        //    stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                        //    _context.StockAlmacenes.Add(stock);
+                        //}
 
-                        if (cabecera.TipoMovimiento == true)
-                        {
-                            stock.StockActual += det.Cantidad ?? 0;
-                        }
-                        else if (cabecera.TipoMovimiento == false)
-                        {
-                            if (stock.StockActual >= det.Cantidad)
-                            {
-                                stock.StockActual -= det.Cantidad ?? 0;
-                            }
-                            else
-                            {
-                                throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}.");
-                            }
-                        }
+                        //if (cabecera.TipoMovimiento == true)
+                        //{
+                        //    stock.StockActual += det.Cantidad ?? 0;
+                        //}
+                        //else if (cabecera.TipoMovimiento == false)
+                        //{
+                        //    if (stock.StockActual >= det.Cantidad)
+                        //    {
+                        //        stock.StockActual -= det.Cantidad ?? 0;
+                        //    }
+                        //    else
+                        //    {
+                        //        throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}.");
+                        //    }
+                        //}
 
-                        stock.UltimaActualizacion = DateTime.Now;
+                        //stock.UltimaActualizacion = DateTime.Now;
 
                         //// C. Actualizar ÍTEM de la Orden (DORDEN)
                         //if (cabecera.TipoMovimiento == true && det.IdReferencia != null && det.TablaReferencia == "DORDENCOMPRA")
@@ -421,7 +421,7 @@ namespace ERPKardex.Controllers
                     //}
 
                     transaction.Commit();
-                    return Json(new { status = true, message = "Movimiento registrado correctamente. Stock y Orden actualizados." });
+                    return Json(new { status = true, message = "Movimiento registrado correctamente." });
                 }
                 catch (Exception ex)
                 {
@@ -431,6 +431,85 @@ namespace ERPKardex.Controllers
             }
         }
 
+        #endregion
+
+        #region APROBACIÓN/RECHAZO DE MOVIMIENTOS
+        // CAMBIAR ESTADO (Aprobar/Rechazar)
+        [HttpPost]
+        public JsonResult CambiarEstado(int id, string nombreEstado)
+        {
+            using (var transaction = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    var usuarioId = UsuarioActualId;
+                    var estadoDb = _context.Estados.FirstOrDefault(e => e.Nombre == nombreEstado && e.Tabla == "INGRESOSALIDAALM");
+
+                    if (estadoDb == null) return Json(new { status = false, message = "Estado no configurado." });
+
+                    var cabecera = _context.IngresoSalidaAlms.Find(id);
+                    if (cabecera == null) return Json(new { status = false, message = "Movimiento no encontrado." });
+
+                    // Validación de seguridad: Evitar reprocesar si ya está en ese estado (Evita duplicar stock)
+                    if (cabecera.EstadoId == estadoDb.Id)
+                        return Json(new { status = false, message = $"El movimiento ya se encuentra en estado {nombreEstado}." });
+
+                    // =================================================================================
+                    // ACTUALIZACIÓN DE STOCK (SOLO SI SE ESTÁ APROBANDO)
+                    // =================================================================================
+                    if (nombreEstado == "Aprobado")
+                    {
+                        var detalles = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == id).ToList();
+
+                        foreach (var det in detalles)
+                        {
+                            var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+
+                            if (stock == null)
+                            {
+                                if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
+                                stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                                _context.StockAlmacenes.Add(stock);
+                            }
+
+                            if (cabecera.TipoMovimiento == true) // Es Ingreso
+                            {
+                                stock.StockActual += det.Cantidad ?? 0;
+                            }
+                            else if (cabecera.TipoMovimiento == false) // Es Salida
+                            {
+                                if (stock.StockActual >= det.Cantidad)
+                                {
+                                    stock.StockActual -= det.Cantidad ?? 0;
+                                }
+                                else
+                                {
+                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}");
+                                }
+                            }
+
+                            stock.UltimaActualizacion = DateTime.Now;
+                        }
+                    }
+
+                    // Cambiamos estado de la cabecera
+                    cabecera.EstadoId = estadoDb.Id;
+                    cabecera.UsuarioAprobador = usuarioId;
+                    cabecera.FechaAprobacion = DateTime.Now;
+
+                    _context.SaveChanges();
+                    transaction.Commit();
+
+                    string msgExtra = (nombreEstado == "Aprobado") ? " y Kardex actualizado." : ".";
+                    return Json(new { status = true, message = $"Movimiento {nombreEstado} correctamente{msgExtra}" });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return Json(new { status = false, message = ex.Message });
+                }
+            }
+        }
         #endregion
 
         #region API: ANULACIÓN DE MOVIMIENTO (NUEVO)
@@ -1015,40 +1094,87 @@ namespace ERPKardex.Controllers
         {
             try
             {
-                var productosData = (from pro in _context.Productos
-                                     where pro.Estado == true
-                                     join disa in _context.DIngresoSalidaAlms on pro.Id equals disa.ProductoId
-                                     join isa in _context.IngresoSalidaAlms on disa.IngresoSalidaAlmId equals isa.Id
-                                     where isa.AlmacenId == almacenId
-                                     where isa.TipoMovimiento == true // Solo Entradas para mostrar el proveedor y doc asociado
-                                     join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
-                                     from td in joinDoc.DefaultIfEmpty()
-                                     join ent in _context.Proveedores on isa.ProveedorId equals ent.Id into joinEnt
-                                     from ent in joinEnt.DefaultIfEmpty()
-                                     join tdi in _context.TiposDocumentoIdentidad on ent.TipoDocumentoIdentidadId equals tdi.Id into joinTdi
-                                     from tdi in joinTdi.DefaultIfEmpty()
-                                     where pro.EmpresaId == EmpresaUsuarioId // <--- CAMBIO AQUÍ
-                                     select new
-                                     {
-                                         pro.Codigo,
-                                         pro.CodGrupo,
-                                         pro.DescripcionGrupo,
-                                         pro.DescripcionComercial,
-                                         pro.CodSubgrupo,
-                                         pro.DescripcionSubgrupo,
-                                         pro.DescripcionProducto,
-                                         pro.CodUnidadMedida,
-                                         disa.Cantidad,
-                                         Proveedor = ((tdi.Descripcion ?? "") + ": " + (ent.NumeroDocumento ?? "") + " - " + (ent.RazonSocial ?? "")) ?? "Sin Proveedor",
-                                         TipoDocumento = td != null ? td.Descripcion : "S/D",
-                                         Documento = (isa.SerieDocumento ?? "") + " - " + (isa.NumeroDocumento ?? ""),
-                                     }).ToList();
+                // 1. Obtener el estado Aprobado
+                var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
+                int idAprobado = estadoAprobado?.Id ?? -1;
 
-                return Json(new { data = productosData, message = "Productos retornados exitosamente.", status = true });
+                // 2. Calcular el Costo Promedio Ponderado de Entradas (CORREGIDO PARA EF CORE)
+                // Paso A: Proyectamos las operaciones básicas antes de agrupar para que SQL lo entienda bien
+                var queryCostos = from d in _context.DIngresoSalidaAlms
+                                  join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
+                                  where c.EmpresaId == EmpresaUsuarioId
+                                     && c.TipoMovimiento == true
+                                     && c.EstadoId == idAprobado
+                                     && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
+                                  select new
+                                  {
+                                      ProductoId = d.ProductoId,
+                                      Cantidad = d.Cantidad ?? 0,
+                                      CostoTotalLinea = (d.Cantidad ?? 0) * (d.Precio ?? 0)
+                                  };
+
+                // Paso B: Agrupamos y hacemos las sumas (Esto sí se traduce perfecto a SQL)
+                var totalesAgrupados = queryCostos
+                    .GroupBy(x => x.ProductoId)
+                    .Select(g => new
+                    {
+                        ProductoId = g.Key,
+                        TotalCant = g.Sum(x => x.Cantidad),
+                        TotalCosto = g.Sum(x => x.CostoTotalLinea)
+                    })
+                    .ToList(); // <-- Clave: Lo traemos a la memoria de C#
+
+                // Paso C: Hacemos la división final de forma segura en memoria y armamos el diccionario
+                var costosPromedio = totalesAgrupados.ToDictionary(
+                    x => x.ProductoId,
+                    x => x.TotalCant > 0 ? x.TotalCosto / x.TotalCant : 0
+                );
+
+                // 3. Consultar la tabla de StockAlmacenes que tiene el SALDO REAL ACTUAL
+                var queryStock = from sa in _context.StockAlmacenes
+                                 join p in _context.Productos on sa.ProductoId equals p.Id
+                                 where sa.EmpresaId == EmpresaUsuarioId
+                                    && p.Estado == true
+                                    && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
+                                 select new
+                                 {
+                                     p.Id,
+                                     p.Codigo,
+                                     p.CodGrupo,
+                                     p.DescripcionGrupo,
+                                     p.DescripcionComercial,
+                                     p.CodSubgrupo,
+                                     p.DescripcionSubgrupo,
+                                     p.DescripcionProducto,
+                                     p.CodUnidadMedida,
+                                     StockReal = sa.StockActual
+                                 };
+
+                var listaStockBD = queryStock.ToList();
+
+                // 4. Armar la respuesta cruzando el Stock Real con su Costo Promedio calculado
+                var reporte = listaStockBD.Select(s => new
+                {
+                    s.Codigo,
+                    s.CodGrupo,
+                    s.DescripcionGrupo,
+                    s.DescripcionComercial,
+                    s.CodSubgrupo,
+                    s.DescripcionSubgrupo,
+                    s.DescripcionProducto,
+                    s.CodUnidadMedida,
+                    Cantidad = s.StockReal,
+
+                    PrecioUnitario = costosPromedio.ContainsKey(s.Id) ? Math.Round(costosPromedio[s.Id], 4) : 0,
+
+                    ValorizacionTotal = Math.Round((s.StockReal * (costosPromedio.ContainsKey(s.Id) ? costosPromedio[s.Id] : 0)).Value, 2)
+                }).OrderBy(x => x.DescripcionProducto).ToList();
+
+                return Json(new { data = reporte, message = "Reporte de stock generado exitosamente.", status = true });
             }
             catch (Exception ex)
             {
-                return Json(new ApiResponse { data = null, message = ex.Message, status = false });
+                return Json(new { data = (object)null, message = ex.Message, status = false });
             }
         }
 

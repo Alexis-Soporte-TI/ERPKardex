@@ -12,7 +12,7 @@
     <div class="panel-heading">
         <div class="row">
             <div class="col-md-12">
-                <h1>Gestionar stock de productos</h1>
+                <h1>Reporte de Stock Valorizado</h1>
             </div>
             <div class="col-md-4 mb-3"><label>Sucursal</label><select id="cbx_Sucursal" class="form-control select2-busqueda"></select></div>
             <div class="col-md-4 mb-3"><label>Almacén</label><select id="cbx_Almacen" class="form-control select2-busqueda"><option value="">-- SELECCIONE --</option></select></div>
@@ -21,15 +21,13 @@
             </div>
         </div>
     </div>
+    
     <div class="panel-body">
         <div class="row">
             <div class="col-12">
-                <table id="tbl_Productos" class="table table-bordered table-striped">
+                <table id="tbl_Productos" class="table table-bordered table-striped w-100">
                     <thead>
                         <tr>
-                            <th class="text-center">PROVEEDOR</th>
-                            <th class="text-center">TIPO DOCUMENTO</th>
-                            <th class="text-center">DOCUMENTO</th>
                             <th class="text-center">CÓDIGO</th>
                             <th class="text-center">GRUPO</th>
                             <th class="text-center">SUBGRUPO</th>
@@ -37,6 +35,8 @@
                             <th class="text-center">DESCRIPCIÓN COM.</th>
                             <th class="text-center">U. MEDIDA</th>
                             <th class="text-center">CANTIDAD</th>
+                            <th class="text-center">PRECIO UNIT.</th>
+                            <th class="text-center">TOTAL (VALORIZADO)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -46,9 +46,9 @@
         </div>
     </div>
 </div>
+
 <script>
     var dtProductos;
-
     $(document).ready(function () {
 
         $('#btn_Generar').on('click', function() {
@@ -65,14 +65,11 @@
             fct_FillCombo(`/Producto/GetAlmacenesBySucursal?sucursalId=${$(this).val()}&empresaId=@empresaId`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --', 'codigo');
         });
 
-        // $('body').addClass('sidebar-collapse');
         var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
-        //CONFIGURACION POR DEFECTO DATATABLES
+        
+        // CONFIGURACION POR DEFECTO DATATABLES
         $.extend($.fn.dataTable.defaults, {
             dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" + "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" + "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" + "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
-            // dom: "<'row pb-1'<'col-sm-9 d-flex'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-4'l><'col-sm-8 justify-content-start'f>>" + "<'row'<'col-sm-6'i><'col-sm-6 d-flex justify-content-end'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>>",
-            // dom: "<'row pb-1'<'col-sm-9'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-10'l><'col-sm-2'f>>" + "<'row'<'col-sm-6'i><'col-sm-6'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6'p>>",
-            // dom: "<'row pb-1'<'col-sm-10'B><'col-sm-2 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-11'l><'col-sm-1'f>>" + "<'row'<'col-sm-10'i><'col-sm-2'p>>" + "rt" + "<'row'<'col-sm-10'i><'col-sm-2'p>>",
             paging: true,
             select: true,
             scroller: false,
@@ -118,7 +115,7 @@
                 },
                 buttons: {
                     copyTitle: 'Copiado en el portapapeles',
-                    copyKeys: 'Presiona <i>ctrl</i> o <i>\u2318</i> + <i>C</i> para copiar los datos de la tabla a tu portapapeles. <br><br>Para cancelar, haga clic en este mensaje o presione Esc.',
+                    copyKeys: 'Presiona <i>ctrl</i> o <i>\u2318</i> + <i>C</i> para copiar los datos de la tabla a tu portapapeles.<br><br>Para cancelar, haga clic en este mensaje o presione Esc.',
                     copySuccess: {
                         _: '%d registros copiados correctamente',
                         1: '1 registro copiado correctamente'
@@ -127,11 +124,9 @@
             },
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
         });
-
     });
 
     function fct_IniciarTablaProductos(IdTabla) {
-        // Inicializar DataTables con botones
         dtProductos = $(IdTabla).DataTable({
             buttons: [
                 {
@@ -148,18 +143,16 @@
                         var sucursal = $('#cbx_Sucursal option:selected').text().trim();
                         var almacen = $('#cbx_Almacen option:selected').text().trim();
 
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
                         if (almacen === "" || almacen === "-- SELECCIONE --") {
                             almacen = "Todos";
                         }
 
-                        return 'Reporte de Stock / Sucursal: ' + sucursal + ' / Almacén: ' + almacen;
+                        return 'Reporte de Stock Valorizado / Sucursal: ' + sucursal + ' / Almacén: ' + almacen;
                     },
                     className: 'btn btn-success',
-                    filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
+                    filename: 'Reporte_Stock_' + moment().format('DD-MM-YYYY_HH_mm'),
                     footer: true,
-                    exportOptions:
-                    {
+                    exportOptions: {
                         stripHtml: true,
                     },
                 },
@@ -168,17 +161,16 @@
                     text: '<i class="bi bi-file-earmark-pdf"></i>',
                     titleAttr: 'Exportar a PDF',
                     className: 'btn btn-danger',
-                    filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
+                    filename: 'Reporte_Stock_' + moment().format('DD-MM-YYYY_HH_mm'),
                     title: function() {
                         var sucursal = $('#cbx_Sucursal option:selected').text().trim();
                         var almacen = $('#cbx_Almacen option:selected').text().trim();
 
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
                         if (almacen === "" || almacen === "-- SELECCIONE --") {
                             almacen = "Todos";
                         }
 
-                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
+                        return 'Reporte de Stock Valorizado\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
                     },
                     exportOptions: {
                         stripHtml: true,
@@ -186,8 +178,8 @@
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
                     customize: function (doc) {
-                        // Tu código de alineación a la derecha (mantenlo aquí)
-                        var colsRight = [8];
+                        // Alineación a la derecha para Cantidad (6), Precio Unit. (7) y Total (8)
+                        var colsRight = [6, 7, 8];
                         doc.content[1].table.body.forEach(function (row) {
                             colsRight.forEach(function (index) {
                                 if (row[index]) {
@@ -195,8 +187,6 @@
                                 }
                             });
                         });
-
-                        // Opcional: Para centrar el título que acabamos de crear
                         doc.styles.title.alignment = 'center';
                         doc.styles.title.fontSize = 14;
                     }
@@ -210,15 +200,13 @@
                         var sucursal = $('#cbx_Sucursal option:selected').text().trim();
                         var almacen = $('#cbx_Almacen option:selected').text().trim();
 
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
                         if (almacen === "" || almacen === "-- SELECCIONE --") {
                             almacen = "Todos";
                         }
 
-                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
+                        return 'Reporte de Stock Valorizado\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
                     },
-                    exportOptions:
-                    {
+                    exportOptions: {
                         stripHtml: true,
                     },
                 },
@@ -251,42 +239,52 @@
                 },
             },
             columns: [
-                { data: "proveedor", name: "proveedor" },
-                { data: "tipoDocumento", name: "tipoDocumento" },
-                { data: "documento", name: "documento" },
                 { data: "codigo", name: "codigo" },
                 { data: "descripcionGrupo", name: "descripcionGrupo" },
                 { data: "descripcionSubgrupo", name: "descripcionSubgrupo" },
                 { data: "descripcionProducto", name: "descripcionProducto" },
-                { 
-                    data: "descripcionComercial", 
-                    name: "descripcionComercial", 
+                {
+                    data: "descripcionComercial",
+                    name: "descripcionComercial",
                     render: function(data, type, row) {
                         return data ? data : '-';
-                    },  
+                    },
                 },
-                { data: "codUnidadMedida", name: "codUnidadMedida" },
-                { 
-                    data: "cantidad", 
+                { data: "codUnidadMedida", name: "codUnidadMedida", className: "text-center" },
+                {
+                    data: "cantidad",
                     name: "cantidad",
+                    className: "text-right font-weight-bold",
                     render: function(data, type, row) {
                         return formatearNumero(data);
                     },
                 },
+                {
+                    data: "precioUnitario",
+                    name: "precioUnitario",
+                    className: "text-right",
+                    render: function(data, type, row) {
+                        return formatearNumero(data);
+                    },
+                },
+                {
+                    data: "valorizacionTotal",
+                    name: "valorizacionTotal",
+                    className: "text-right font-weight-bold text-success",
+                    render: function(data, type, row) {
+                        return formatearNumero(data);
+                    },
+                }
             ],
             columnDefs: [
                 {
-                    targets: [0],
-                    className: "text-center align-middle",
-                },
-                {
-                    targets: [1, 2, 3, 4, 5, 6, 7, 8],
+                    targets: [0, 1, 2, 3, 4],
                     className: 'align-middle',
                 },
-                // {
-                //     targets: [],
-                //     orderable: false,
-                // },
+                {
+                    targets: [5, 6, 7, 8],
+                    className: 'align-middle text-right',
+                }
             ],
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
             initComplete: function (data, row, cell, start, end, display) {
@@ -297,10 +295,6 @@
                 $('.btn.btn-primary').removeClass('dt-button btn-secondary buttons-copy buttons-html5');
                 $('.btn.btn-info').removeClass('dt-button btn-secondary buttons-print');
                 $('.btn.btn-warning').removeClass('dt-button btn-secondary buttons-collection buttons-colvis');
-                //Botón Nuevo
-                $('button[title="Nuevo"]').attr('id', 'btn_Nuevo');
-                $('#btn_Nuevo').removeClass('dt-button');
-                $('#btn_Nuevo').appendTo('div.col-sm-4.c1.d-flex.justify-content-end');
             },
         });
     }
@@ -317,12 +311,10 @@
     }
     
     function formatearNumero(numero) {
-        // Validación para evitar errores si viene nulo o indefinido
         if (numero === null || numero === undefined || isNaN(numero)) {
             return "0.00";
         }
 
-        // Convertimos a float por seguridad y formateamos
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
