@@ -344,15 +344,6 @@ namespace ERPKardex.Controllers
 
                         _context.DIngresoSalidaAlms.Add(det);
 
-                        if (cabecera.TipoMovimiento ?? false)
-                        {
-                            prod.Estado = true;
-                        }
-                        else
-                        {
-                            prod.Estado = false;
-                        }
-
                         //// B. Actualizar Kardex/Stock (Lógica Estándar)
                         //var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
 
