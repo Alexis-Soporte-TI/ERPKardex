@@ -37,7 +37,7 @@ namespace ERPKardex.Controllers
         #region APIs Maestro-Detalle
 
         [HttpGet]
-        public JsonResult GetMovimientosData()
+        public JsonResult GetMovimientosData(bool? Tipo, string CodigoProducto, string NombreProducto)
         {
             try
             {
@@ -53,8 +53,16 @@ namespace ERPKardex.Controllers
                                    from tc in joinDoc.DefaultIfEmpty()
                                    join mon in _context.Monedas on isa.MonedaId equals mon.Id into joinMon
                                    from mo in joinMon.DefaultIfEmpty()
-                                   where isa.EmpresaId == EmpresaUsuarioId // <--- CAMBIO AQUÍ
-                                   orderby isa.Fecha descending, isa.Numero descending // Orden sugerido
+                                   where isa.EmpresaId == EmpresaUsuarioId
+                                   where Tipo == null || isa.TipoMovimiento == Tipo.Value
+                                   orderby isa.Fecha descending, isa.Numero descending
+
+                                   let productos = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == isa.Id)
+                                        .Select(d => new { d.CodProducto, d.DescripcionProducto })
+                                        .ToList()
+                                   where (string.IsNullOrEmpty(CodigoProducto) || productos.Any(p => p.CodProducto.Contains(CodigoProducto))) &&
+                                         (string.IsNullOrEmpty(NombreProducto) || productos.Any(p => p.DescripcionProducto.Contains(NombreProducto)))
+
                                    select new IngresoSalidaAlmViewModel
                                    {
                                        Id = isa.Id,
@@ -335,6 +343,15 @@ namespace ERPKardex.Controllers
                             det.TablaReferencia = (cabecera.TipoMovimiento == true) ? "DORDENCOMPRA" : null;
 
                         _context.DIngresoSalidaAlms.Add(det);
+
+                        if (cabecera.TipoMovimiento ?? false)
+                        {
+                            prod.Estado = true;
+                        }
+                        else
+                        {
+                            prod.Estado = false;
+                        }
 
                         //// B. Actualizar Kardex/Stock (Lógica Estándar)
                         //var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);

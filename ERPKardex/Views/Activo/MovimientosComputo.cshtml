@@ -20,7 +20,7 @@
         <div class="card card-outline card-secondary mb-3">
             <div class="card-body py-2">
                 <div class="row align-items-end">
-                    <div class="col-md-4">
+                    <div class="col">
                         <div class="form-group mb-2">
                             <label class="small mb-1">Empresa</label>
                             <select id="filtroEmpresa" class="form-control form-control-sm" onchange="cargarMovimientos()">
@@ -28,7 +28,15 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col">
+                        <div class="form-group mb-2">
+                            <label class="small mb-1">Empresa</label>
+                            <select id="filtroEmpresa" class="form-control form-control-sm" onchange="cargarMovimientos()">
+                                <option value="">-- Todas --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
                         <div class="form-group mb-2">
                             <label class="small mb-1">Buscar</label>
                             <input type="text" id="filtroBuscar" class="form-control form-control-sm"
@@ -36,7 +44,7 @@
                                    onkeyup="if(event.key==='Enter') cargarMovimientos()">
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col">
                         <div class="form-group mb-2">
                             <button class="btn btn-sm btn-outline-secondary btn-block" onclick="cargarMovimientos()">
                                 <i class="fas fa-search mr-1"></i>Filtrar
