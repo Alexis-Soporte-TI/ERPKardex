@@ -30,17 +30,17 @@
                     </div>
                     <div class="col">
                         <div class="form-group mb-2">
-                            <label class="small mb-1">Empresa</label>
-                            <select id="filtroEmpresa" class="form-control form-control-sm" onchange="cargarMovimientos()">
-                                <option value="">-- Todas --</option>
-                            </select>
+                            <label class="small mb-1">Buscar</label>
+                            <input type="text" id="filtroBuscar" class="form-control form-control-sm"
+                                   placeholder="Código movimiento, personal, DNI..."
+                                   onkeyup="if(event.key==='Enter') cargarMovimientos()">
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-group mb-2">
-                            <label class="small mb-1">Buscar</label>
-                            <input type="text" id="filtroBuscar" class="form-control form-control-sm"
-                                   placeholder="Código movimiento, personal, DNI..."
+                            <label class="small mb-1">Código de activo</label>
+                            <input type="text" id="filtroCodigo" class="form-control form-control-sm"
+                                   placeholder="SM-00000"
                                    onkeyup="if(event.key==='Enter') cargarMovimientos()">
                         </div>
                     </div>
@@ -257,8 +257,10 @@
         async function cargarMovimientos() {
             let empresa = document.getElementById('filtroEmpresa').value;
             let buscar = document.getElementById('filtroBuscar').value;
+            let codigo = document.getElementById('filtroCodigo').value;
             let url = `/Activo/GetMovimientos?tipoCodigo=${TIPO_CODIGO}`;
             if (empresa) url += `&empresaId=${empresa}`;
+            if (codigo) url += `&codigo=${codigo}`;
             if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
 
             let res = await fetch(url);

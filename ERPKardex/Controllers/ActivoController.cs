@@ -451,7 +451,7 @@ namespace ERPKardex.Controllers
         // =====================================================================
 
         [HttpGet]
-        public async Task<JsonResult> GetMovimientos(string? tipoCodigo, int? empresaId, string? buscar)
+        public async Task<JsonResult> GetMovimientos(string? tipoCodigo, int? empresaId, string? buscar, string? codigo)
         {
             try
             {
@@ -471,6 +471,16 @@ namespace ERPKardex.Controllers
                                         join t in _context.TipoActivo on a.TipoActivoId equals t.Id
                                         where t.Codigo == tipoCodigo && dm.Estado
                                         select dm.MovimientoActivoId).Distinct().ToListAsync();
+                    query = query.Where(x => movIds.Contains(x.m.Id));
+                }
+
+                if (!string.IsNullOrWhiteSpace(codigo))
+                {
+                    var movIds = await (from dm in _context.DMovimientoActivo
+                                        join a in _context.Activo on dm.ActivoId equals a.Id
+                                        where a.Codigo.Contains(codigo) && dm.Estado
+                                        select dm.MovimientoActivoId).Distinct().ToListAsync();
+
                     query = query.Where(x => movIds.Contains(x.m.Id));
                 }
 
