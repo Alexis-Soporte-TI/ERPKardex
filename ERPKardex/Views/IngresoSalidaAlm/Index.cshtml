@@ -12,35 +12,74 @@
 </div>
 <div class="container-fluid p-4">
     <div class="panel-heading">
-        <div class="row">
+        <div class="row mb-2">
             <div class="col-md-12">
-                <h1>Gestionar ingresos y salidas</h1>
+                <h3>Gestionar ingresos y salidas</h3>
             </div>
         </div>
     </div>
     <div class="panel-body">
         <div class="row">
             <div class="col-12">
-                <table id="tbl_Movimientos" class="table table-bordered table-striped">
-                    <thead>
-                        <tr>
-                            <th class="text-center">ID</th>
-                            <th class="text-center">FECHA</th>
-                            <th class="text-center">NÚMERO</th>
-                            <th class="text-center">MOVIMIENTO</th>
-                            <th class="text-center">MOTIVO</th>
-                            <th class="text-center">SUCURSAL</th>
-                            <th class="text-center">ALMACÉN</th>
-                            <th class="text-center">TIPO DOC.</th>
-                            <th class="text-center">DOCUMENTO</th>
-                            <th class="text-center">MONEDA</th>
-                            <th class="text-center">ESTADO</th>
-                            <th class="text-center">ACCIÓN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo de movimiento:</label>
+                                <select id="filtro_tipo" class="custom-select">
+                                    <option value="">Todos</option>
+                                    <option value="entrada">Entrada</option>
+                                    <option value="salida">Salida</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Codigo de producto:</label>
+                                <input type="text" id="filtro_codigo" class="form-control">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Nombre de producto:</label>
+                                <input type="text" id="filtro_nombre" class="form-control">
+                            </div>
+
+                            <div class="col-md-3 d-flex justify-content-end">
+                                <button id="btn_filtrar" class="btn btn-primary mr-2">
+                                    <i class="bi bi-funnel"></i> Filtrar
+                                </button>
+                                <button id="btn_limpiar" class="btn btn-danger">
+                                    <i class="bi bi-eraser"></i> Limpiar
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="tbl_Movimientos" class="table table-bordered table-striped w-100 table-sm">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">ID</th>
+                                    <th class="text-center">FECHA</th>
+                                    <th class="text-center">NÚMERO</th>
+                                    <th class="text-center">MOVIMIENTO</th>
+                                    <th class="text-center">MOTIVO</th>
+                                    <th class="text-center">SUCURSAL</th>
+                                    <th class="text-center">ALMACÉN</th>
+                                    <th class="text-center">TIPO DOC.</th>
+                                    <th class="text-center">DOCUMENTO</th>
+                                    <th class="text-center">MONEDA</th>
+                                    <th class="text-center">ESTADO</th>
+                                    <th class="text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                
             </div>
         </div>
     </div>
@@ -85,11 +124,27 @@
     let auditarMovs = '@auditarMovimientos' === 'True' ? true : false;
 
     $(document).ready(function () {
+        $('#btn_filtrar').on('click', function () {
+            $('#tbl_Movimientos').DataTable().ajax.reload(null, true);
+        });
+        $('#btn_limpiar').on('click', function () {
+            // Resetear campos
+            $('#filtro_tipo').val('');
+            $('#filtro_codigo').val('');
+            $('#filtro_nombre').val('');
+
+            // Recargar tabla sin filtros
+            $('#tbl_Movimientos').DataTable().ajax.reload(null, true);
+        });
         // $('body').addClass('sidebar-collapse');
         var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
         //CONFIGURACION POR DEFECTO DATATABLES
         $.extend($.fn.dataTable.defaults, {
-            dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" + "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" + "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" + "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
+            //dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" + "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" + "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" + "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
+            dom: "<'row align-items-center'<'col-sm-8 d-flex justify-content-start'B><'col-sm-4 c1 d-flex justify-content-end'>>" +
+            "<'row align-items-center'<'col-sm-6'l><'col-sm-6 d-flex justify-content-end'f>>" +
+            "rt" +
+            "<'row mt-3'<'col-sm-6'i><'col-sm-6 d-flex justify-content-end'p>>",
             // dom: "<'row pb-1'<'col-sm-9 d-flex'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-4'l><'col-sm-8 justify-content-start'f>>" + "<'row'<'col-sm-6'i><'col-sm-6 d-flex justify-content-end'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>>",
             // dom: "<'row pb-1'<'col-sm-9'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-10'l><'col-sm-2'f>>" + "<'row'<'col-sm-6'i><'col-sm-6'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6'p>>",
             // dom: "<'row pb-1'<'col-sm-10'B><'col-sm-2 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-11'l><'col-sm-1'f>>" + "<'row'<'col-sm-10'i><'col-sm-2'p>>" + "rt" + "<'row'<'col-sm-10'i><'col-sm-2'p>>",
@@ -109,6 +164,7 @@
             orderMulti: true,
             stateSave: false,
             serverSide: false,
+            //info: false,
             language: {
                 processing: "Procesando...",
                 sSearch: "Buscar:",
@@ -219,7 +275,10 @@
                 url: "/IngresoSalidaAlm/GetMovimientosData",
                 type: "GET",
                 datatype: "json",
-                data: function (d) {
+                data: function (d) {                    
+                    d.Tipo = $('#filtro_tipo').val() ? ($('#filtro_tipo').val() == "entrada" ? true : false) : null;
+                    d.CodigoProducto = $('#filtro_codigo').val(); 
+                    d.NombreProducto = $('#filtro_nombre').val();
                 },
                 dataSrc: function (json) {
                     if (json.status === false) {
