@@ -1,5 +1,7 @@
-﻿@{
+﻿@inject ERPKardex.Services.IPermisoService _permisos
+@{
     ViewData["Title"] = "Nuevo Requerimiento de Servicio";
+    string puedeIngresarSolicitante = await _permisos.TienePermiso("REQ_SERVICIO_SOLICITANTE") ? "" : "d-none";
 }
 
 <div class="card d-none" id="efec-cargando">
@@ -29,6 +31,16 @@
                         <div class="col-md-4 mb-3">
                             <label>Observación General</label>
                             <input type="text" id="txt_Observacion" class="form-control" placeholder="Ej: Mantenimiento de aires acondicionados...">
+                        </div>
+                    </div>
+                    <div class="row @puedeIngresarSolicitante">
+                        <div class="col-md-6 mb-3">
+                            <label>Área Solicitante</label>
+                            <input type="text" id="txt_AreaSoli" class="form-control" placeholder="Ej: Costos...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Persona Solicitante</label>
+                            <input type="text" id="txt_PersonalSoli" class="form-control" placeholder="Ej: Juan Pérez...">
                         </div>
                     </div>
                 </div>
@@ -163,6 +175,8 @@
                 FechaEmision: $("#dtp_FechaEmision").val(),
                 FechaNecesaria: $("#dtp_FechaNecesaria").val(),
                 Observacion: $("#txt_Observacion").val(),
+                AreaSolicitante: $("#txt_AreaSoli").val(),
+                PersonalSolicitante: $("#txt_PersonalSoli").val(),
                 PeriodoContableId: PeriodoManager.getActual()
             };
 
