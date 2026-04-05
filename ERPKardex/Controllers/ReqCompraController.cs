@@ -141,6 +141,42 @@ namespace ERPKardex.Controllers
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
         }
 
+        [HttpGet]
+        public JsonResult GetAreasSolicitante()
+        {
+            try
+            {
+                var data = (from r in _context.AreaSolicitante
+                            where r.Estado == true
+                            select new
+                            {
+                                r.Id,
+                                r.Nombre,
+                            }).ToList();
+
+                return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        [HttpGet]
+        public JsonResult GetPersonalSolicitante()
+        {
+            try
+            {
+                var data = (from r in _context.PersonalSolicitante
+                            where r.Estado == true
+                            select new
+                            {
+                                r.Id,
+                                r.Nombre,
+                            }).ToList();
+
+                return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
         #endregion
 
         #region 3. TRANSACCIONES (POST)

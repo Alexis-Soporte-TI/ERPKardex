@@ -36,11 +36,15 @@
                     <div class="row @puedeIngresarSolicitante">
                         <div class="col-md-6 mb-3">
                             <label>Área Solicitante</label>
-                            <input type="text" id="txt_AreaSoli" class="form-control" placeholder="Ej: Costos...">
+                            <select id="cbx_AreaSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una área...</option>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label>Persona Solicitante</label>
-                            <input type="text" id="txt_PersonalSoli" class="form-control" placeholder="Ej: Juan Pérez...">
+                            <select id="cbx_PersonalSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una persona...</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -116,6 +120,18 @@
     var SERVICIOS_TEMP = [];
 
     $(document).ready(function () {
+
+        $('.select2-custom').select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: "Buscar...",
+            allowClear: true,
+            language: { noResults: () => "No se encontraron resultados" }
+        });
+
+        // Cargar los datos desde las APIs
+        cargarCombosSolicitantes();
+
         // Inicializar Select2
         $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Buscar Servicio --' });
         $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' });
@@ -175,8 +191,8 @@
                 FechaEmision: $("#dtp_FechaEmision").val(),
                 FechaNecesaria: $("#dtp_FechaNecesaria").val(),
                 Observacion: $("#txt_Observacion").val(),
-                AreaSolicitante: $("#txt_AreaSoli").val(),
-                PersonalSolicitante: $("#txt_PersonalSoli").val(),
+                AreaSolicitante: $('#cbx_AreaSoli').val(),
+                PersonalSolicitante: $("#cbx_PersonalSoli").val(),
                 PeriodoContableId: PeriodoManager.getActual()
             };
 
@@ -267,6 +283,32 @@
         $("#txt_DetCantidad").val("1.00");
         $("#txt_DetLugar").val("");
         $("#cbx_ServicioBusqueda").select2('open');
+    }
+    
+    function cargarCombosSolicitantes() {
+        // 1. Cargar Áreas
+        $.getJSON('/ReqServicio/GetAreasSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_AreaSoli');
+                $combo.empty().append('<option value="">Seleccione una área...</option>');
+            
+                response.data.forEach(item => {
+                    $combo.append(new Option(item.nombre, item.id));
+                });
+            }
+        });
+
+        // 2. Cargar Personal
+        $.getJSON('/ReqServicio/GetPersonalSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_PersonalSoli');
+                $combo.empty().append('<option value="">Seleccione una persona...</option>');
+            
+                response.data.forEach(item => {
+                    $combo.append(new Option(item.nombre, item.id));
+                });
+            }
+        });
     }
 
     function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }

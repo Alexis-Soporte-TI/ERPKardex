@@ -100,6 +100,8 @@ namespace ERPKardex.Data
         public DbSet<DocumentoCobrar> DocumentosCobrar { get; set; }
         public DbSet<DDocumentoCobrar> DetallesDocumentoCobrar { get; set; }
         public DbSet<DocumentoCobrarAplicacion> AplicacionesDocumentoCobrar { get; set; }
+        public DbSet<AreaSolicitante> AreaSolicitante { get; set; }
+        public DbSet<PersonalSolicitante> PersonalSolicitante { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

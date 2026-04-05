@@ -151,23 +151,42 @@
             const selector = '#cbx_Gen_Periodo';
             
             $.getJSON('/Home/GetPeriodosContables', function (response) {
-                if (response.status) {
+                if (response.status && response.data.length > 0) {
                     let $select = $('#cbx_Gen_Periodo');
+                    $select.empty(); // Limpiamos opciones previas para evitar duplicados
+
                     let valorGuardado = PeriodoManager.getActual();
                     let existeEnLista = false;
 
+                    // 1. Llenar el combo y verificar si el guardado existe
                     response.data.forEach(p => {
                         $select.append($('<option>', { value: p.id, text: `${p.anio}-${p.mes}` }));
                         if (p.id == valorGuardado) existeEnLista = true;
                     });
 
+                    // 2. Lógica de selección
                     if (valorGuardado && existeEnLista) {
+                        // Caso A: El valor guardado es válido y existe
                         $select.val(valorGuardado);
                     } else {
-                        // Si el periodo guardado ya no está en la lista (se cerró)
+                        // Caso B: No hay valor guardado o ya no existe en la lista
                         localStorage.removeItem('periodoSeleccionado');
-                        $select.val(""); // O seleccionar el primero por defecto
+            
+                        // Seleccionamos el ID del primer elemento del array por defecto
+                        let primerId = response.data[0].id;
+                        $select.val(primerId);
+            
+                        // Opcional: Actualizar el Manager con este nuevo periodo "por defecto"
+                        PeriodoManager.setActual(primerId); 
                     }
+        
+                    // Disparar evento change si tienes lógica que dependa de la selección
+                    $select.trigger('change');
+
+                } else {
+                    // En caso de que no haya datos o status sea false
+                    $('#cbx_Gen_Periodo').empty().append('<option value="">Sin periodos</option>');
+                    localStorage.removeItem('periodoSeleccionado');
                 }
             });
 
