@@ -8,6 +8,13 @@ services:
       - TZ=${TZ}
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Server=db-sqlserver;Database=erp_kardex;User Id=sa;Password=${BD_PASSWORD};TrustServerCertificate=True;
+      # --- Configuración SMTP inyectada desde el .env ---
+      - SmtpSettings__Server=${SMTP_SERVER}
+      - SmtpSettings__Port=${SMTP_PORT}
+      - SmtpSettings__User=${SMTP_USER}
+      - SmtpSettings__Pass=${SMTP_PASS}
+      - SmtpSettings__From=${SMTP_FROM}
+      - SmtpSettings__FromName=${SMTP_FROM_NAME}
     volumes:
       - ./datos/uploads:/app/wwwroot/uploads
     networks:
