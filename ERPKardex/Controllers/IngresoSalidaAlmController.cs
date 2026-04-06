@@ -24,7 +24,11 @@ namespace ERPKardex.Controllers
 
         #region VISTAS
         public IActionResult Index() => View();
-        public IActionResult Registrar() => View();
+        public IActionResult Registrar(int? id = null)
+        {
+            ViewData["MovimientoId"] = id;
+            return View();
+        }
         public IActionResult ReporteStock() => View();
         public IActionResult ReporteKardex() => View();
         public IActionResult Valorizacion() => View();
@@ -122,6 +126,56 @@ namespace ERPKardex.Controllers
             catch (Exception ex)
             {
                 return Json(new { status = false, message = "Error al obtener detalles: " + ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetMovimientoParaEditar(int id)
+        {
+            try
+            {
+                var estadoPendiente = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "INGRESOSALIDAALM");
+
+                var cabecera = _context.IngresoSalidaAlms
+                    .Where(x => x.Id == id && x.EmpresaId == EmpresaUsuarioId)
+                    .Select(x => new
+                    {
+                        x.Id, x.Fecha, x.TipoMovimiento, x.SucursalId, x.AlmacenId,
+                        x.MotivoId, x.ProveedorId, x.FechaDocumento, x.TipoDocumentoId,
+                        x.SerieDocumento, x.NumeroDocumento, x.PeriodoContableId, x.EstadoId,
+                        x.MonedaId, x.IdReferencia, x.TablaReferencia
+                    })
+                    .FirstOrDefault();
+
+                if (cabecera == null)
+                    return Json(new { status = false, message = "Movimiento no encontrado." });
+
+                if (estadoPendiente == null || cabecera.EstadoId != estadoPendiente.Id)
+                    return Json(new { status = false, message = "Solo se pueden editar movimientos en estado Pendiente." });
+
+                var detalles = (from d in _context.DIngresoSalidaAlms
+                                join cc in _context.CentroCostos on d.CentroCostoId equals cc.Id into ccJoin
+                                from cc in ccJoin.DefaultIfEmpty()
+                                join ac in _context.Actividades on d.ActividadId equals ac.Id into acJoin
+                                from ac in acJoin.DefaultIfEmpty()
+                                where d.IngresoSalidaAlmId == id
+                                orderby d.Item
+                                select new
+                                {
+                                    d.Item, d.ProductoId, d.CodProducto, d.DescripcionProducto,
+                                    d.CodUnidadMedida, d.Cantidad, d.Lote,
+                                    d.FechaFabricacion, d.FechaVencimiento,
+                                    d.CentroCostoId, d.ActividadId, d.PedidoInterno,
+                                    d.IdReferencia, d.TablaReferencia,
+                                    NombreCentroCosto = cc != null ? cc.Nombre : "",
+                                    NombreActividad = ac != null ? ac.Nombre : ""
+                                }).ToList();
+
+                return Json(new { status = true, cabecera = cabecera, detalles = detalles });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
             }
         }
 
@@ -430,6 +484,90 @@ namespace ERPKardex.Controllers
 
                     transaction.Commit();
                     return Json(new { status = true, message = "Movimiento registrado correctamente." });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return Json(new { status = false, message = "Error: " + ex.Message });
+                }
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarMovimiento(IngresoSalidaAlm cabecera, string detallesJson, int id)
+        {
+            using (var transaction = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    var movExistente = _context.IngresoSalidaAlms
+                        .FirstOrDefault(x => x.Id == id && x.EmpresaId == EmpresaUsuarioId);
+
+                    if (movExistente == null)
+                        throw new Exception("Movimiento no encontrado.");
+
+                    var estadoPendiente = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "INGRESOSALIDAALM");
+                    if (estadoPendiente == null || movExistente.EstadoId != estadoPendiente.Id)
+                        throw new Exception("Solo se pueden editar movimientos en estado Pendiente.");
+
+                    if (!EsPeriodoValido(cabecera.PeriodoContableId ?? 0))
+                        throw new Exception("El periodo seleccionado ya no se encuentra abierto o es inválido.");
+
+                    // Actualizar campos de cabecera (sin tocar TipoMovimiento, Numero, EstadoId, TipoDocumentoInternoId)
+                    movExistente.Fecha = cabecera.Fecha;
+                    movExistente.SucursalId = cabecera.SucursalId;
+                    movExistente.AlmacenId = cabecera.AlmacenId;
+                    movExistente.MotivoId = cabecera.MotivoId;
+                    movExistente.ProveedorId = cabecera.ProveedorId;
+                    movExistente.FechaDocumento = cabecera.FechaDocumento;
+                    movExistente.TipoDocumentoId = cabecera.TipoDocumentoId;
+                    movExistente.SerieDocumento = cabecera.SerieDocumento;
+                    movExistente.NumeroDocumento = cabecera.NumeroDocumento;
+                    movExistente.PeriodoContableId = cabecera.PeriodoContableId;
+                    movExistente.MonedaId = cabecera.MonedaId;
+
+                    // Eliminar detalles anteriores
+                    var detallesAnteriores = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == id).ToList();
+                    _context.DIngresoSalidaAlms.RemoveRange(detallesAnteriores);
+                    _context.SaveChanges();
+
+                    // Insertar nuevos detalles
+                    var listaDetalles = JsonConvert.DeserializeObject<List<DIngresoSalidaAlm>>(detallesJson);
+
+                    foreach (var det in listaDetalles)
+                    {
+                        det.Id = 0;
+                        det.IngresoSalidaAlmId = id;
+                        det.FechaRegistro = DateTime.Now;
+                        det.EmpresaId = EmpresaUsuarioId;
+
+                        if (det.Cantidad <= 0)
+                            throw new Exception("Las cantidades de los detalles no pueden ser 0.");
+
+                        if (movExistente.TipoMovimiento == true)
+                        {
+                            decimal cant = det.Cantidad ?? 0;
+                            decimal precio = det.Precio ?? 0;
+                            det.Subtotal = cant * precio;
+                            det.Igv = det.Subtotal * 0.18m;
+                            det.Total = det.Subtotal + det.Igv;
+                        }
+
+                        var prod = _context.Productos.Find(det.ProductoId);
+                        if (prod != null)
+                        {
+                            det.CodProducto = prod.Codigo;
+                            det.DescripcionProducto = prod.DescripcionProducto;
+                            det.CodUnidadMedida = prod.CodUnidadMedida;
+                        }
+
+                        _context.DIngresoSalidaAlms.Add(det);
+                    }
+
+                    _context.SaveChanges();
+                    transaction.Commit();
+
+                    return Json(new { status = true, message = "Movimiento actualizado correctamente." });
                 }
                 catch (Exception ex)
                 {

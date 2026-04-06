@@ -2,6 +2,8 @@
     ViewData["Title"] = "Registro de Ingreso/Salida de Almacén";
     var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
     int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
+    var movimientoId = ViewData["MovimientoId"] as int?;
+    bool esEdicion = movimientoId.HasValue;
 }
 
 <div class="card d-none" id="efec-cargando">
@@ -15,8 +17,19 @@
         <div class="col-lg-11">
 
             <div class="card shadow mb-4">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-box-seam"></i> Datos del Movimiento</h5>
+                <div class="card-header @(esEdicion ? "bg-warning text-dark" : "bg-dark text-white") d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        @if (esEdicion)
+                        {
+                            <i class="bi bi-pencil-square"></i>
+                            <text> Editando Movimiento</text>
+                        }
+                        else
+                        {
+                            <i class="bi bi-box-seam"></i>
+                            <text> Datos del Movimiento</text>
+                        }
+                    </h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -136,7 +149,14 @@
 
             <div class="text-right mb-5">
                 <button id="btn_Cancelar" class="btn btn-secondary btn-lg mr-2">Cancelar</button>
-                <button id="btn_GuardarTodo" class="btn btn-success btn-lg font-weight-bold"><i class="fas fa-save"></i> GUARDAR MOVIMIENTO</button>
+                @if (esEdicion)
+                {
+                    <button id="btn_GuardarTodo" class="btn btn-warning btn-lg font-weight-bold"><i class="fas fa-save"></i> ACTUALIZAR MOVIMIENTO</button>
+                }
+                else
+                {
+                    <button id="btn_GuardarTodo" class="btn btn-success btn-lg font-weight-bold"><i class="fas fa-save"></i> GUARDAR MOVIMIENTO</button>
+                }
             </div>
         </div>
     </div>
@@ -146,6 +166,7 @@
     var LISTA_DETALLE = [];
     var PRODUCTOS_TEMP = [];
     var MOTIVOS_FULL = [];
+    var MOVIMIENTO_ID = @(movimientoId.HasValue ? movimientoId.Value.ToString() : "0");
 
     $(document).ready(function () {
         $('.select2-busqueda').select2({ theme: 'bootstrap4', allowClear: true });
@@ -215,6 +236,10 @@
             }
         });
 
+        if (MOVIMIENTO_ID > 0) {
+            fct_CargarParaEdicion(MOVIMIENTO_ID);
+        }
+
         $("#btn_AgregarDetalle").click(function () {
             let tipoMov = $('#cbx_TipoMovimiento').val();
             if(tipoMov === "") return toastr.warning("Seleccione primero el Tipo de Movimiento");
@@ -269,45 +294,46 @@
 
         $("#btn_GuardarTodo").click(function () {
             if (LISTA_DETALLE.length === 0) return toastr.error("Detalle vacío, agregue productos.");
-            let tipoMov = $('#cbx_TipoMovimiento').val();
+            let tipoMov = MOVIMIENTO_ID > 0 ? ($('#cbx_TipoMovimiento').val() || $('#cbx_TipoMovimiento').find('option:selected').val()) : $('#cbx_TipoMovimiento').val();
             if(!tipoMov) return toastr.error("Seleccione tipo de movimiento");
 
             let cab = {
                 Fecha: $("#dtp_FechaMov").val(),
-                TipoMovimiento: (tipoMov === "1"), // true = Entrada, false = Salida
+                TipoMovimiento: (tipoMov === "1"),
                 SucursalId: parseInt($("#cbx_Sucursal").val()),
                 AlmacenId: parseInt($("#cbx_Almacen").val()),
                 MotivoId: $("#cbx_Motivo").val(),
-
-                // Proveedor ahora viene del combo en la sección de Guía
                 ProveedorId: $("#cbx_Proveedor").val() ? parseInt($("#cbx_Proveedor").val()) : null,
                 PeriodoContableId: PeriodoManager.getActual(),
-
                 FechaDocumento: $("#dtp_FechaDoc").val(),
                 TipoDocumentoId: $("#cbx_TipoDoc").val(),
                 SerieDocumento: $("#txt_SerieDoc").val(),
                 NumeroDocumento: $("#txt_NumeroDoc").val(),
-
-                // CAMPOS DE VALORIZACIÓN EN NULL (Se hará en otro módulo)
-                MonedaId: null, // Opcional, o puedes poner moneda base por defecto
+                MonedaId: null,
                 IdReferencia: null,
                 TablaReferencia: null
             };
 
-            // Validaciones básicas de cabecera
             if(!cab.SucursalId || !cab.AlmacenId || !cab.MotivoId) return toastr.warning("Complete los datos de almacén y motivo.");
             if(tipoMov === "1" && !cab.ProveedorId) return toastr.warning("Para ingresos, debe seleccionar el Proveedor.");
 
-            Swal.fire({ title: "¿Guardar Movimiento?", text: "Se actualizará el stock inmediatamente.", icon: "question", showCancelButton: true, confirmButtonText: "Sí, Guardar" })
+            let esEdicion = MOVIMIENTO_ID > 0;
+            let titulo = esEdicion ? "¿Actualizar Movimiento?" : "¿Guardar Movimiento?";
+            let url = esEdicion ? "/IngresoSalidaAlm/ActualizarMovimiento" : "/IngresoSalidaAlm/GuardarMovimiento";
+            let postData = esEdicion
+                ? { cabecera: cab, detallesJson: JSON.stringify(LISTA_DETALLE), id: MOVIMIENTO_ID }
+                : { cabecera: cab, detallesJson: JSON.stringify(LISTA_DETALLE) };
+
+            Swal.fire({ title: titulo, icon: "question", showCancelButton: true, confirmButtonText: "Sí, Confirmar", cancelButtonText: "Cancelar" })
             .then((result) => {
                 if (result.isConfirmed) {
                     $('#efec-cargando').removeClass('d-none');
                     $.ajax({
-                        url: "/IngresoSalidaAlm/GuardarMovimiento", type: "POST",
-                        data: { cabecera: cab, detallesJson: JSON.stringify(LISTA_DETALLE) },
+                        url: url, type: "POST",
+                        data: postData,
                         success: function (res) {
                             $('#efec-cargando').addClass('d-none');
-                            if (res.status) { Swal.fire("Éxito", res.message, "success").then(() => location.reload()); }
+                            if (res.status) { Swal.fire("Éxito", res.message, "success").then(() => window.location.href = '/IngresoSalidaAlm/Index'); }
                             else { Swal.fire("Error", res.message, "error"); }
                         },
                         error: function () { $('#efec-cargando').addClass('d-none'); toastr.error("Error de servidor"); }
@@ -356,4 +382,94 @@
     }
     function cargarComboEntidades() { $.get('/IngresoSalidaAlm/GetProveedores', function (res) { let ops = '<option value="">-- Seleccione --</option>'; if(res.status) res.data.forEach(i => ops += `<option value="${i.id}">${i.tipoDocumentoIdentidad}: ${i.numeroDocumento} - ${i.razonSocial}</option>`); $('#cbx_Proveedor').html(ops); }); }
     function fct_FillCombo(url, id, val, txt, ph, extra) { $.getJSON(url, function (res) { let h = `<option value="">${ph}</option>`; if (res.status) res.data.forEach(i => h += `<option value="${i[val]}">${extra ? i[extra] + ' - ' : ''}${i[txt]}</option>`); $(id).html(h); }); }
+
+    function fct_CargarParaEdicion(id) {
+        $('#efec-cargando').removeClass('d-none');
+        $.getJSON('/IngresoSalidaAlm/GetMovimientoParaEditar?id=' + id, function (res) {
+            $('#efec-cargando').addClass('d-none');
+            if (!res.status) { toastr.error(res.message || 'Error al cargar movimiento.'); return; }
+
+            let cab = res.cabecera;
+            let empresaId = @empresaId;
+
+            // 1. Tipo movimiento (deshabilitar para no cambiar el flujo)
+            let tipoVal = cab.tipoMovimiento ? "1" : "0";
+            $('#cbx_TipoMovimiento').val(tipoVal).trigger('change');
+            $('#cbx_TipoMovimiento').prop('disabled', true);
+
+            // 2. Fecha
+            if (cab.fecha) $('#dtp_FechaMov').val(cab.fecha.split('T')[0]);
+
+            // 3. Sucursal → cargar almacenes directamente y setear ambos
+            $('#cbx_Sucursal').val(cab.sucursalId);
+            if (cab.sucursalId) {
+                $.getJSON('/IngresoSalidaAlm/GetAlmacenesBySucursal?sucursalId=' + cab.sucursalId + '&empresaId=' + empresaId, function (rAlm) {
+                    let h = '<option value="">-- SELECCIONAR --</option>';
+                    if (rAlm.status) rAlm.data.forEach(a => h += `<option value="${a.id}">${a.codigo} - ${a.nombre}</option>`);
+                    $('#cbx_Almacen').html(h).val(cab.almacenId);
+                    $('#cbx_Almacen').trigger('change.select2');
+                });
+            }
+            $('#cbx_Sucursal').trigger('change.select2');
+
+            // 4. Motivo (esperar MOTIVOS_FULL si aún no cargó)
+            function setMotivo() {
+                if (MOTIVOS_FULL.length > 0) {
+                    let esIngreso = (tipoVal === "1");
+                    let h = '<option value="">-- MOTIVO --</option>';
+                    MOTIVOS_FULL.filter(x => x.tipoMovimiento === esIngreso).forEach(m => h += `<option value="${m.id}">${m.codigo} - ${m.descripcion}</option>`);
+                    $('#cbx_Motivo').html(h).val(cab.motivoId);
+                    $('#cbx_Motivo').trigger('change.select2');
+                } else {
+                    setTimeout(setMotivo, 200);
+                }
+            }
+            setMotivo();
+
+            // 5. Documento de referencia
+            if (cab.fechaDocumento) $('#dtp_FechaDoc').val(cab.fechaDocumento.split('T')[0]);
+            $('#txt_SerieDoc').val(cab.serieDocumento || '');
+            $('#txt_NumeroDoc').val(cab.numeroDocumento || '');
+            function setTipoDoc() {
+                if ($('#cbx_TipoDoc option').length > 1) {
+                    $('#cbx_TipoDoc').val(cab.tipoDocumentoId);
+                    $('#cbx_TipoDoc').trigger('change.select2');
+                } else { setTimeout(setTipoDoc, 200); }
+            }
+            if (cab.tipoDocumentoId) setTipoDoc();
+
+            // 6. Proveedor
+            function setProveedor() {
+                if ($('#cbx_Proveedor option').length > 1) {
+                    $('#cbx_Proveedor').val(cab.proveedorId);
+                    $('#cbx_Proveedor').trigger('change.select2');
+                } else { setTimeout(setProveedor, 200); }
+            }
+            if (cab.proveedorId) setProveedor();
+
+            // 7. Detalles
+            LISTA_DETALLE = res.detalles.map((d, i) => ({
+                Item: (i + 1).toString().padStart(3, '0'),
+                ProductoId: d.productoId,
+                CodProducto: d.codProducto,
+                DescripcionProducto: d.descripcionProducto,
+                CodUnidadMedida: d.codUnidadMedida,
+                Cantidad: parseFloat(d.cantidad),
+                Lote: d.lote || '',
+                FechaFabricacion: d.fechaFabricacion ? d.fechaFabricacion.split('T')[0] : '',
+                FechaVencimiento: d.fechaVencimiento ? d.fechaVencimiento.split('T')[0] : '',
+                CentroCostoId: d.centroCostoId,
+                NombreCentroCosto: d.nombreCentroCosto || '',
+                ActividadId: d.actividadId,
+                NombreActividad: d.nombreActividad || '',
+                PedidoInterno: d.pedidoInterno || '',
+                IdReferencia: d.idReferencia,
+                TablaReferencia: d.tablaReferencia
+            }));
+            fct_RenderDetalle();
+        }).fail(function () {
+            $('#efec-cargando').addClass('d-none');
+            toastr.error('Error de conexión al cargar el movimiento.');
+        });
+    }
 </script>

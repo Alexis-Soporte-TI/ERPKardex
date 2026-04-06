@@ -343,14 +343,20 @@
                     orderable: false,
                     render: function (data) {
                         let botonesGestion = '';
-                        if(data.estado === 'Pendiente' && auditarMovs) {
-                            botonesGestion = `
+                        if(data.estado === 'Pendiente') {
+                            botonesGestion += `
+                            <button class="btn btn-sm btn-warning" title="Editar" onclick="fct_EditarMovimiento(${data.id})">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>`;
+                            if(auditarMovs) {
+                                botonesGestion += `
                             <button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')">
                                 <i class="bi bi-check-lg"></i>
                             </button>
                             <button class="btn btn-sm btn-danger" title="Rechazar" onclick="cambiarEstado(${data.id}, 'Rechazado')">
                                 <i class="bi bi-x-lg"></i>
                             </button>`;
+                            }
                         }
 
                         return `
@@ -405,6 +411,10 @@
 
     function fct_MovimientoNuevo() {
         window.location.href = '/IngresoSalidaAlm/Registrar';
+    }
+
+    function fct_EditarMovimiento(id) {
+        window.location.href = '/IngresoSalidaAlm/Registrar?id=' + id;
     }
     
     // 2. La función que hace la magia (agrégala en tu bloque <script>)
