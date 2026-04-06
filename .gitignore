@@ -364,3 +364,6 @@ FodyWeavers.xsd
 *.bak
 .env
 /datos
+
+# Configuración local de ASP.NET
+appsettings.Development.json

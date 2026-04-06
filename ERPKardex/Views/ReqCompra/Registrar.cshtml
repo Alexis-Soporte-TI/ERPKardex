@@ -1,5 +1,7 @@
-﻿@{
+﻿@inject ERPKardex.Services.IPermisoService _permisos
+@{
     ViewData["Title"] = "Nuevo Requerimiento de Compra";
+    string puedeIngresarSolicitante = await _permisos.TienePermiso("REQ_COMPRA_SOLICITANTE") ? "" : "d-none";
 }
 
 <div class="card d-none" id="efec-cargando">
@@ -29,6 +31,20 @@
                         <div class="col-md-4 mb-3">
                             <label>Lugar de entrega</label>
                             <input type="text" id="txt_Observacion" class="form-control" placeholder="Ej: Almacén...">
+                        </div>
+                    </div>
+                    <div class="row @puedeIngresarSolicitante">
+                        <div class="col-md-6 mb-3">
+                            <label>Área Solicitante</label>
+                            <select id="cbx_AreaSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una área...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Persona Solicitante</label>
+                            <select id="cbx_PersonalSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una persona...</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -109,6 +125,17 @@
         $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Buscar Producto --' });
         $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' }); // Para el combo de CC
 
+        $('.select2-custom').select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: "Buscar...",
+            allowClear: true,
+            language: { noResults: () => "No se encontraron resultados" }
+        });
+
+        // Cargar los datos desde las APIs
+        cargarCombosSolicitantes();
+
         fct_CargarProductos();
         fct_CargarCentrosCosto(); // <-- NUEVA FUNCIÓN
 
@@ -176,6 +203,8 @@
                 FechaEmision: $("#dtp_FechaEmision").val(),
                 FechaNecesaria: $("#dtp_FechaNecesaria").val(),
                 Observacion: $("#txt_Observacion").val(),
+                AreaSolicitanteId: $('#cbx_AreaSoli').val(),
+                PersonalSolicitanteId: $("#cbx_PersonalSoli").val(),
                 PeriodoContableId: PeriodoManager.getActual()
             };
 
@@ -284,6 +313,32 @@
         $("#txt_DetCantidad").val("1.00");
         $("#txt_DetLugar").val("");
         $("#cbx_ProductoBusqueda").select2('open'); // Foco al producto de nuevo
+    }
+    
+    function cargarCombosSolicitantes() {
+        // 1. Cargar Áreas
+        $.getJSON('/ReqCompra/GetAreasSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_AreaSoli');
+                $combo.empty().append('<option value="">Seleccione una área...</option>');
+            
+                response.data.forEach(item => {
+                    $combo.append(new Option(item.nombre, item.id));
+                });
+            }
+        });
+
+        // 2. Cargar Personal
+        $.getJSON('/ReqCompra/GetPersonalSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_PersonalSoli');
+                $combo.empty().append('<option value="">Seleccione una persona...</option>');
+            
+                response.data.forEach(item => {
+                    $combo.append(new Option(item.nombre, item.id));
+                });
+            }
+        });
     }
 
     function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }

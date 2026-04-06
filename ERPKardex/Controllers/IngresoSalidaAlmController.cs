@@ -618,15 +618,18 @@ namespace ERPKardex.Controllers
                                 _context.StockAlmacenes.Add(stock);
                             }
 
+                            decimal stockActual = stock.StockActual ?? 0;
+                            decimal cantidadMovimiento = det.Cantidad ?? 0;
+
                             if (cabecera.TipoMovimiento == true) // Es Ingreso
                             {
-                                stock.StockActual += det.Cantidad ?? 0;
+                                stock.StockActual = Math.Round(stockActual + cantidadMovimiento, 2, MidpointRounding.AwayFromZero);
                             }
                             else if (cabecera.TipoMovimiento == false) // Es Salida
                             {
                                 if (stock.StockActual >= det.Cantidad)
                                 {
-                                    stock.StockActual -= det.Cantidad ?? 0;
+                                    stock.StockActual = Math.Round(stockActual - cantidadMovimiento, 2, MidpointRounding.AwayFromZero);
                                 }
                                 else
                                 {
