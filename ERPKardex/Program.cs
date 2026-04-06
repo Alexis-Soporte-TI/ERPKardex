@@ -1,4 +1,7 @@
 ﻿using ERPKardex.Data;
+using ERPKardex.Models;
+using ERPKardex.Services;
+using ERPKardex.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +55,14 @@ builder.Services.AddMemoryCache(); // Habilitar Caché en RAM
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ERPKardex.Data.AuditoriaInterceptor>();
 builder.Services.AddScoped<ERPKardex.Services.IPermisoService, ERPKardex.Services.PermisoService>();
+
+// CORREOS 
+// Mapear la sección "SmtpSettings" a nuestra clase
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+
+// Registrar el servicio de correos
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 
 // --- CONFIGURACI�N DE CULTURA H�BRIDA ---
 var cultureInfo = new System.Globalization.CultureInfo("es-PE");
