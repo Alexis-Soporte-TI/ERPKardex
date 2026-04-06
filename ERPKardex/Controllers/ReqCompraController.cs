@@ -265,50 +265,59 @@ namespace ERPKardex.Controllers
 
                     transaction.Commit();
 
-                    var empresa = _context.Empresas.FirstOrDefault(e => e.Id == cabecera.EmpresaId);
+                    var empresa = await _context.Empresas.FirstOrDefaultAsync(e => e.Id == cabecera.EmpresaId);
 
                     if (empresa != null && empresa.Ruc == "20612680842")
                     {
                         // 5. ENVÍO DE CORREO 
                         try
                         {
-                            // Preparamos los datos del correo
-                            // Actualizamos con los correos reales que solicitaste
-                            var destinatarios = new List<string> { "valarcon@corpsaf.com", "roliva@corpsaf.com" };
+                            // 1. Consultas asíncronas para no bloquear el servidor
+                            var areaSolicitante = await _context.AreaSolicitante
+                                .FirstOrDefaultAsync(ar => ar.Id == cabecera.AreaSolicitanteId);
 
+                            var personalSolicitante = await _context.PersonalSolicitante
+                                .FirstOrDefaultAsync(ar => ar.Id == cabecera.PersonalSolicitanteId);
+
+                            // 2. Manejo de nulos (Cambia ".Nombre" por el nombre real de tus columnas en BD)
+                            string nombreArea = areaSolicitante != null ? areaSolicitante.Nombre : "No especificada";
+                            string nombrePersonal = personalSolicitante != null ? personalSolicitante.Nombre : "No especificado";
+
+                            // Preparamos los datos del correo
+                            var destinatarios = new List<string> { "valarcon@corpsaf.com", "roliva@corpsaf.com" };
                             var asunto = $"Nuevo Requerimiento de Compra: {cabecera.Numero}";
 
-                            // Agregamos el enlace al ERP con un estilo amigable
+                            // 3. Agregamos el Área y Personal al cuerpo del correo
                             var cuerpo = $@"
-                    <div style='font-family: Arial, sans-serif; color: #333;'>
-                        <h2 style='color: #0056b3;'>Nuevo Requerimiento Generado</h2>
-                        <p>Se ha registrado exitosamente en el sistema un nuevo requerimiento de compra.</p>
-                        <ul>
-                            <li><strong>Número:</strong> {cabecera.Numero}</li>
-                            <li><strong>Fecha Necesaria:</strong> {cabecera.FechaNecesaria.GetValueOrDefault().ToString("dd/MM/yyyy")}</li>
-                        </ul>
-                        <p>Por favor, ingrese al ERP para revisarlo y aprobarlo haciendo clic en el siguiente botón:</p>
-                        <br>
-                        <a href='https://syssaf.ynnovacorp.com' 
-                           style='background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>
-                           Ir a SYSSAF
-                        </a>
-                        <br><br>
-                        <p style='font-size: 12px; color: #777;'>
-                            Si el botón no funciona, copie y pegue la siguiente dirección en su navegador: <br>
-                            <a href='https://syssaf.ynnovacorp.com'>https://syssaf.ynnovacorp.com</a>
-                        </p>
-                    </div>";
+                            <div style='font-family: Arial, sans-serif; color: #333;'>
+                                <h2 style='color: #0056b3;'>Nuevo Requerimiento Generado</h2>
+                                <p>Se ha registrado exitosamente en el sistema un nuevo requerimiento de compra.</p>
+                                <ul>
+                                    <li><strong>Número:</strong> {cabecera.Numero}</li>
+                                    <li><strong>Área Solicitante:</strong> {nombreArea}</li>
+                                    <li><strong>Personal Solicitante:</strong> {nombrePersonal}</li>
+                                    <li><strong>Fecha Necesaria:</strong> {cabecera.FechaNecesaria.GetValueOrDefault().ToString("dd/MM/yyyy")}</li>
+                                </ul>
+                                <p>Por favor, ingrese al ERP para revisarlo y aprobarlo haciendo clic en el siguiente botón:</p>
+                                <br>
+                                <a href='https://syssaf.ynnovacorp.com' 
+                                   style='background-color: #0056b3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>
+                                   Ir a SYSSAF
+                                </a>
+                                <br><br>
+                                <p style='font-size: 12px; color: #777;'>
+                                    Si el botón no funciona, copie y pegue la siguiente dirección en su navegador: <br>
+                                    <a href='https://syssaf.ynnovacorp.com'>https://syssaf.ynnovacorp.com</a>
+                                </p>
+                            </div>";
 
                             // Usamos el servicio asíncrono
                             await _emailService.SendEmailAsync(destinatarios, asunto, cuerpo, isHtml: true);
                         }
                         catch (Exception exCorreo)
                         {
-                            // Si el correo falla, NO hacemos rollback porque el registro ya es válido y se guardó en BD.
-                            // Podrías guardar el error en un log (ej: _logger.LogError(exCorreo.Message))
-                            // Retornamos que se guardó, pero advertimos del correo
-                            return Json(new { status = true, message = $"Requerimiento {cabecera.Numero} generado." });
+                            // Si el correo falla, NO hacemos rollback.
+                            return Json(new { status = true, message = $"Requerimiento {cabecera.Numero} generado, pero el correo no se pudo enviar." });
                         }
                     }
 
