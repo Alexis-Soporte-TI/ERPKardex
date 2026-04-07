@@ -24,7 +24,7 @@ namespace ERPKardex.Models
         public string? DescripcionProducto { get; set; }
         [Column("cod_unidad_medida")]
         public string? CodUnidadMedida { get; set; }
-        [Precision(12, 2)]
+        [Precision(12, 4)]
         public decimal? Cantidad { get; set; }
         [Column("tipo_documento_id")]
         public int? TipoDocumentoId { get; set; }

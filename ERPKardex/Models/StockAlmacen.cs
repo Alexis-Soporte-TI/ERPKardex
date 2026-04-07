@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ERPKardex.Models
@@ -13,6 +14,7 @@ namespace ERPKardex.Models
         [Column("producto_id")]
         public int? ProductoId { get; set; }
         [Column("stock_actual")]
+        [Precision(14, 4)]
         public decimal? StockActual { get; set; }
         [Column("empresa_id")]
         public int? EmpresaId { get; set; }

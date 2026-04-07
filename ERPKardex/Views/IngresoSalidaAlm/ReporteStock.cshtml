@@ -256,7 +256,7 @@
                     name: "cantidad",
                     className: "text-right font-weight-bold",
                     render: function(data, type, row) {
-                        return formatearNumero(data);
+                        return formatearNumero(data, 4);
                     },
                 },
                 {
@@ -310,14 +310,14 @@
         });
     }
     
-    function formatearNumero(numero) {
+    function formatearNumero(numero, decimales = 2) {
         if (numero === null || numero === undefined || isNaN(numero)) {
             return "0.00";
         }
 
         return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            minimumFractionDigits: decimales,
+            maximumFractionDigits: decimales
         }).format(parseFloat(numero));
     }
 
