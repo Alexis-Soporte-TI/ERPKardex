@@ -140,10 +140,22 @@ namespace ERPKardex.Controllers
                     .Where(x => x.Id == id && x.EmpresaId == EmpresaUsuarioId)
                     .Select(x => new
                     {
-                        x.Id, x.Fecha, x.TipoMovimiento, x.SucursalId, x.AlmacenId,
-                        x.MotivoId, x.ProveedorId, x.FechaDocumento, x.TipoDocumentoId,
-                        x.SerieDocumento, x.NumeroDocumento, x.PeriodoContableId, x.EstadoId,
-                        x.MonedaId, x.IdReferencia, x.TablaReferencia
+                        x.Id,
+                        x.Fecha,
+                        x.TipoMovimiento,
+                        x.SucursalId,
+                        x.AlmacenId,
+                        x.MotivoId,
+                        x.ProveedorId,
+                        x.FechaDocumento,
+                        x.TipoDocumentoId,
+                        x.SerieDocumento,
+                        x.NumeroDocumento,
+                        x.PeriodoContableId,
+                        x.EstadoId,
+                        x.MonedaId,
+                        x.IdReferencia,
+                        x.TablaReferencia
                     })
                     .FirstOrDefault();
 
@@ -162,11 +174,20 @@ namespace ERPKardex.Controllers
                                 orderby d.Item
                                 select new
                                 {
-                                    d.Item, d.ProductoId, d.CodProducto, d.DescripcionProducto,
-                                    d.CodUnidadMedida, d.Cantidad, d.Lote,
-                                    d.FechaFabricacion, d.FechaVencimiento,
-                                    d.CentroCostoId, d.ActividadId, d.PedidoInterno,
-                                    d.IdReferencia, d.TablaReferencia,
+                                    d.Item,
+                                    d.ProductoId,
+                                    d.CodProducto,
+                                    d.DescripcionProducto,
+                                    d.CodUnidadMedida,
+                                    d.Cantidad,
+                                    d.Lote,
+                                    d.FechaFabricacion,
+                                    d.FechaVencimiento,
+                                    d.CentroCostoId,
+                                    d.ActividadId,
+                                    d.PedidoInterno,
+                                    d.IdReferencia,
+                                    d.TablaReferencia,
                                     NombreCentroCosto = cc != null ? cc.Nombre : "",
                                     NombreActividad = ac != null ? ac.Nombre : ""
                                 }).ToList();
@@ -1005,15 +1026,15 @@ namespace ERPKardex.Controllers
                             doc = $"{(mov.SerieDocumento ?? "---")}-{(mov.NumeroDocumento ?? "---")}",
                             // AQUÍ USAMOS EL CÓDIGO DE MOTIVO (TABLA 12) CONCATENADO CON DESCRIPCIÓN
                             motivo = mov.CodigoMotivo + " - " + mov.Motivo,
-                            eCant = cantEntrada > 0 ? cantEntrada.ToString("N2") : "-",
+                            eCant = cantEntrada > 0 ? cantEntrada.ToString("N4") : "-",
                             eCosto = cantEntrada > 0 ? costoUEntrada.ToString("N4") : "-",
-                            eTotal = cantEntrada > 0 ? totalEntrada.ToString("N2") : "-",
-                            sCant = cantSalida > 0 ? cantSalida.ToString("N2") : "-",
+                            eTotal = cantEntrada > 0 ? totalEntrada.ToString("N4") : "-",
+                            sCant = cantSalida > 0 ? cantSalida.ToString("N4") : "-",
                             sCosto = cantSalida > 0 ? costoUSalida.ToString("N4") : "-",
-                            sTotal = cantSalida > 0 ? totalSalida.ToString("N2") : "-",
-                            finalCant = saldoCant.ToString("N2"),
+                            sTotal = cantSalida > 0 ? totalSalida.ToString("N4") : "-",
+                            finalCant = saldoCant.ToString("N4"),
                             finalCosto = (metodo == "PEPS" ? (saldoCant > 0 ? saldoCostoTotal / saldoCant : 0) : costoPromedio).ToString("N4"),
-                            finalTotal = saldoCostoTotal.ToString("N2"),
+                            finalTotal = saldoCostoTotal.ToString("N4"),
                             isHeader = false
                         });
                     }
