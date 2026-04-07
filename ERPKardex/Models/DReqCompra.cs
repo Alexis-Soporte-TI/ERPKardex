@@ -31,7 +31,7 @@ namespace ERPKardex.Models
         [StringLength(50)]
         public string? UnidadMedida { get; set; }
 
-        [Column("cantidad_solicitada")]
+        [Column("cantidad_solicitada", TypeName = "decimal(14,4)")]
         public decimal CantidadSolicitada { get; set; }
 
         [Column("estado_id")]

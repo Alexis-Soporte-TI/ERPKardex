@@ -19,11 +19,11 @@ namespace ERPKardex.Models
         public string? DescripcionLibre { get; set; }
         [Column("unidad_medida")]
         public string? UnidadMedida { get; set; }
-        [Column("cantidad_solicitada")]
+        [Column("cantidad_solicitada", TypeName = "decimal(14,4)")]
         public decimal? CantidadSolicitada { get; set; }
-        [Column("cantidad_aprobada")]
+        [Column("cantidad_aprobada", TypeName = "decimal(14,4)")]
         public decimal? CantidadAprobada { get; set; }
-        [Column("cantidad_atendida")]
+        [Column("cantidad_atendida", TypeName = "decimal(14,4)")]
         public decimal? CantidadAtendida { get; set; }
         [Column("id_referencia")]
         public int? IdReferencia { get; set; }

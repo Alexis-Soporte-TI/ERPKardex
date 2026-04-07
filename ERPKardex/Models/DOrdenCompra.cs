@@ -22,9 +22,11 @@ namespace ERPKardex.Models
         [Column("unidad_medida")]
         public string? UnidadMedida { get; set; }
 
+
+        [Column("cantidad", TypeName = "decimal(14,4)")]
         public decimal? Cantidad { get; set; }
 
-        [Column("cantidad_atendida")]
+        [Column("cantidad_atendida", TypeName = "decimal(14,4)")]
         public decimal? CantidadAtendida { get; set; }
 
         [Column("precio_unitario", TypeName = "decimal(19,10)")]

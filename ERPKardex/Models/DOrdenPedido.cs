@@ -12,8 +12,8 @@ namespace ERPKardex.Models
         [Column("producto_id")] public int? ProductoId { get; set; }
         [Column("descripcion")] public string? Descripcion { get; set; }
         [Column("unidad_medida")] public string? UnidadMedida { get; set; }
-        [Column("cantidad")] public decimal? Cantidad { get; set; }
-        [Column("cantidad_atendida")] public decimal? CantidadAtendida { get; set; } = 0;
+        [Column("cantidad", TypeName = "decimal(14,4)")] public decimal? Cantidad { get; set; }
+        [Column("cantidad_atendida", TypeName = "decimal(14,4)")] public decimal? CantidadAtendida { get; set; } = 0;
         [Column("precio_unitario")] public decimal? PrecioUnitario { get; set; }
         [Column("porc_descuento")] public decimal? PorcDescuento { get; set; } = 0;
         [Column("valor_venta")] public decimal? ValorVenta { get; set; }

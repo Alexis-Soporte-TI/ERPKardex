@@ -17,8 +17,9 @@ namespace ERPKardex.Models
         public string? Item { get; set; }
         [Column("descripcion_servicio")]
         public string? DescripcionServicio { get; set; }
+        [Column("cantidad", TypeName = "decimal(14,4)")]
         public decimal? Cantidad { get; set; }
-        [Column("cantidad_atendida")]
+        [Column("cantidad_atendida", TypeName = "decimal(14,4)")]
         public decimal? CantidadAtendida { get; set; }
         [Column("unidad_medida")]
         public string? UnidadMedida { get; set; }
