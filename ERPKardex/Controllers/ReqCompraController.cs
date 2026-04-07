@@ -45,7 +45,9 @@ namespace ERPKardex.Controllers
                             join usu in _context.Usuarios on r.UsuarioSolicitanteId equals usu.Id
                             join est in _context.Estados on r.EstadoId equals est.Id
                             join emp in _context.Empresas on r.EmpresaId equals emp.Id
-                            // LÓGICA LIMPIA: Si soy global veo todo, si no, solo lo mío
+                            join per in _context.PersonalSolicitante on r.PersonalSolicitanteId equals per.Id into perJoin
+                            from per in perJoin.DefaultIfEmpty()
+                                // LÓGICA LIMPIA: Si soy global veo todo, si no, solo lo mío
                             where (r.EmpresaId == miEmpresaId)
                             orderby r.Id descending
                             select new
@@ -56,7 +58,7 @@ namespace ERPKardex.Controllers
                                 r.Numero,
                                 FechaEmision = r.FechaEmision.GetValueOrDefault().ToString("dd/MM/yyyy HH:mm"),
                                 FechaNecesaria = r.FechaNecesaria.GetValueOrDefault().ToString("dd/MM/yyyy"),
-                                Solicitante = usu.Nombre,
+                                Solicitante = per.Nombre != null ? per.Nombre : usu.Nombre,
                                 Estado = est.Nombre,
                                 r.EstadoId,
                                 r.Observacion
