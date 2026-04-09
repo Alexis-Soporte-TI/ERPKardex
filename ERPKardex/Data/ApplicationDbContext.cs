@@ -119,13 +119,22 @@ namespace ERPKardex.Data
             // =================================================================
             // TIPOS DE DATOS MONETARIOS (Global)
             // =================================================================
-            foreach (var property in modelBuilder.Model.GetEntityTypes()
-                .SelectMany(t => t.GetProperties())
-                .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
+            // 1. PRIMERO: Configuramos el default para TODOS los decimales
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                // Si no se especificó un TypeName manual (como en TC), usar default 18,2
-                if (property.GetColumnType() == null)
-                    property.SetColumnType("decimal(18,2)");
+                var properties = entityType.GetProperties()
+                    .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?));
+
+                foreach (var property in properties)
+                {
+                    // Verificamos si ya tiene una precisión definida (vía atributo o manualmente)
+                    // Si GetPrecision() es null, es que EF todavía no tiene una regla específica
+                    if (property.GetPrecision() == null && property.GetColumnType() == null)
+                    {
+                        property.SetPrecision(18);
+                        property.SetScale(2);
+                    }
+                }
             }
 
             modelBuilder.Entity<ReqCompra>().ToTable(tb => tb.HasTrigger("trg_Audit_reqcompra"));
