@@ -377,5 +377,57 @@ namespace ERPKardex.Controllers
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
         }
         #endregion
+        #region IMPRESIÓN
+        [HttpGet]
+        public async Task<IActionResult> Imprimir(int id)
+        {
+            try
+            {
+                // 1. OBTENER CABECERA
+                var dataCabecera = await (from p in _context.PedServicios
+                                          join e in _context.Empresas on p.EmpresaId equals e.Id
+                                          // Tomamos al usuario que consolidó/registró el pedido de servicio
+                                          join u in _context.Usuarios on p.UsuarioRegistro equals u.Id
+                                          join est in _context.Estados on p.EstadoId equals est.Id
+                                          where p.Id == id
+                                          select new
+                                          {
+                                              Ped = p,
+                                              Emp = e,
+                                              Usu = u,
+                                              NombreEstado = est.Nombre
+                                          }).FirstOrDefaultAsync();
+
+                if (dataCabecera == null) return NotFound();
+
+                // 2. OBTENER DETALLES
+                var detalles = await (from d in _context.DPedidosServicio
+                                      join cc in _context.CentroCostos on d.CentroCostoId equals cc.Id into ccJoin
+                                      from cc in ccJoin.DefaultIfEmpty()
+                                      where d.PedidoServicioId == id
+                                      select new
+                                      {
+                                          d.Item,
+                                          Descripcion = d.DescripcionServicio, // Usamos la propiedad correcta de DPedidosServicio
+                                          d.UnidadMedida,
+                                          Cantidad = d.Cantidad, // Cantidad del pedido
+                                          d.Lugar,
+                                          CentroCosto = cc != null ? cc.Nombre : ""
+                                      }).ToListAsync();
+
+                // 3. PASAR DATOS A LA VISTA
+                ViewBag.Empresa = dataCabecera.Emp;
+                ViewBag.Usuario = dataCabecera.Usu; // Este es nuestro "Consolidador"
+                ViewBag.Estado = dataCabecera.NombreEstado;
+                ViewBag.Detalles = detalles;
+
+                return View(dataCabecera.Ped);
+            }
+            catch (Exception ex)
+            {
+                return Content($"Error al generar formato: {ex.Message}");
+            }
+        }
+        #endregion
     }
 }

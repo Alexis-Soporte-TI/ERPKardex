@@ -250,7 +250,14 @@
                 {
                     data: null, orderable: false, className: 'text-center align-middle',
                     render: function (data, type, row) {
-                        return `<button class="btn btn-sm btn-info" onclick="fct_VerPedido(${row.id})"><i class="bi bi-eye"></i></button>`;
+                        // Botones de acción
+                        return `
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-secondary" title="Imprimir Formato" onclick="fct_Imprimir(${row.id})">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="fct_VerPedido(${row.id})" title="Ver Detalle"><i class="bi bi-eye"></i></button>
+                        </div>`;
                     }
                 }
             ],
@@ -312,6 +319,11 @@
             },
             error: function () { HideSpinner(); toastr.error("Error al obtener detalle."); }
         });
+    }
+
+    function fct_Imprimir(id) {
+        // Abre en una pestaña nueva
+        window.open('/PedServicio/Imprimir?id=' + id, '_blank');
     }
 
     function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }
