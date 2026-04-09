@@ -45,53 +45,70 @@ namespace ERPKardex.Controllers
         {
             try
             {
-                // Usamos la propiedad heredada
-                var movimientos = (from isa in _context.IngresoSalidaAlms
-                                   join mot in _context.Motivos on isa.MotivoId equals mot.Id
-                                   join est in _context.Estados on isa.EstadoId equals est.Id
-                                   join suc in _context.Sucursales on isa.SucursalId equals suc.Id
-                                   join alm in _context.Almacenes on isa.AlmacenId equals alm.Id
-                                   join emp in _context.Empresas on alm.EmpresaId equals emp.Id
-                                   join tdi in _context.TiposDocumentoInterno on isa.TipoDocumentoInternoId equals tdi.Id
-                                   join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
-                                   from tc in joinDoc.DefaultIfEmpty()
-                                   join mon in _context.Monedas on isa.MonedaId equals mon.Id into joinMon
-                                   from mo in joinMon.DefaultIfEmpty()
-                                   where isa.EmpresaId == EmpresaUsuarioId
-                                   where Tipo == null || isa.TipoMovimiento == Tipo.Value
-                                   orderby isa.Fecha descending, isa.Numero descending
+                // 1. Iniciamos el query sin ejecutarlo (IQueryable)
+                var query = from isa in _context.IngresoSalidaAlms
+                            join mot in _context.Motivos on isa.MotivoId equals mot.Id
+                            join est in _context.Estados on isa.EstadoId equals est.Id
+                            join suc in _context.Sucursales on isa.SucursalId equals suc.Id
+                            join alm in _context.Almacenes on isa.AlmacenId equals alm.Id
+                            join tdi in _context.TiposDocumentoInterno on isa.TipoDocumentoInternoId equals tdi.Id
+                            join td in _context.TipoDocumentos on isa.TipoDocumentoId equals td.Id into joinDoc
+                            from tc in joinDoc.DefaultIfEmpty()
+                            join mon in _context.Monedas on isa.MonedaId equals mon.Id into joinMon
+                            from mo in joinMon.DefaultIfEmpty()
+                            where isa.EmpresaId == EmpresaUsuarioId
+                            select new { isa, mot, tc, mo, est, suc, alm };
 
-                                   let productos = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == isa.Id)
-                                        .Select(d => new { d.CodProducto, d.DescripcionProducto })
-                                        .ToList()
-                                   where (string.IsNullOrEmpty(CodigoProducto) || productos.Any(p => p.CodProducto.Contains(CodigoProducto))) &&
-                                         (string.IsNullOrEmpty(NombreProducto) || productos.Any(p => p.DescripcionProducto.Contains(NombreProducto)))
+                // 2. Filtros básicos
+                if (Tipo.HasValue)
+                {
+                    query = query.Where(x => x.isa.TipoMovimiento == Tipo.Value);
+                }
 
-                                   select new IngresoSalidaAlmViewModel
-                                   {
-                                       Id = isa.Id,
-                                       Fecha = isa.Fecha,
-                                       Numero = isa.Numero,
-                                       MotivoId = isa.MotivoId,
-                                       CodMotivo = mot.Codigo,
-                                       TipoMovimiento = mot.TipoMovimiento,
-                                       Motivo = mot.Descripcion,
-                                       TipoDocumentoId = isa.TipoDocumentoId,
-                                       TipoDocumento = tc.Descripcion,
-                                       SerieDocumento = isa.SerieDocumento,
-                                       NumeroDocumento = isa.NumeroDocumento,
-                                       FechaDocumento = isa.FechaDocumento,
-                                       MonedaId = isa.MonedaId,
-                                       Moneda = mo.Nombre,
-                                       EstadoId = isa.EstadoId,
-                                       Estado = est.Nombre,
-                                       SucursalId = isa.SucursalId,
-                                       Sucursal = suc.Nombre,
-                                       AlmacenId = isa.AlmacenId,
-                                       Almacen = alm.Nombre,
-                                       UsuarioId = isa.UsuarioId,
-                                       FechaRegistro = isa.FechaRegistro,
-                                   }).ToList();
+                // 3. Optimización de filtros de productos (Se traduce a EXISTS en SQL)
+                if (!string.IsNullOrEmpty(CodigoProducto))
+                {
+                    query = query.Where(x => _context.DIngresoSalidaAlms
+                        .Any(d => d.IngresoSalidaAlmId == x.isa.Id && d.CodProducto.Contains(CodigoProducto)));
+                }
+
+                if (!string.IsNullOrEmpty(NombreProducto))
+                {
+                    query = query.Where(x => _context.DIngresoSalidaAlms
+                        .Any(d => d.IngresoSalidaAlmId == x.isa.Id && d.DescripcionProducto.Contains(NombreProducto)));
+                }
+
+                // 4. Proyección final y ejecución única
+                var movimientos = query
+                    .OrderByDescending(x => x.isa.Fecha)
+                    .ThenByDescending(x => x.isa.Numero)
+                    .Select(x => new IngresoSalidaAlmViewModel
+                    {
+                        Id = x.isa.Id,
+                        Fecha = x.isa.Fecha,
+                        Numero = x.isa.Numero,
+                        MotivoId = x.isa.MotivoId,
+                        CodMotivo = x.mot.Codigo,
+                        TipoMovimiento = x.mot.TipoMovimiento,
+                        Motivo = x.mot.Descripcion,
+                        TipoDocumentoId = x.isa.TipoDocumentoId,
+                        TipoDocumento = x.tc.Descripcion,
+                        SerieDocumento = x.isa.SerieDocumento,
+                        NumeroDocumento = x.isa.NumeroDocumento,
+                        FechaDocumento = x.isa.FechaDocumento,
+                        MonedaId = x.isa.MonedaId,
+                        Moneda = x.mo.Nombre,
+                        EstadoId = x.isa.EstadoId,
+                        Estado = x.est.Nombre,
+                        SucursalId = x.isa.SucursalId,
+                        Sucursal = x.suc.Nombre,
+                        AlmacenId = x.isa.AlmacenId,
+                        Almacen = x.alm.Nombre,
+                        UsuarioId = x.isa.UsuarioId,
+                        FechaRegistro = x.isa.FechaRegistro,
+                    })
+                    .Take(100) // Mejora rendimiento en consultas de solo lectura
+                    .ToList();
 
                 return Json(new { data = movimientos, message = "Movimientos retornados exitosamente.", status = true });
             }
@@ -812,6 +829,7 @@ namespace ERPKardex.Controllers
                                             && sa.ProductoId == productoId
                                             && sa.EmpresaId == EmpresaUsuarioId // Tu validación de seguridad
                                             && p.Estado == true                 // <--- NUEVA VALIDACIÓN: Producto Activo
+                                            && !p.Codigo.StartsWith("6")
                                          select sa.StockActual).FirstOrDefault();
 
                     // Si el producto no existe, está inactivo, o no hay registro de stock, stockProducto será null (o 0 dependiendo de tu modelo).
