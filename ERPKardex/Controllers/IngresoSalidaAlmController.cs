@@ -805,14 +805,19 @@ namespace ERPKardex.Controllers
             {
                 if (almacenId != null && productoId != null)
                 {
-                    // Validamos también por empresa para mayor seguridad
-                    var stockProducto = _context.StockAlmacenes
-                        .Where(sa => sa.AlmacenId == almacenId && sa.ProductoId == productoId && sa.EmpresaId == EmpresaUsuarioId) // <--- CAMBIO AQUÍ
-                        .Select(sa => sa.StockActual)
-                        .FirstOrDefault();
+                    // Hacemos el JOIN con Productos y validamos la Empresa y el Estado activo
+                    var stockProducto = (from sa in _context.StockAlmacenes
+                                         join p in _context.Productos on sa.ProductoId equals p.Id
+                                         where sa.AlmacenId == almacenId
+                                            && sa.ProductoId == productoId
+                                            && sa.EmpresaId == EmpresaUsuarioId // Tu validación de seguridad
+                                            && p.Estado == true                 // <--- NUEVA VALIDACIÓN: Producto Activo
+                                         select sa.StockActual).FirstOrDefault();
 
+                    // Si el producto no existe, está inactivo, o no hay registro de stock, stockProducto será null (o 0 dependiendo de tu modelo).
                     return Json(new { data = stockProducto, status = true, message = "Stock recuperado." });
                 }
+
                 return Json(new ApiResponse { data = null, status = false, message = "Datos incompletos." });
             }
             catch (Exception ex)
