@@ -696,6 +696,21 @@ namespace ERPKardex.Controllers
                         Estado = true,
                         FechaRegistro = DateTime.Now
                     });
+
+                    var activo = await _context.Activo.FirstOrDefaultAsync(a => a.Id == activoId && a.Estado);
+
+                    if (activo != null)
+                    {
+                        if (movimiento.TipoMovimiento == "ENTREGA")
+                        {
+                            activo.EstadoUso = "ACTIVO";
+                        }
+                        else if (movimiento.TipoMovimiento == "DEVOLUCION")
+                        {
+                            activo.EstadoUso = "STOCK";
+                        }
+                    }
+
                 }
                 await _context.SaveChangesAsync();
                 return Json(new { status = true, message = $"Movimiento {codigo} registrado correctamente.", codigo });
