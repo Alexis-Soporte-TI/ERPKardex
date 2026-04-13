@@ -57,8 +57,9 @@ builder.Services.AddScoped<ERPKardex.Data.AuditoriaInterceptor>();
 builder.Services.AddScoped<ERPKardex.Services.IPermisoService, ERPKardex.Services.PermisoService>();
 
 // CORREOS 
-// Mapear la sección "SmtpSettings" a nuestra clase
+// Mapear las configuraciones a nuestra clase
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.Configure<ExternalAppsSettings>(builder.Configuration.GetSection("ExternalApps"));
 
 // Registrar el servicio de correos
 builder.Services.AddScoped<IEmailService, EmailService>();

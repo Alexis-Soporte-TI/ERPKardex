@@ -83,7 +83,13 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label>Orden de producción</label>
+                            <select id="cbx_OrdenesBusqueda" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label>Finalidad del Req (*)</label>
                             <input type="text" id="txt_DetLugar" class="form-control form-control-sm" placeholder="Observación específica para este ítem">
                         </div>
@@ -95,6 +101,7 @@
                                 <tr>
                                     <th style="width: 50px;">Item</th>
                                     <th>Producto</th>
+                                    <th style="width: 300px;">Orden de Producción</th>
                                     <th style="width: 200px;">Centro Costo</th>
                                     <th style="width: 80px;">U.M.</th>
                                     <th style="width: 100px;">Cant.</th>
@@ -119,6 +126,7 @@
 <script>
     var LISTA_DETALLE = [];
     var PRODUCTOS_TEMP = [];
+    var ORDENES_TEMP = [];
 
     $(document).ready(function () {
         // 1. Configuración Inicial
@@ -137,6 +145,7 @@
         cargarCombosSolicitantes();
 
         fct_CargarProductos();
+        fct_CargarOrdenesProduccion();
         fct_CargarCentrosCosto(); // <-- NUEVA FUNCIÓN
 
         // 2. Al seleccionar producto, mostrar su U.M.
@@ -156,6 +165,9 @@
             let idCC = $("#cbx_CentroCosto").val();               // ID Centro Costo
             let txtCC = $("#cbx_CentroCosto option:selected").text(); // Nombre Centro Costo
 
+            let idOP = $("#cbx_OrdenesBusqueda").val(); // ID Orden Producción (opcional)
+            let txtOP = $("#cbx_OrdenesBusqueda option:selected").text(); // Nombre Orden Producción (opcional)
+            debugger;
             let um = $("#txt_DetUnidad").val();
             let can = parseFloat($("#txt_DetCantidad").val());
             let lugarItem = $("#txt_DetLugar").val();
@@ -180,6 +192,8 @@
                 Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
                 ProductoId: parseInt(idProd),
                 CentroCostoId: parseInt(idCC), // <-- PROPIEDAD CLAVE PARA TU DB
+                IdOrdenProduccionErpCorpsaf: idOP ? idOP : null, // <-- PROPIEDAD CLAVE PARA TU DB, puede ser null
+                DescOrdenProduccionErpCorpsaf: idOP ? txtOP : "--",
 
                 // Campos solo para visualización o snapshot
                 Codigo: codProd,
@@ -259,6 +273,22 @@
             }
         });
     }
+    function fct_CargarOrdenesProduccion() {
+        $.getJSON('/ReqCompra/GetOrdenesProduccion', function (res) {
+            if (res.status) {
+                if(res.data.length > 0) {                    
+                    ORDENES_TEMP = res.data;
+                    let h = '<option value="">-- BUSCAR --</option>';
+                    res.data.forEach(x => h += `<option value="${x.idOrden}">${x.idOrden} - ${x.objetivo}</option>`);
+                    $('#cbx_OrdenesBusqueda').html(h);
+                } else {
+                    ORDENES_TEMP = [];
+                    let h = '<option value=""> SIN ORDENES REGISTRADAS</option>';
+                    $('#cbx_OrdenesBusqueda').html(h);
+                }
+            }
+        });
+    }
 
     // NUEVA FUNCIÓN PARA LLENAR EL COMBO DE CENTROS DE COSTO
     function fct_CargarCentrosCosto() {
@@ -281,6 +311,7 @@
                     ${d.DescripcionProducto}
                 </td>
 
+                <td class="align-middle text-primary small font-weight-bold">${d.DescOrdenProduccionErpCorpsaf}</td>
                 <td class="align-middle text-primary small font-weight-bold">${d.NombreCentroCosto}</td>
 
                 <td class="align-middle">${d.UnidadMedida}</td>

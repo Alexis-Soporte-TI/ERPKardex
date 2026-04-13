@@ -12,11 +12,13 @@ namespace ERPKardex.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly string _erpCorpsafUrl;
 
-        public ReqCompraController(ApplicationDbContext context, IEmailService emailService)
+        public ReqCompraController(ApplicationDbContext context, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _emailService = emailService;
+            _erpCorpsafUrl = configuration["ExternalApps:ErpCorpsaf"] ?? "";
         }
 
         public bool EsPeriodoValido(int periodoId)
@@ -97,6 +99,7 @@ namespace ERPKardex.Controllers
                                           d.Item,
                                           d.DescripcionProducto,
                                           d.UnidadMedida,
+                                          OrdenProduccion = d.IdOrdenProduccionErpCorpsaf != null ? d.DescOrdenProduccionErpCorpsaf : "",
                                           d.Lugar, // Campo nuevo
                                           d.CantidadSolicitada,
                                           CentroCosto = cc != null ? cc.Nombre : "N/A",
@@ -144,6 +147,59 @@ namespace ERPKardex.Controllers
                 return Json(new { status = true, data });
             }
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+        public class ApiResponse<T>
+        {
+            public bool Success { get; set; }
+            public string Message { get; set; }
+            public List<T> Data { get; set; }
+        }
+        public class OrdenProduccion
+        {
+            public string IdOrden { get; set; }
+            public int IdEmpresa { get; set; }
+            public int NumeroOrden { get; set; }
+            public string Objetivo { get; set; }
+        }
+        //COMBO DE ORDENES DE PRODUCCION DESDE ERP CORPSAF
+        [HttpGet]
+        public async Task<JsonResult> GetOrdenesProduccion()
+        {
+            try
+            {
+                var result = await ObtenerOrdenesProduccion();
+
+                return Json(new
+                {
+                    status = true,
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
+        }
+
+        private async Task<ApiResponse<OrdenProduccion>> ObtenerOrdenesProduccion()
+        {
+            var miEmpresaId = EmpresaUsuarioId;
+            var empresa = await _context.Empresas.FindAsync(miEmpresaId);
+            var idEmpresaCorpsaf = empresa != null ? (empresa.IdEmpresaCorpsaf != null ? empresa.IdEmpresaCorpsaf : 0) : 0;
+
+            var client = new HttpClient();
+
+            var response = await client.GetAsync($"{_erpCorpsafUrl}/api/maestros/ordenes-produccion/{idEmpresaCorpsaf}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<OrdenProduccion>>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result;
         }
 
         [HttpGet]
@@ -258,6 +314,10 @@ namespace ERPKardex.Controllers
                             {
                                 det.DescripcionProducto = prod.DescripcionComercial;
                                 det.UnidadMedida = prod.CodUnidadMedida;
+                            }
+                            if (det.IdOrdenProduccionErpCorpsaf == null)
+                            {
+                                det.DescOrdenProduccionErpCorpsaf = null;
                             }
                             _context.DReqCompras.Add(det);
                             item++;

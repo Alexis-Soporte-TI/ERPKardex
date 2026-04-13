@@ -12,5 +12,7 @@ namespace ERPKardex.Models
         public string? Nombre { get; set; }
         public string? Direccion { get; set; }
         public bool? Estado { get; set; }
+        [Column("id_empresa_erpcorpsaf")]
+        public int? IdEmpresaCorpsaf { get; set; }
     }
 }
