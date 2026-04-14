@@ -4,6 +4,7 @@ using ERPKardex.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using static ERPKardex.Controllers.ReqCompraController;
 
 namespace ERPKardex.Controllers
 {
@@ -11,10 +12,12 @@ namespace ERPKardex.Controllers
     public class IngresoSalidaAlmController : BaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly string _erpCorpsafUrl;
 
-        public IngresoSalidaAlmController(ApplicationDbContext context)
+        public IngresoSalidaAlmController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _erpCorpsafUrl = configuration["ExternalApps:ErpCorpsaf"] ?? "";
         }
 
         public bool EsPeriodoValido(int periodoId)
@@ -205,6 +208,12 @@ namespace ERPKardex.Controllers
                                     d.PedidoInterno,
                                     d.IdReferencia,
                                     d.TablaReferencia,
+                                    d.IdOrdenProduccionErpcorpsaf,
+                                    d.DescOrdenProduccionErpcorpsaf,
+                                    d.IdActividadErpcorpsaf,
+                                    d.DescActividadErpcorpsaf,
+                                    d.IdLaborErpcorpsaf,
+                                    d.DescLaborErpcorpsaf,
                                     NombreCentroCosto = cc != null ? cc.Nombre : "",
                                     NombreActividad = ac != null ? ac.Nombre : ""
                                 }).ToList();
@@ -843,6 +852,102 @@ namespace ERPKardex.Controllers
                 return Json(new ApiResponse { data = null, status = false, message = ex.Message });
             }
         }
+        public class ActividadResponseDto
+        {
+            public string IdActividad { get; set; } = string.Empty;
+            public int IdEmpresa { get; set; }
+            public string Nombre { get; set; } = string.Empty;
+            public string Descripcion { get; set; } = string.Empty;
+        }
+        public class LaborResponseDto
+        {
+            public string IdLabor { get; set; } = string.Empty;
+            public string IdActividad { get; set; } = string.Empty;
+            public int IdEmpresa { get; set; }
+            public string Nombre { get; set; } = string.Empty;
+            public string Descripcion { get; set; } = string.Empty;
+            public string UnidadMedida { get; set; } = string.Empty;
+        }
+        //COMBO DE ORDENES DE PRODUCCION DESDE ERP CORPSAF
+        [HttpGet]
+        public async Task<JsonResult> GetOrdenesProduccion()
+        {
+            try
+            {
+                var result = await ObtenerOrdenesProduccion();
+
+                return Json(new
+                {
+                    status = true,
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
+        }
+
+        private async Task<ApiResponse<OrdenProduccion>> ObtenerOrdenesProduccion()
+        {
+            var miEmpresaId = EmpresaUsuarioId;
+            var empresa = await _context.Empresas.FindAsync(miEmpresaId);
+            var idEmpresaCorpsaf = empresa != null ? (empresa.IdEmpresaCorpsaf != null ? empresa.IdEmpresaCorpsaf : 0) : 0;
+
+            var client = new HttpClient();
+
+            var response = await client.GetAsync($"{_erpCorpsafUrl}/api/maestros/ordenes-produccion/{idEmpresaCorpsaf}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<OrdenProduccion>>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result;
+        }
+        private async Task<ApiResponse<ActividadResponseDto>> ObtenerActividadesExternal()
+        {
+            var miEmpresaId = EmpresaUsuarioId;
+            var empresa = await _context.Empresas.FindAsync(miEmpresaId);
+            var idEmpresaCorpsaf = empresa != null ? (empresa.IdEmpresaCorpsaf != null ? empresa.IdEmpresaCorpsaf : 0) : 0;
+
+            var client = new HttpClient();
+
+            var response = await client.GetAsync($"{_erpCorpsafUrl}/api/maestros/actividades/{idEmpresaCorpsaf}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<ActividadResponseDto>>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result;
+        }
+        private async Task<ApiResponse<LaborResponseDto>> ObtenerLabores()
+        {
+            var miEmpresaId = EmpresaUsuarioId;
+            var empresa = await _context.Empresas.FindAsync(miEmpresaId);
+            var idEmpresaCorpsaf = empresa != null ? (empresa.IdEmpresaCorpsaf != null ? empresa.IdEmpresaCorpsaf : 0) : 0;
+
+            var client = new HttpClient();
+
+            var response = await client.GetAsync($"{_erpCorpsafUrl}/api/maestros/labores/{idEmpresaCorpsaf}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<LaborResponseDto>>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result;
+        }
         #endregion
 
         #region APIs Auxiliares (Centros Costo, Actividades, Entidades, Kardex)
@@ -854,10 +959,68 @@ namespace ERPKardex.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetActividades()
+        public async Task<JsonResult> GetActividades()
         {
-            var data = _context.Actividades.Where(a => a.Estado == true && a.EmpresaId == EmpresaUsuarioId).ToList(); // <--- CAMBIO AQUÍ
-            return Json(new { data = data, status = true });
+            try
+            {
+                var res = await ObtenerActividadesExternal();
+
+                if (res.Data.Count == 0)
+                {
+                    var data = _context.Actividades.Where(a => a.Estado == true && a.EmpresaId == EmpresaUsuarioId).ToList(); // <--- CAMBIO AQUÍ
+                    return Json(new { data = data, status = true });
+                }
+                else
+                {
+                    return Json(new { data = res.Data, status = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                var data = _context.Actividades.Where(a => a.Estado == true && a.EmpresaId == EmpresaUsuarioId).ToList(); // <--- CAMBIO AQUÍ
+                return Json(new { data = data, status = true });
+            }
+
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GetActividadesExternal()
+        {
+            try
+            {
+                var result = await ObtenerActividadesExternal();
+
+                return Json(new
+                {
+                    status = true,
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GetLaboresExternal(string IdActividad = null)
+        {
+            try
+            {
+                var result = await ObtenerLabores();
+                if (!string.IsNullOrEmpty(IdActividad))
+                    result.Data = result.Data.Where(l => l.IdActividad == IdActividad).ToList();
+
+                return Json(new
+                {
+                    status = true,
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
         }
 
         [HttpGet]

@@ -83,13 +83,13 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3 d-none">
                             <label>Orden de producción</label>
                             <select id="cbx_OrdenesBusqueda" class="form-control select2-basic">
                                 <option value="">-- Seleccione --</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-12 mb-3">
                             <label>Finalidad del Req (*)</label>
                             <input type="text" id="txt_DetLugar" class="form-control form-control-sm" placeholder="Observación específica para este ítem">
                         </div>
@@ -101,7 +101,6 @@
                                 <tr>
                                     <th style="width: 50px;">Item</th>
                                     <th>Producto</th>
-                                    <th style="width: 300px;">Orden de Producción</th>
                                     <th style="width: 200px;">Centro Costo</th>
                                     <th style="width: 80px;">U.M.</th>
                                     <th style="width: 100px;">Cant.</th>
@@ -311,7 +310,6 @@
                     ${d.DescripcionProducto}
                 </td>
 
-                <td class="align-middle text-primary small font-weight-bold">${d.DescOrdenProduccionErpCorpsaf}</td>
                 <td class="align-middle text-primary small font-weight-bold">${d.NombreCentroCosto}</td>
 
                 <td class="align-middle">${d.UnidadMedida}</td>

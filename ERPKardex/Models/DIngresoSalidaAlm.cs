@@ -64,5 +64,17 @@ namespace ERPKardex.Models
         public int? EmpresaId { get; set; }
         [Column("pedido_interno")]
         public string? PedidoInterno { get; set; }
+        [Column("id_orden_produccion_erpcorpsaf")]
+        public string? IdOrdenProduccionErpcorpsaf { get; set; }
+        [Column("desc_orden_produccion_erpcorpsaf")]
+        public string? DescOrdenProduccionErpcorpsaf { get; set; }
+        [Column("id_actividad_erpcorpsaf")]
+        public string? IdActividadErpcorpsaf { get; set; }
+        [Column("desc_actividad_erpcorpsaf")]
+        public string? DescActividadErpcorpsaf { get; set; }
+        [Column("id_labor_erpcorpsaf")]
+        public string? IdLaborErpcorpsaf { get; set; }
+        [Column("desc_labor_erpcorpsaf")]
+        public string? DescLaborErpcorpsaf { get; set; }
     }
 }

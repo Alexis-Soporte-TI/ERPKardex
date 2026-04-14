@@ -108,12 +108,27 @@
                             <div class="col-md-4 mb-3" id="div_InputSalida_CC">
                                 <label>Centro de Costo</label><select id="cbx_CentroCosto" class="form-control select2-busqueda"></select>
                             </div>
-                            <div class="col-md-4 mb-3" id="div_InputSalida_Act">
+                            <div class="col-md-4 mb-3 d-none" id="div_InputSalida_Act">
                                 <label>Actividad</label><select id="cbx_Actividad" class="form-control select2-busqueda"></select>
                             </div>
                             <div class="col-md-4 mb-3" id="div_InputSalida_PedInt">
                                 <label>Pedido Interno</label>
                                 <input type="text" id="txt_PedidoInterno" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row border-top pt-2 mt-1">
+                            <div class="col-md-4 mb-3">
+                                <label>Orden de Producción</label>
+                                <select id="cbx_OrdenProduccion" class="form-control select2-busqueda"></select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label>Actividad</label>
+                                <select id="cbx_ActividadExt" class="form-control select2-busqueda"></select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label>Labor</label>
+                                <select id="cbx_LaborExt" class="form-control select2-busqueda"></select>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <button id="btn_AgregarDetalle" type="button" class="btn btn-primary btn-block font-weight-bold">
@@ -136,7 +151,9 @@
                                     <th width="15%" class="bg-warning text-dark">Cantidad Real</th>
                                     <th>U.M.</th>
                                     <th class="col-salida">Centro Costo</th>
-                                    <th class="col-salida">Actividad</th>
+                                    <th>Orden Prod.</th>
+                                    <th>Actividad</th>
+                                    <th>Labor</th>
                                     <th class="col-salida">Pedido Interno</th>
                                     <th>Acción</th>
                                 </tr>
@@ -166,11 +183,22 @@
     var LISTA_DETALLE = [];
     var PRODUCTOS_TEMP = [];
     var MOTIVOS_FULL = [];
+    var ORDENES_EXT_TEMP = [];
+    var ACTIVIDADES_EXT_TEMP = [];
+    var LABORES_EXT_TEMP = [];
     var MOVIMIENTO_ID = @(movimientoId.HasValue ? movimientoId.Value.ToString() : "0");
 
     $(document).ready(function () {
         $('.select2-busqueda').select2({ theme: 'bootstrap4', allowClear: true });
         fct_InitCombos();
+
+        $('#cbx_ActividadExt').on('change', function () {
+            let idAct = $(this).val();
+            let filtradas = idAct ? LABORES_EXT_TEMP.filter(l => l.idActividad === idAct) : [];
+            let h = '<option value="">-- Labor --</option>';
+            filtradas.forEach(l => h += `<option value="${l.idLabor}">${l.nombre}</option>`);
+            $('#cbx_LaborExt').html(h);
+        });
 
         $('#btn_Cancelar').click(function() { window.location.href = '/IngresoSalidaAlm/Index'; });
 
@@ -198,7 +226,7 @@
 
                 // Ocultar columnas de costos (Entrada no lleva CC ni Actividad)
                 $('.col-salida').addClass('d-none');
-                $('#div_InputSalida_CC, #div_InputSalida_Act, #div_InputSalida_PedInt').addClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_PedInt').addClass('d-none');
 
             } else if (tipo === "0") { // SALIDA
                 // $('#div_DocRef').addClass('d-none'); // Salida interna no suele llevar Guia de proveedor
@@ -207,7 +235,7 @@
 
                 // Mostrar columnas de costos
                 $('.col-salida').removeClass('d-none');
-                $('#div_InputSalida_CC, #div_InputSalida_Act, #div_InputSalida_PedInt').removeClass('d-none');
+                $('#div_InputSalida_CC, #div_InputSalida_PedInt').removeClass('d-none');
             } else {
                  // Si no selecciona nada
                  $('.col-salida').removeClass('d-none');
@@ -263,7 +291,7 @@
             let pedidoInterno = "";  
 
             if(tipoMov === "0") { // Salida
-                if(!ccId || !actId) return toastr.warning("Centro de Costo y Actividad son obligatorios para SALIDAS.");
+                if(!ccId) return toastr.warning("Centro de Costo es obligatorio para SALIDAS.");
                 nombreCC = $("#cbx_CentroCosto option:selected").text();
                 nombreAct = $("#cbx_Actividad option:selected").text();
                 pedidoInterno = $("#txt_PedidoInterno").val();
@@ -271,6 +299,13 @@
                 // Entrada: Limpiamos por si acaso, no se guardan
                 ccId = null; actId = null;
             }
+
+            let idOrdenProd = $("#cbx_OrdenProduccion").val();
+            let descOrdenProd = idOrdenProd ? $("#cbx_OrdenProduccion option:selected").text() : null;
+            let idActExt = $("#cbx_ActividadExt").val();
+            let descActExt = idActExt ? $("#cbx_ActividadExt option:selected").text() : null;
+            let idLaborExt = $("#cbx_LaborExt").val();
+            let descLaborExt = idLaborExt ? $("#cbx_LaborExt option:selected").text() : null;
 
             LISTA_DETALLE.push({
                 Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
@@ -282,12 +317,21 @@
                 CentroCostoId: ccId, NombreCentroCosto: nombreCC,
                 ActividadId: actId, NombreActividad: nombreAct,
                 PedidoInterno: pedidoInterno,
+                IdOrdenProduccionErpcorpsaf: idOrdenProd || null,
+                DescOrdenProduccionErpcorpsaf: descOrdenProd,
+                IdActividadErpcorpsaf: idActExt || null,
+                DescActividadErpcorpsaf: descActExt,
+                IdLaborErpcorpsaf: idLaborExt || null,
+                DescLaborErpcorpsaf: descLaborExt,
                 IdReferencia: null, TablaReferencia: null
             });
             fct_RenderDetalle(); $("#txt_DetCantidad").val("0.00");
             $("#txt_Lote").val("");
             $("#dtp_FechaFabricacion").val("");
             $("#dtp_FechaVencimiento").val("");
+            $("#cbx_OrdenProduccion").val('').trigger('change');
+            $("#cbx_ActividadExt").val('').trigger('change');
+            $("#cbx_LaborExt").val('').trigger('change');
             // Opcional: Limpiar producto para agilizar siguiente carga
             $("#cbx_ProductoBusqueda").val('').trigger('change');
         });
@@ -357,12 +401,19 @@
                     <td class="align-middle"><input type="number" class="form-control form-control-sm text-center font-weight-bold ${esEntrada ? 'border-success' : 'border-primary'}" value="${d.Cantidad}" min="0" step="0.01" onchange="actualizarCantidad(${i}, this.value)"></td>
                     <td class="align-middle">${d.CodUnidadMedida}</td>`;
 
-            // Renderizado condicional de columnas CC y Actividad
+            // Centro Costo | Orden Prod. | Actividad | Labor | Pedido Interno
             if (!esEntrada) {
-                h += `<td class="align-middle">${d.NombreCentroCosto}</td><td class="align-middle">${d.NombreActividad}</td><td class="align-middle">${d.PedidoInterno}</td>`;
+                h += `<td class="align-middle">${d.NombreCentroCosto || '-'}</td>`;
             } else {
-                // Mantenemos las celdas ocultas para no romper la estructura de la tabla si el CSS falla
-                h += `<td class="d-none"></td><td class="d-none"></td>`;
+                h += `<td class="d-none"></td>`;
+            }
+            h += `<td class="align-middle small">${d.DescOrdenProduccionErpcorpsaf || '-'}</td>`;
+            h += `<td class="align-middle small">${d.DescActividadErpcorpsaf || '-'}</td>`;
+            h += `<td class="align-middle small">${d.DescLaborErpcorpsaf || '-'}</td>`;
+            if (!esEntrada) {
+                h += `<td class="align-middle">${d.PedidoInterno || '-'}</td>`;
+            } else {
+                h += `<td class="d-none"></td>`;
             }
 
             h += `<td class="align-middle"><button class="btn btn-outline-danger btn-sm" onclick="fct_QuitarDetalle(${i})"><i class="fas fa-trash"></i></button></td></tr>`;
@@ -379,6 +430,8 @@
         fct_FillCombo('/IngresoSalidaAlm/GetCentrosCosto', '#cbx_CentroCosto', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
         fct_FillCombo('/IngresoSalidaAlm/GetActividades', '#cbx_Actividad', 'id', 'nombre', '-- SELECCIONAR --', 'codigo');
         cargarComboEntidades();
+        fct_CargarOrdenesProduccion();
+        fct_CargarActividadesExt();
     }
     function cargarComboEntidades() { $.get('/IngresoSalidaAlm/GetProveedores', function (res) { let ops = '<option value="">-- Seleccione --</option>'; if(res.status) res.data.forEach(i => ops += `<option value="${i.id}">${i.tipoDocumentoIdentidad}: ${i.numeroDocumento} - ${i.razonSocial}</option>`); $('#cbx_Proveedor').html(ops); }); }
     function fct_FillCombo(url, id, val, txt, ph, extra) { $.getJSON(url, function (res) { let h = `<option value="">${ph}</option>`; if (res.status) res.data.forEach(i => h += `<option value="${i[val]}">${extra ? i[extra] + ' - ' : ''}${i[txt]}</option>`); $(id).html(h); }); }
@@ -463,6 +516,12 @@
                 ActividadId: d.actividadId,
                 NombreActividad: d.nombreActividad || '',
                 PedidoInterno: d.pedidoInterno || '',
+                IdOrdenProduccionErpcorpsaf: d.idOrdenProduccionErpcorpsaf || null,
+                DescOrdenProduccionErpcorpsaf: d.descOrdenProduccionErpcorpsaf || null,
+                IdActividadErpcorpsaf: d.idActividadErpcorpsaf || null,
+                DescActividadErpcorpsaf: d.descActividadErpcorpsaf || null,
+                IdLaborErpcorpsaf: d.idLaborErpcorpsaf || null,
+                DescLaborErpcorpsaf: d.descLaborErpcorpsaf || null,
                 IdReferencia: d.idReferencia,
                 TablaReferencia: d.tablaReferencia
             }));
@@ -472,4 +531,31 @@
             toastr.error('Error de conexión al cargar el movimiento.');
         });
     }
+
+    function fct_CargarOrdenesProduccion() {
+        $.getJSON('/IngresoSalidaAlm/GetOrdenesProduccion', function (res) {
+            if (res.status) {
+                ORDENES_EXT_TEMP = res.data;
+                let h = '<option value="">-- Orden de Producción --</option>';
+                res.data.forEach(o => h += `<option value="${o.idOrden}">${o.numeroOrden} - ${o.objetivo}</option>`);
+                $('#cbx_OrdenProduccion').html(h);
+            }
+        });
+    }
+
+    function fct_CargarActividadesExt() {
+        $.getJSON('/IngresoSalidaAlm/GetActividadesExternal', function (res) {
+            if (res.status) {
+                ACTIVIDADES_EXT_TEMP = res.data;
+                let h = '<option value="">-- Actividad --</option>';
+                res.data.forEach(a => h += `<option value="${a.idActividad}">${a.nombre}</option>`);
+                $('#cbx_ActividadExt').html(h);
+            }
+        });
+        // Cargar todas las labores una sola vez al inicio
+        $.getJSON('/IngresoSalidaAlm/GetLaboresExternal', function (res) {
+            if (res.status) LABORES_EXT_TEMP = res.data;
+        });
+    }
+
 </script>
