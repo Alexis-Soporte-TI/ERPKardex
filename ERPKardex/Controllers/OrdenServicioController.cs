@@ -208,6 +208,9 @@ namespace ERPKardex.Controllers
                                        d.CantidadAtendida,
                                        d.CentroCostoId,
                                        CentroCostoNombre = cc != null ? cc.Codigo : "-",
+                                       OrdenProduccion = d.IdOrdenProduccionErpCorpsaf != null ? d.DescOrdenProduccionErpCorpsaf : "",
+                                       d.IdOrdenProduccionErpCorpsaf,
+                                       d.DescOrdenProduccionErpCorpsaf,
                                        d.Lugar, // En servicio también hay lugar por detalle
                                        d.Item
                                    }).ToList();
@@ -237,6 +240,9 @@ namespace ERPKardex.Controllers
                         ip.UnidadMedida,
                         ip.CentroCostoId,
                         ip.CentroCostoNombre,
+                        ip.OrdenProduccion,
+                        ip.IdOrdenProduccionErpCorpsaf,
+                        ip.DescOrdenProduccionErpCorpsaf,
                         ip.Lugar,
                         CantidadPedido = ip.CantidadSolicitada,
                         // Si saldo es negativo (sobre-atención previa), mostramos 0
@@ -369,6 +375,10 @@ namespace ERPKardex.Controllers
                         //        _context.DPedidosServicio.Update(ped);
                         //    }
                         //}
+                        if (det.IdOrdenProduccionErpCorpsaf == null)
+                        {
+                            det.DescOrdenProduccionErpCorpsaf = null;
+                        }
 
                         _context.DOrdenServicios.Add(det);
                         item++;

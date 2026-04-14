@@ -73,6 +73,7 @@
                                     <th style="width: 50px;">Item</th>
                                     <th>Descripción del Servicio</th>
                                     <th>Centro Costo</th>
+                                    <th>Orden de Producción</th>
                                     <th>Lugar</th>
                                     <th style="width: 80px;">Cant.</th>
                                     <th style="width: 60px;">Ref.</th>
@@ -143,6 +144,7 @@
                             <th>Item</th>
                             <th>Descripción</th>
                             <th>C. Costo</th>
+                            <th>Orden Producción</th>
                             <th>Cant.</th>
                             <th>Lugar</th>
                         </tr>
@@ -285,6 +287,7 @@
                         <td>${d.item}</td>
                         <td class="text-left">${d.descripcionServicio}</td>
                         <td>${d.centroCosto}</td>
+                        <td>${d.ordenProduccion}</td>
                         <td>${d.cantidadSolicitada}</td>
                         <td>${d.lugar}</td>
                     </tr>`;
@@ -321,6 +324,8 @@
                                 Lugar: d.lugar,
                                 Cantidad: d.cantidad,
                                 NombreCentroCosto: d.nombreCentroCosto,
+                                IdOrdenProduccionErpCorpsaf: d.idOrdenProduccionErpCorpsaf, 
+                                DescOrdenProduccionErpCorpsaf: d.descOrdenProduccionErpCorpsaf,
                                 IdReferencia: d.idReferencia,
                                 TablaReferencia: 'DREQSERVICIO',
                                 ItemReferencia: d.itemReferencia
@@ -346,6 +351,7 @@
                 <td class="align-middle font-weight-bold">${d.Item}</td>
                 <td class="align-middle text-left text-wrap" style="max-width: 300px;">${d.DescripcionServicio}</td>
                 <td class="align-middle text-primary small font-weight-bold">${d.NombreCentroCosto}</td>
+                <td class="align-middle text-primary small font-weight-bold">${d.DescOrdenProduccionErpCorpsaf}</td>
                 <td class="align-middle font-weight-bold">${d.Lugar}</td>
                 <td class="align-middle font-weight-bold">${d.Cantidad.toFixed(2)}</td>
                 <td class="align-middle small text-muted">${d.ItemReferencia}</td>

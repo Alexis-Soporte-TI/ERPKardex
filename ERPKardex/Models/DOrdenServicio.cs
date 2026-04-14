@@ -54,5 +54,11 @@ namespace ERPKardex.Models
 
         [Column("empresa_id")]
         public int? EmpresaId { get; set; }
+
+        [Column("id_orden_produccion_erpcorpsaf")]
+        public string? IdOrdenProduccionErpCorpsaf { get; set; }
+
+        [Column("desc_orden_produccion_erpcorpsaf")]
+        public string? DescOrdenProduccionErpCorpsaf { get; set; }
     }
 }

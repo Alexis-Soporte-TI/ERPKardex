@@ -122,6 +122,7 @@
                                     <th width="35%">Descripción del Servicio</th>
                                     <th width="5%">U.M.</th>
                                     <th width="10%">C. Costo</th>
+                                    <th width="10%">Orden de producción</th>
                                     <th>Lugar</th>
                                     <th width="10%">Saldo Ped.</th>
                                     <th width="10%" class="bg-warning text-dark">Cantidad</th>
@@ -210,6 +211,7 @@
                                 <th>Descripción</th>
                                 <th>U.M.</th>
                                 <th>C. Costo</th>
+                                <th>Orden de Producción</th>
                                 <th>Lugar</th>
                                 <th class="text-dark bg-warning" style="width: 120px;">Saldo Pendiente</th>
                             </tr>
@@ -341,6 +343,7 @@
                             <td class="text-left"><small>${d.descripcion}</small></td>
                             <td>${d.unidadMedida}</td>
                             <td><small>${d.centroCostoNombre}</small></td>
+                            <td><small>${d.ordenProduccion}</small></td>
                             <td><small>${d.lugar || '-'}</small></td>
                             <td class="font-weight-bold text-dark bg-warning">${d.saldoDisponible.toFixed(2)}</td>
                         </tr>`;
@@ -374,6 +377,8 @@
                     UnidadMedida: d.unidadMedida,
                     CentroCostoId: d.centroCostoId,
                     CentroCostoNombre: d.centroCostoNombre,
+                    IdOrdenProduccionErpCorpsaf: d.idOrdenProduccionErpCorpsaf,
+                    DescOrdenProduccionErpCorpsaf: d.descOrdenProduccionErpCorpsaf,
                     Lugar: d.lugar,
                     SaldoMaximo: d.saldoDisponible,
                     Cantidad: d.saldoDisponible,
@@ -393,6 +398,7 @@
                 <td class="text-left align-middle"><small>${item.Descripcion}</small></td>
                 <td class="align-middle">${item.UnidadMedida}</td>
                 <td class="align-middle small">${item.CentroCostoNombre}</td>
+                <td class="align-middle small">${item.DescOrdenProduccionErpCorpsaf}</td>
                 <td class="align-middle small">${item.Lugar}</td>
                 <td class="align-middle text-muted font-weight-bold">${item.SaldoMaximo.toFixed(2)}</td>
                 <td>
@@ -520,6 +526,8 @@
             Descripcion: x.Descripcion,
             UnidadMedida: x.UnidadMedida,
             CentroCostoId: x.CentroCostoId,
+            IdOrdenProduccionErpCorpsaf: x.IdOrdenProduccionErpCorpsaf,
+            DescOrdenProduccionErpCorpsaf: x.DescOrdenProduccionErpCorpsaf,
             Lugar: x.Lugar,
             Cantidad: x.Cantidad,
             PrecioUnitario: x.PrecioUnitario

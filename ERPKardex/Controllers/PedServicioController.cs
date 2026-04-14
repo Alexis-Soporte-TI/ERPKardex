@@ -172,7 +172,8 @@ namespace ERPKardex.Controllers
                                     d.DescripcionServicio,
                                     d.CantidadSolicitada,
                                     d.Lugar,
-                                    CentroCosto = cc.Codigo
+                                    CentroCosto = cc.Codigo,
+                                    OrdenProduccion = d.IdOrdenProduccionErpCorpsaf != null ? d.DescOrdenProduccionErpCorpsaf : "",
                                 }).ToList();
                 return Json(new { status = true, data = detalles });
             }
@@ -201,6 +202,8 @@ namespace ERPKardex.Controllers
                                     CentroCostoId = d.CentroCostoId,
                                     NombreCentroCosto = cc.Codigo + " - " + cc.Nombre,
                                     Lugar = d.Lugar,
+                                    d.IdOrdenProduccionErpCorpsaf,
+                                    d.DescOrdenProduccionErpCorpsaf,
 
                                     // Referencias
                                     ReqOrigenId = d.ReqServicioId,

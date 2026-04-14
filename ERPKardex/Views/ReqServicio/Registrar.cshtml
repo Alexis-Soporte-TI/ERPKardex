@@ -83,7 +83,13 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label>Orden de producción</label>
+                            <select id="cbx_OrdenesBusqueda" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label>Lugar de entrega (*)</label>
                             <input type="text" id="txt_DetLugar" class="form-control form-control-sm" placeholder="Lugar específico del servicio">
                         </div>
@@ -96,6 +102,7 @@
                                     <th style="width: 50px;">Item</th>
                                     <th>Servicio / Descripción</th>
                                     <th style="width: 200px;">Centro Costo</th>
+                                    <th>Orden Producción</th>
                                     <th style="width: 100px;">Cant.</th>
                                     <th>Lugar</th>
                                     <th style="width: 60px;"></th>
@@ -137,6 +144,7 @@
         $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' });
 
         fct_CargarServicios();
+        fct_CargarOrdenesProduccion();
         fct_CargarCentrosCosto(); // <-- Llamada para RS
 
         // Al seleccionar servicio
@@ -154,6 +162,9 @@
 
             let idCC = $("#cbx_CentroCosto").val();
             let txtCC = $("#cbx_CentroCosto option:selected").text();
+            
+            let idOP = $("#cbx_OrdenesBusqueda").val(); // ID Orden Producción (opcional)
+            let txtOP = $("#cbx_OrdenesBusqueda option:selected").text(); // Nombre Orden Producción (opcional)
 
             let can = parseFloat($("#txt_DetCantidad").val());
             let lugarItem = $("#txt_DetLugar").val();
@@ -171,6 +182,9 @@
                 Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
                 ProductoId: parseInt(idServ), // En BD guardamos el ID del producto base
                 CentroCostoId: parseInt(idCC),
+
+                IdOrdenProduccionErpCorpsaf: idOP ? idOP : null,
+                DescOrdenProduccionErpCorpsaf: idOP ? txtOP : "--",
 
                 // Campos para visualización o guardado directo
                 DescripcionServicio: nomServ,
@@ -233,6 +247,23 @@
         });
     });
 
+    function fct_CargarOrdenesProduccion() {
+        $.getJSON('/ReqCompra/GetOrdenesProduccion', function (res) {
+            if (res.status) {
+                if(res.data.length > 0) {
+                    ORDENES_TEMP = res.data;
+                    let h = '<option value="">-- BUSCAR --</option>';
+                    res.data.forEach(x => h += `<option value="${x.idOrden}">${x.idOrden} - ${x.objetivo}</option>`);
+                    $('#cbx_OrdenesBusqueda').html(h);
+                } else {
+                    ORDENES_TEMP = [];
+                    let h = '<option value=""> SIN ORDENES REGISTRADAS</option>';
+                    $('#cbx_OrdenesBusqueda').html(h);
+                }
+            }
+        });
+    }
+
     function fct_CargarServicios() {
         $.getJSON('/ReqServicio/GetServicios', function (res) {
             if (res.status) {
@@ -261,6 +292,7 @@
                 <td class="align-middle font-weight-bold">${d.Item}</td>
                 <td class="align-middle text-left">${d.DescripcionServicio}</td>
                 <td class="align-middle text-info small font-weight-bold">${d.NombreCentroCosto}</td>
+                <td class="align-middle text-info small font-weight-bold">${d.DescOrdenProduccionErpCorpsaf}</td>
                 <td class="align-middle font-weight-bold">${d.CantidadSolicitada.toFixed(2)}</td>
                 <td class="align-middle text-left small text-muted">${d.Lugar || '-'}</td>
                 <td class="align-middle">

@@ -95,6 +95,7 @@ namespace ERPKardex.Controllers
                                           d.Item,
                                           d.DescripcionServicio,
                                           d.UnidadMedida,
+                                          OrdenProduccion = d.IdOrdenProduccionErpCorpsaf != null ? d.DescOrdenProduccionErpCorpsaf : "",
                                           d.Lugar, // Campo LUGAR
                                           d.CantidadSolicitada,
                                           CentroCosto = cc != null ? cc.Nombre : "N/A",
@@ -268,6 +269,11 @@ namespace ERPKardex.Controllers
                                     var prod = _context.Productos.Find(det.ProductoId);
                                     if (prod != null) det.UnidadMedida = prod.CodUnidadMedida;
                                 }
+                            }
+
+                            if (det.IdOrdenProduccionErpCorpsaf == null)
+                            {
+                                det.DescOrdenProduccionErpCorpsaf = null;
                             }
 
                             _context.DReqServicios.Add(det);
