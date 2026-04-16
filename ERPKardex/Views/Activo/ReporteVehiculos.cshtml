@@ -1,0 +1,761 @@
+@{
+    ViewData["Title"] = "Reporte de Flota Vehicular";
+}
+
+@section Styles {
+    <!-- FullCalendar (incluido con AdminLTE 3) -->
+    <link rel="stylesheet" href="~/plugins/fullcalendar/main.css">
+    <!-- Daterangepicker -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+    <style>
+        .kpi-card {
+            transition: transform .15s ease-in-out;
+            cursor: default;
+        }
+        .kpi-card:hover { transform: translateY(-2px); }
+        .kpi-card .inner h3 { font-size: 1.8rem; margin-bottom: 0; }
+        .kpi-card .inner p { font-size: .85rem; margin: 0; }
+        .kpi-card .icon { font-size: 3.2rem; opacity: .25; top: 12px; }
+
+        #calendarFlota { max-width: 100%; }
+        #calendarFlota .fc-event {
+            cursor: pointer;
+            font-size: .75rem;
+            padding: 2px 4px;
+            border: 0 !important;
+        }
+        #calendarFlota .fc-daygrid-day.fc-day-today { background: #fffbe6 !important; }
+        #calendarFlota .fc-toolbar-title { font-size: 1.1rem; }
+
+        .leyenda span.badge-color {
+            display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+            margin-right: 4px; vertical-align: middle;
+        }
+        .timeline-venc { max-height: 520px; overflow-y: auto; padding-right: 6px; }
+        .timeline-item-v {
+            border-left: 3px solid #dee2e6; padding: 6px 10px;
+            margin-bottom: 8px; background: #f8f9fa; border-radius: 0 4px 4px 0;
+            font-size: .85rem;
+        }
+        .timeline-item-v.vencido   { border-left-color: #dc3545; background: #fdeaea; }
+        .timeline-item-v.critico   { border-left-color: #fd7e14; background: #fff4e6; }
+        .timeline-item-v.urgente   { border-left-color: #ffc107; background: #fffbeb; }
+        .timeline-item-v.proximo   { border-left-color: #28a745; background: #f3faf5; }
+        .timeline-item-v .placa-v  { font-weight: 600; color: #343a40; }
+        .timeline-item-v .concepto-v { color: #495057; }
+        .timeline-item-v .fecha-v  { font-size: .75rem; color: #6c757d; }
+        .timeline-item-v .dias-v   { font-weight: 700; float: right; font-size: .8rem; }
+
+        .filtro-tipo label {
+            margin-right: 10px; font-weight: 500; user-select: none;
+            padding: 3px 8px; border-radius: 4px; cursor: pointer;
+        }
+        .filtro-tipo input[type=checkbox] { margin-right: 4px; }
+
+        .mini-stats td { padding: 3px 6px !important; font-size: .85rem; }
+
+        .badge-situacion-pendiente { background:#dc3545; color:#fff; }
+        .badge-situacion-pagado    { background:#28a745; color:#fff; }
+    </style>
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h4 class="m-0 text-dark">
+                    <i class="fas fa-chart-line mr-2"></i>Reporte de Flota Vehicular
+                </h4>
+            </div>
+            <div class="col-sm-6 text-right">
+                <button class="btn btn-sm btn-outline-secondary" onclick="refrescarTodo()">
+                    <i class="fas fa-sync-alt mr-1"></i> Refrescar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+
+        <!-- FILTROS -->
+        <div class="card card-outline card-secondary mb-3">
+            <div class="card-body py-2">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="small mb-1">Empresa</label>
+                        <select id="fltEmpresa" class="form-control form-control-sm">
+                            <option value="">-- Todas --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="small mb-1">Vehículo</label>
+                        <select id="fltVehiculo" class="form-control form-control-sm">
+                            <option value="">-- Todos --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small mb-1">Tipos de evento</label>
+                        <div class="filtro-tipo">
+                            <label title="Mantenimientos"     style="background:#d7effb;"><input type="checkbox" class="flt-tipo" value="MANTENIMIENTO" checked> Mantenim.</label>
+                            <label title="Documentos"         style="background:#fff1d6;"><input type="checkbox" class="flt-tipo" value="DOCUMENTO" checked> Docs.</label>
+                            <label title="Infracciones"       style="background:#f8d7da;"><input type="checkbox" class="flt-tipo" value="INFRACCION" checked> Infracc.</label>
+                            <label title="GPS"                style="background:#d1f3e8;"><input type="checkbox" class="flt-tipo" value="GPS" checked> GPS</label>
+                            <label title="Seguros"            style="background:#e2d7f8;"><input type="checkbox" class="flt-tipo" value="SEGURO" checked> Seguros</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-right">
+                        <button class="btn btn-sm btn-primary btn-block" onclick="aplicarFiltros()">
+                            <i class="fas fa-filter mr-1"></i> Aplicar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiVehiculos">0</h3>
+                        <p>Vehículos de flota</p>
+                        <small><span id="kpiEnUso">0</span> en uso · <span id="kpiStock">0</span> en stock</small>
+                    </div>
+                    <div class="icon"><i class="fas fa-truck"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiDocs">0</h3>
+                        <p>Documentos por vencer (30d)</p>
+                        <small><span id="kpiDocsVenc">0</span> ya vencidos</small>
+                    </div>
+                    <div class="icon"><i class="fas fa-file-signature"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiMtos">0</h3>
+                        <p>Mantenimientos del mes</p>
+                        <small>Gasto: <b id="kpiMtosGasto">S/ 0.00</b></small>
+                    </div>
+                    <div class="icon"><i class="fas fa-wrench"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiInfr">0</h3>
+                        <p>Infracciones pendientes</p>
+                        <small>Importe: <b id="kpiInfrImporte">S/ 0.00</b></small>
+                    </div>
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4 col-6">
+                <div class="small-box bg-primary kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiSeguros">0</h3>
+                        <p>Pólizas por vencer (30d)</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-shield-alt"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-6">
+                <div class="small-box bg-teal kpi-card">
+                    <div class="inner">
+                        <h3 id="kpiGps">0</h3>
+                        <p>Servicios GPS por vencer (30d)</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-satellite-dish"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-12">
+                <div class="small-box bg-indigo kpi-card">
+                    <div class="inner">
+                        <h3><i class="fas fa-bell text-white" style="font-size:1.3rem"></i> Alertas activas</h3>
+                        <p id="kpiAlertasResumen">-- críticos / -- urgentes</p>
+                    </div>
+                    <div class="icon"><i class="far fa-bell"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALENDARIO + PANEL DE VENCIMIENTOS -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card card-primary card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title">
+                            <i class="far fa-calendar-alt mr-1"></i> Calendario de eventos
+                        </h3>
+                        <div class="card-tools leyenda small">
+                            <span><span class="badge-color" style="background:#17a2b8"></span>Mantenim.</span>&nbsp;
+                            <span><span class="badge-color" style="background:#ffc107"></span>Doc. próximo</span>&nbsp;
+                            <span><span class="badge-color" style="background:#fd7e14"></span>Por vencer</span>&nbsp;
+                            <span><span class="badge-color" style="background:#dc3545"></span>Vencido / Infr.</span>&nbsp;
+                            <span><span class="badge-color" style="background:#6610f2"></span>Seguro</span>&nbsp;
+                            <span><span class="badge-color" style="background:#20c997"></span>GPS</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="calendarFlota"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-warning card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title">
+                            <i class="fas fa-stopwatch mr-1"></i> Próximos vencimientos
+                        </h3>
+                        <div class="card-tools">
+                            <select id="selDias" class="form-control form-control-sm" style="height:26px;padding:0 4px;"
+                                    onchange="cargarVencimientos()">
+                                <option value="15">15 días</option>
+                                <option value="30" selected>30 días</option>
+                                <option value="60">60 días</option>
+                                <option value="90">90 días</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="timelineVenc" class="timeline-venc">
+                            <div class="text-center text-muted py-3">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICOS -->
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-info card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title"><i class="fas fa-chart-bar mr-1"></i> Mantenimientos por mes</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartMtosMes" height="110"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Gasto por tipo de mantenimiento</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartMtosTipo" height="110"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card card-teal card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title"><i class="fas fa-tachometer-alt mr-1"></i> Kilometraje mensual por vehículo</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartKm" height="70"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA INFRACCIONES PENDIENTES -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card card-danger card-outline">
+                    <div class="card-header py-2">
+                        <h3 class="card-title"><i class="fas fa-exclamation-triangle mr-1"></i> Infracciones pendientes</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Placa</th>
+                                        <th>Fecha</th>
+                                        <th>Entidad</th>
+                                        <th>N° Papeleta</th>
+                                        <th>Cód. infr.</th>
+                                        <th>Falta</th>
+                                        <th>Conductor</th>
+                                        <th class="text-right">Importe</th>
+                                        <th>Situación</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tblInfr">
+                                    <tr><td colspan="9" class="text-center text-muted py-3">Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL DETALLE DE EVENTO -->
+<div class="modal fade" id="modalEvento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2" id="modalEventoHeader">
+                <h5 class="modal-title" id="modalEventoTitulo"><i class="fas fa-calendar-day mr-2"></i>Detalle</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" id="modalEventoBody"></div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                <a href="#" id="btnIrAVehiculo" class="btn btn-primary btn-sm">
+                    <i class="fas fa-external-link-alt mr-1"></i> Ver ficha del vehículo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- FullCalendar (incluido con AdminLTE 3) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // ================= ESTADO GLOBAL =================
+        let calendar = null;
+        let chartMtosMes = null;
+        let chartMtosTipo = null;
+        let chartKm = null;
+        let currentFilters = { empresaId: '', activoId: '', tipos: 'MANTENIMIENTO,DOCUMENTO,INFRACCION,GPS,SEGURO' };
+
+        // Paleta para kilometraje (datasets)
+        const paletaKm = ['#007bff','#28a745','#ffc107','#dc3545','#17a2b8','#6610f2','#fd7e14','#20c997','#6c757d','#343a40'];
+
+        // ================= INIT =================
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarEmpresas();
+            await cargarVehiculosCombo();
+            initCalendar();
+            await refrescarTodo();
+        });
+
+        // ================= COMBOS =================
+        async function cargarEmpresas() {
+            const r = await fetch('/Activo/GetEmpresas');
+            const j = await r.json();
+            if (!j.status) return;
+            const s = document.getElementById('fltEmpresa');
+            j.data.forEach(e => s.innerHTML += `<option value="${e.id}">${e.nombre}</option>`);
+            s.addEventListener('change', async () => { await cargarVehiculosCombo(); });
+        }
+
+        async function cargarVehiculosCombo() {
+            const empresaId = document.getElementById('fltEmpresa').value;
+            const url = '/Activo/GetVehiculosCombo' + (empresaId ? `?empresaId=${empresaId}` : '');
+            const r = await fetch(url);
+            const j = await r.json();
+            const s = document.getElementById('fltVehiculo');
+            s.innerHTML = '<option value="">-- Todos --</option>';
+            if (!j.status) return;
+            j.data.forEach(v => {
+                const etiqueta = [v.placa, v.marca, v.modelo].filter(Boolean).join(' · ');
+                s.innerHTML += `<option value="${v.id}">${etiqueta || v.codigo}</option>`;
+            });
+        }
+
+        // ================= FILTROS =================
+        function leerFiltros() {
+            const empresaId = document.getElementById('fltEmpresa').value || '';
+            const activoId = document.getElementById('fltVehiculo').value || '';
+            const tipos = Array.from(document.querySelectorAll('.flt-tipo:checked')).map(c => c.value).join(',');
+            return { empresaId, activoId, tipos };
+        }
+
+        function aplicarFiltros() {
+            currentFilters = leerFiltros();
+            refrescarTodo();
+        }
+
+        async function refrescarTodo() {
+            await Promise.all([
+                cargarKpis(),
+                cargarCalendario(),
+                cargarVencimientos(),
+                cargarMantenimientosCharts(),
+                cargarKmChart(),
+                cargarInfracciones()
+            ]);
+        }
+
+        // ================= KPIs =================
+        async function cargarKpis() {
+            const { empresaId } = currentFilters;
+            const r = await fetch('/Activo/GetResumenFlota' + (empresaId ? `?empresaId=${empresaId}` : ''));
+            const j = await r.json();
+            if (!j.status) return;
+            const d = j.data;
+            document.getElementById('kpiVehiculos').textContent = d.totalVehiculos;
+            document.getElementById('kpiEnUso').textContent = d.enUso;
+            document.getElementById('kpiStock').textContent = d.enStock;
+            document.getElementById('kpiDocs').textContent = d.docsPorVencer;
+            document.getElementById('kpiDocsVenc').textContent = d.docsVencidos;
+            document.getElementById('kpiMtos').textContent = d.totalMantenimientosMes;
+            document.getElementById('kpiMtosGasto').textContent = fmtMoneda(d.gastoMantenimientosMes, 'PEN');
+            document.getElementById('kpiInfr').textContent = d.totalInfraccionesPendientes;
+            document.getElementById('kpiInfrImporte').textContent = fmtMoneda(d.montoInfraccionesPendientes, 'PEN');
+            document.getElementById('kpiSeguros').textContent = d.segurosPorVencer;
+            document.getElementById('kpiGps').textContent = d.gpsPorVencer;
+        }
+
+        // ================= CALENDARIO =================
+        function initCalendar() {
+            const el = document.getElementById('calendarFlota');
+            calendar = new FullCalendar.Calendar(el, {
+                locale: 'es',
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,listMonth'
+                },
+                height: 600,
+                firstDay: 1,
+                buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', list: 'Lista' },
+                eventDisplay: 'block',
+                dayMaxEvents: 3,
+                eventClick: function(info) {
+                    info.jsEvent.preventDefault();
+                    mostrarDetalleEvento(info.event);
+                },
+                eventDidMount: function(info) {
+                    // Tooltip nativo
+                    const p = info.event.extendedProps;
+                    info.el.title = `${p.placa || ''} · ${p.subtitulo || info.event.title}`;
+                }
+            });
+            calendar.render();
+        }
+
+        async function cargarCalendario() {
+            if (!calendar) return;
+            const { empresaId, activoId, tipos } = currentFilters;
+            const params = new URLSearchParams();
+            if (empresaId) params.append('empresaId', empresaId);
+            if (activoId) params.append('activoId', activoId);
+            if (tipos) params.append('tipos', tipos);
+            // rango: usamos los 3 meses anteriores y 6 posteriores al inicio de mes actual
+            const hoy = new Date();
+            const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 3, 1);
+            const hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 6, 0);
+            params.append('desde', desde.toISOString().slice(0,10));
+            params.append('hasta', hasta.toISOString().slice(0,10));
+
+            const r = await fetch('/Activo/GetEventosCalendario?' + params.toString());
+            const j = await r.json();
+            calendar.removeAllEvents();
+            if (!j.status) return;
+            j.data.forEach(ev => calendar.addEvent(ev));
+        }
+
+        // ================= MODAL DETALLE =================
+        function mostrarDetalleEvento(ev) {
+            const p = ev.extendedProps;
+            const header = document.getElementById('modalEventoHeader');
+            const body = document.getElementById('modalEventoBody');
+            const titulo = document.getElementById('modalEventoTitulo');
+
+            // estilo header según tipo
+            header.className = 'modal-header py-2 text-white';
+            let bg = 'bg-secondary', icono = 'fas fa-calendar';
+            switch (p.tipo) {
+                case 'MANTENIMIENTO': bg = 'bg-info'; icono = 'fas fa-wrench'; break;
+                case 'DOCUMENTO':     bg = 'bg-warning'; icono = 'fas fa-file-signature'; break;
+                case 'INFRACCION':    bg = 'bg-danger'; icono = 'fas fa-exclamation-triangle'; break;
+                case 'GPS':           bg = 'bg-success'; icono = 'fas fa-satellite-dish'; break;
+                case 'SEGURO':        bg = 'bg-primary'; icono = 'fas fa-shield-alt'; break;
+            }
+            header.classList.add(bg);
+
+            titulo.innerHTML = `<i class="${icono} mr-2"></i>${p.tipo} - ${p.subtitulo || ''}`;
+
+            let tablaExtra = '';
+            if (p.tipo === 'INFRACCION') {
+                tablaExtra = `
+                    <tr><th style="width:35%">Código infracción</th><td>${p.codigoInfraccion || '-'}</td></tr>
+                    <tr><th>Conductor</th><td>${p.conductor || '-'}</td></tr>
+                    <tr><th>Situación</th><td><span class="badge ${p.situacion === 'PAGADO' ? 'badge-success' : 'badge-danger'}">${p.situacion || '-'}</span></td></tr>
+                    <tr><th>Importe</th><td>${fmtMoneda(p.importe, p.moneda || 'PEN')}</td></tr>`;
+            } else if (p.tipo === 'MANTENIMIENTO') {
+                tablaExtra = `
+                    <tr><th style="width:35%">Km al servicio</th><td>${p.kmServicio ?? '-'}</td></tr>
+                    <tr><th>Conductor</th><td>${p.conductor || '-'}</td></tr>
+                    <tr><th>Precio</th><td>${fmtMoneda(p.importe, p.moneda || 'PEN')}</td></tr>`;
+            } else if (p.tipo === 'DOCUMENTO') {
+                const dias = p.diasRestantes;
+                const etiquetaDias = dias < 0
+                    ? `<span class="badge badge-danger">Vencido hace ${Math.abs(dias)} días</span>`
+                    : `<span class="badge badge-warning">Vence en ${dias} días</span>`;
+                tablaExtra = `
+                    <tr><th style="width:35%">N° de documento</th><td>${p.numero || '-'}</td></tr>
+                    <tr><th>Emisión</th><td>${p.fechaEmision || '-'}</td></tr>
+                    <tr><th>Estado</th><td>${etiquetaDias}</td></tr>
+                    ${p.rutaArchivo ? `<tr><th>Archivo</th><td><a href="${p.rutaArchivo}" target="_blank"><i class="fas fa-paperclip"></i> Abrir</a></td></tr>` : ''}`;
+            } else if (p.tipo === 'SEGURO' || p.tipo === 'GPS') {
+                const dias = p.diasRestantes;
+                const etiquetaDias = dias < 0
+                    ? `<span class="badge badge-danger">Vencido hace ${Math.abs(dias)} días</span>`
+                    : `<span class="badge badge-warning">Vence en ${dias} días</span>`;
+                tablaExtra = `<tr><th style="width:35%">Estado</th><td>${etiquetaDias}</td></tr>`;
+            }
+
+            body.innerHTML = `
+                <table class="table table-sm table-bordered mini-stats mb-2">
+                    <tr><th style="width:35%">Fecha</th><td>${formatFecha(ev.startStr)}</td></tr>
+                    <tr><th>Vehículo</th><td><b>${p.placa || '-'}</b> · ${p.codigoVeh || ''} · ${p.marcaModelo || ''}</td></tr>
+                    <tr><th>Empresa</th><td>${p.empresa || '-'}</td></tr>
+                    ${tablaExtra}
+                    ${p.detalle ? `<tr><th>Detalle</th><td>${p.detalle}</td></tr>` : ''}
+                </table>
+            `;
+
+            document.getElementById('btnIrAVehiculo').href = `/Activo/Vehiculos#ficha-${p.activoId}`;
+            $('#modalEvento').modal('show');
+        }
+
+        // ================= TIMELINE DE VENCIMIENTOS =================
+        async function cargarVencimientos() {
+            const { empresaId } = currentFilters;
+            const dias = document.getElementById('selDias').value || 30;
+            const params = new URLSearchParams();
+            if (empresaId) params.append('empresaId', empresaId);
+            params.append('dias', dias);
+
+            const r = await fetch('/Activo/GetProximosVencimientos?' + params.toString());
+            const j = await r.json();
+            const cont = document.getElementById('timelineVenc');
+
+            if (!j.status || !j.data.length) {
+                cont.innerHTML = '<div class="text-center text-muted py-3"><i class="far fa-check-circle fa-2x mb-2"></i><br>Sin vencimientos próximos</div>';
+                document.getElementById('kpiAlertasResumen').textContent = '0 críticos / 0 urgentes';
+                return;
+            }
+
+            let criticos = 0, urgentes = 0;
+            let html = '';
+            j.data.forEach(item => {
+                const clase = item.estado.toLowerCase();
+                if (item.estado === 'CRITICO' || item.estado === 'VENCIDO') criticos++;
+                else if (item.estado === 'URGENTE') urgentes++;
+
+                const iconoTipo = item.tipo === 'DOCUMENTO' ? 'fa-file-signature'
+                                : item.tipo === 'GPS' ? 'fa-satellite-dish' : 'fa-shield-alt';
+                const txtDias = item.diasRestantes < 0
+                    ? `<span class="text-danger">Venció (${Math.abs(item.diasRestantes)}d)</span>`
+                    : `<span>${item.diasRestantes}d</span>`;
+
+                html += `
+                    <div class="timeline-item-v ${clase}">
+                        <span class="dias-v">${txtDias}</span>
+                        <div><span class="placa-v"><i class="fas ${iconoTipo} mr-1"></i>${item.placa || item.codigoVeh}</span></div>
+                        <div class="concepto-v">${item.concepto}</div>
+                        <div class="fecha-v">${item.fechaFmt}${item.numero ? ' · ' + item.numero : ''}</div>
+                    </div>`;
+            });
+            cont.innerHTML = html;
+            document.getElementById('kpiAlertasResumen').textContent = `${criticos} críticos / ${urgentes} urgentes`;
+        }
+
+        // ================= CHARTS DE MANTENIMIENTOS =================
+        async function cargarMantenimientosCharts() {
+            const { empresaId } = currentFilters;
+            const url = '/Activo/GetMantenimientosPorMes' + (empresaId ? `?empresaId=${empresaId}` : '');
+            const r = await fetch(url);
+            const j = await r.json();
+            if (!j.status) return;
+
+            // ---- por mes (barras dobles: cantidad y gasto) ----
+            const labels = j.porMes.map(m => m.label);
+            const cantidades = j.porMes.map(m => m.cantidad);
+            const gastos = j.porMes.map(m => m.gasto);
+
+            if (chartMtosMes) chartMtosMes.destroy();
+            chartMtosMes = new Chart(document.getElementById('chartMtosMes').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Cantidad',
+                            data: cantidades,
+                            backgroundColor: 'rgba(23,162,184,.7)',
+                            yAxisID: 'y1',
+                            order: 2
+                        },
+                        {
+                            label: 'Gasto (S/)',
+                            data: gastos,
+                            type: 'line',
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220,53,69,.15)',
+                            fill: true,
+                            tension: .3,
+                            yAxisID: 'y2',
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y1: {
+                            type: 'linear',
+                            position: 'left',
+                            ticks: { 
+                                beginAtZero: true, 
+                                precision: 0 
+                            }
+                        },
+                        y2: {
+                            type: 'linear',
+                            position: 'right',
+                            ticks: { 
+                                beginAtZero: true 
+                            },
+                            grid: { 
+                                display: false // Antes era gridLines
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ---- por tipo (doughnut de gasto) ----
+            const colores = ['#007bff','#28a745','#ffc107','#dc3545','#17a2b8','#6610f2','#fd7e14','#20c997'];
+            if (chartMtosTipo) chartMtosTipo.destroy();
+            chartMtosTipo = new Chart(document.getElementById('chartMtosTipo').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: j.porTipo.map(t => t.tipo),
+                    datasets: [{
+                        data: j.porTipo.map(t => t.gasto),
+                        backgroundColor: j.porTipo.map((_, i) => colores[i % colores.length])
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const v = context.parsed;
+                                    const lbl = context.label;
+                                    return `${lbl}: ${fmtMoneda(v, 'PEN')}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ================= CHART DE KILOMETRAJE =================
+        async function cargarKmChart() {
+            const { empresaId, activoId } = currentFilters;
+            const params = new URLSearchParams();
+            if (empresaId) params.append('empresaId', empresaId);
+            if (activoId) params.append('activoId', activoId);
+            params.append('meses', 6);
+
+            const r = await fetch('/Activo/GetKilometrajeMensual?' + params.toString());
+            const j = await r.json();
+            if (!j.status) return;
+
+            const datasets = j.datasets.map((ds, i) => ({
+                label: ds.label,
+                data: ds.data,
+                borderColor: paletaKm[i % paletaKm.length],
+                backgroundColor: paletaKm[i % paletaKm.length] + '22',
+                fill: false,
+                tension: .25
+            }));
+
+            if (chartKm) chartKm.destroy();
+            chartKm = new Chart(document.getElementById('chartKm').getContext('2d'), {
+                type: 'line',
+                data: { labels: j.labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true, // Antes era scaleLabel
+                                text: 'Km recorridos' // Antes era labelString
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' } // La leyenda ahora va dentro de plugins
+                    }
+                }
+            });
+        }
+
+        // ================= TABLA INFRACCIONES =================
+        async function cargarInfracciones() {
+            const { empresaId } = currentFilters;
+            const url = '/Activo/GetInfraccionesPendientes' + (empresaId ? `?empresaId=${empresaId}` : '');
+            const r = await fetch(url);
+            const j = await r.json();
+            const tb = document.getElementById('tblInfr');
+            if (!j.status || !j.data.length) {
+                tb.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">No hay infracciones pendientes</td></tr>';
+                return;
+            }
+            tb.innerHTML = j.data.map(i => `
+                <tr>
+                    <td><b>${i.placa || '-'}</b><br><small class="text-muted">${i.codigoVeh || ''}</small></td>
+                    <td>${i.fechaOcurrencia}</td>
+                    <td>${i.entidad || '-'}</td>
+                    <td>${i.nroPapeleta || '-'}</td>
+                    <td>${i.codigoInfraccion || '-'}</td>
+                    <td><small>${i.descripcionFalta || '-'}</small></td>
+                    <td><small>${i.conductorDatos || '-'}</small></td>
+                    <td class="text-right"><b>${fmtMoneda(i.importe, 'PEN')}</b></td>
+                    <td><span class="badge badge-situacion-pendiente">${i.situacionPago || 'PENDIENTE'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // ================= UTILIDADES =================
+        function fmtMoneda(v, moneda) {
+            if (v == null) return '-';
+            const prefix = moneda === 'USD' ? '$ ' : 'S/ ';
+            return prefix + Number(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function formatFecha(iso) {
+            if (!iso) return '-';
+            const d = new Date(iso + 'T00:00:00');
+            return d.toLocaleDateString('es-PE', { year:'numeric', month:'long', day:'2-digit', weekday:'long' });
+        }
+    </script>
+}

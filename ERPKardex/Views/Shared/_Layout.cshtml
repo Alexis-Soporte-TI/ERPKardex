@@ -683,6 +683,16 @@
                                             </a>
                                         </li>
                                     }
+
+                                    @if (await _permisos.TienePermiso("ACT_REPORTE_FLOTA"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Activo/ReporteVehiculos" class="nav-link @(isActivoController && actionName == "ReporteVehiculos" ? "active" : "")">
+                                                <i class="fas fa-chart-line nav-icon text-info"></i>
+                                                <p>Reporte de Flota</p>
+                                            </a>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
                         }

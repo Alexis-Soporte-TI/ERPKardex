@@ -1223,5 +1223,679 @@ namespace ERPKardex.Controllers
             }
             catch (Exception ex) { return Json(new { status = false, message = "Error: " + ex.Message }); }
         }
+        // =====================================================================
+        //  DASHBOARD / REPORTE DE FLOTA VEHICULAR
+        //  ---------------------------------------------------------------------
+        //  Estos endpoints son adicionales al ActivoController existente.
+        //  Péguelos DENTRO de la clase ActivoController (antes de la llave final).
+        //  No modifican ninguna lógica actual.
+        // =====================================================================
+
+        // ---------------------- VISTA ----------------------
+        public IActionResult ReporteVehiculos() => View();
+
+        // ---------------------- KPIs / CARDS ---------------
+        [HttpGet]
+        public async Task<JsonResult> GetResumenFlota(int? empresaId)
+        {
+            try
+            {
+                var hoy = DateTime.Today;
+                var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
+                var en30Dias = hoy.AddDays(30);
+
+                // Sólo vehículos
+                var vehiculosQuery = from a in _context.Activo
+                                     join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                                     where t.Codigo == "VEHICULO" && a.Estado
+                                     select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    vehiculosQuery = vehiculosQuery.Where(a => a.EmpresaId == empresaId);
+
+                var vehiculosIds = await vehiculosQuery.Select(a => a.Id).ToListAsync();
+
+                int totalVehiculos = vehiculosIds.Count;
+                int enUso = await vehiculosQuery.CountAsync(a => a.EstadoUso == "ACTIVO");
+                int enStock = await vehiculosQuery.CountAsync(a => a.EstadoUso == "STOCK");
+
+                // Documentos por vencer en 30 días
+                int docsPorVencer = await _context.ActivoDocumento
+                    .Where(d => d.Estado && vehiculosIds.Contains(d.ActivoId)
+                                && d.FechaVencimiento.HasValue
+                                && d.FechaVencimiento.Value >= hoy
+                                && d.FechaVencimiento.Value <= en30Dias)
+                    .CountAsync();
+
+                int docsVencidos = await _context.ActivoDocumento
+                    .Where(d => d.Estado && vehiculosIds.Contains(d.ActivoId)
+                                && d.FechaVencimiento.HasValue
+                                && d.FechaVencimiento.Value < hoy)
+                    .CountAsync();
+
+                // GPS por vencer / vencidos
+                int gpsPorVencer = await _context.GpsVehiculo
+                    .Where(g => g.Estado && vehiculosIds.Contains(g.ActivoId)
+                                && g.FechaVencimiento.HasValue
+                                && g.FechaVencimiento.Value >= hoy
+                                && g.FechaVencimiento.Value <= en30Dias)
+                    .CountAsync();
+
+                // Seguros por vencer
+                int segurosPorVencer = await _context.SeguroVehiculo
+                    .Where(s => s.Estado && vehiculosIds.Contains(s.ActivoId)
+                                && s.FechaVigencia.HasValue
+                                && s.FechaVigencia.Value >= hoy
+                                && s.FechaVigencia.Value <= en30Dias)
+                    .CountAsync();
+
+                // Mantenimientos del mes y gasto total
+                var mantenimientosMes = await _context.MantenimientoVehiculo
+                    .Where(m => m.Estado && vehiculosIds.Contains(m.ActivoId)
+                                && m.Fecha >= inicioMes && m.Fecha <= hoy)
+                    .ToListAsync();
+
+                int totalMantenimientosMes = mantenimientosMes.Count;
+                decimal gastoMantenimientosMes = mantenimientosMes
+                    .Where(m => m.Precio.HasValue).Sum(m => m.Precio ?? 0);
+
+                // Infracciones pendientes
+                var infraccionesPendientes = await _context.InfraccionVehiculo
+                    .Where(i => i.Estado && vehiculosIds.Contains(i.ActivoId)
+                                && (i.SituacionPago == null || i.SituacionPago == "PENDIENTE DE PAGO"))
+                    .ToListAsync();
+
+                int totalInfraccionesPendientes = infraccionesPendientes.Count;
+                decimal montoInfraccionesPendientes = infraccionesPendientes
+                    .Where(i => i.Importe.HasValue).Sum(i => i.Importe ?? 0);
+
+                return Json(new
+                {
+                    status = true,
+                    data = new
+                    {
+                        totalVehiculos,
+                        enUso,
+                        enStock,
+                        docsPorVencer,
+                        docsVencidos,
+                        gpsPorVencer,
+                        segurosPorVencer,
+                        totalMantenimientosMes,
+                        gastoMantenimientosMes,
+                        totalInfraccionesPendientes,
+                        montoInfraccionesPendientes
+                    }
+                });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- EVENTOS PARA CALENDARIO ----------------------
+        // Devuelve eventos en el formato FullCalendar:
+        // { id, title, start, color, extendedProps: { tipo, activoId, placa, ... } }
+        [HttpGet]
+        public async Task<JsonResult> GetEventosCalendario(
+            int? empresaId, int? activoId, DateTime? desde, DateTime? hasta, string? tipos)
+        {
+            try
+            {
+                var fechaDesde = desde ?? DateTime.Today.AddMonths(-3);
+                var fechaHasta = hasta ?? DateTime.Today.AddMonths(6);
+                var tiposSet = string.IsNullOrWhiteSpace(tipos)
+                    ? new HashSet<string> { "MANTENIMIENTO", "DOCUMENTO", "INFRACCION", "GPS", "SEGURO" }
+                    : tipos.Split(',').Select(t => t.Trim().ToUpper()).ToHashSet();
+
+                // Base: vehículos filtrados
+                var vehiculosQuery = from a in _context.Activo
+                                     join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                                     join e in _context.Empresas on a.EmpresaId equals e.Id
+                                     where t.Codigo == "VEHICULO" && a.Estado
+                                     select new { a, e };
+
+                if (empresaId.HasValue && empresaId > 0)
+                    vehiculosQuery = vehiculosQuery.Where(x => x.a.EmpresaId == empresaId);
+                if (activoId.HasValue && activoId > 0)
+                    vehiculosQuery = vehiculosQuery.Where(x => x.a.Id == activoId);
+
+                var vehiculos = await vehiculosQuery
+                    .Select(x => new
+                    {
+                        x.a.Id,
+                        x.a.Codigo,
+                        x.a.Placa,
+                        x.a.Marca,
+                        x.a.Modelo,
+                        Empresa = x.e.Nombre
+                    }).ToListAsync();
+
+                var vehIds = vehiculos.Select(v => v.Id).ToList();
+                var vehDict = vehiculos.ToDictionary(v => v.Id, v => v);
+
+                var eventos = new List<object>();
+
+                // ------ 1) MANTENIMIENTOS ------
+                if (tiposSet.Contains("MANTENIMIENTO"))
+                {
+                    var mtos = await _context.MantenimientoVehiculo
+                        .Where(m => m.Estado && vehIds.Contains(m.ActivoId)
+                                    && m.Fecha >= fechaDesde && m.Fecha <= fechaHasta)
+                        .Select(m => new
+                        {
+                            m.Id,
+                            m.ActivoId,
+                            m.Fecha,
+                            m.TipoMantenimiento,
+                            m.TrabajosEjecutados,
+                            m.Precio,
+                            m.Moneda,
+                            m.KmAlServicio,
+                            m.Conductor
+                        }).ToListAsync();
+
+                    foreach (var m in mtos)
+                    {
+                        var v = vehDict.ContainsKey(m.ActivoId) ? vehDict[m.ActivoId] : null;
+                        if (v == null) continue;
+                        eventos.Add(new
+                        {
+                            id = $"MTO-{m.Id}",
+                            title = $"🔧 {v.Placa} - {m.TipoMantenimiento}",
+                            start = m.Fecha.ToString("yyyy-MM-dd"),
+                            color = "#17a2b8", // info
+                            allDay = true,
+                            extendedProps = new
+                            {
+                                tipo = "MANTENIMIENTO",
+                                activoId = m.ActivoId,
+                                codigoVeh = v.Codigo,
+                                placa = v.Placa,
+                                marcaModelo = $"{v.Marca} {v.Modelo}",
+                                empresa = v.Empresa,
+                                subtitulo = m.TipoMantenimiento,
+                                detalle = m.TrabajosEjecutados ?? "",
+                                importe = m.Precio,
+                                moneda = m.Moneda ?? "PEN",
+                                kmServicio = m.KmAlServicio,
+                                conductor = m.Conductor ?? ""
+                            }
+                        });
+                    }
+                }
+
+                // ------ 2) DOCUMENTOS (por fecha de vencimiento) ------
+                if (tiposSet.Contains("DOCUMENTO"))
+                {
+                    var docs = await (from d in _context.ActivoDocumento
+                                      join td in _context.TipoDocumentoActivo on d.TipoDocumentoActivoId equals td.Id
+                                      where d.Estado && vehIds.Contains(d.ActivoId)
+                                            && d.FechaVencimiento.HasValue
+                                            && d.FechaVencimiento.Value >= fechaDesde
+                                            && d.FechaVencimiento.Value <= fechaHasta
+                                      select new
+                                      {
+                                          d.Id,
+                                          d.ActivoId,
+                                          d.NumeroDocumento,
+                                          d.FechaVencimiento,
+                                          d.FechaEmision,
+                                          TipoDocumento = td.Nombre,
+                                          d.RutaArchivo,
+                                          d.Observacion
+                                      }).ToListAsync();
+
+                    var hoy = DateTime.Today;
+                    foreach (var d in docs)
+                    {
+                        var v = vehDict.ContainsKey(d.ActivoId) ? vehDict[d.ActivoId] : null;
+                        if (v == null) continue;
+                        var fv = d.FechaVencimiento!.Value;
+                        string color = fv < hoy ? "#dc3545"                          // rojo: vencido
+                                        : (fv - hoy).TotalDays <= 15 ? "#fd7e14"    // naranja: por vencer
+                                        : "#ffc107";                                 // amarillo: próximo
+                        eventos.Add(new
+                        {
+                            id = $"DOC-{d.Id}",
+                            title = $"📄 {v.Placa} - {d.TipoDocumento}",
+                            start = fv.ToString("yyyy-MM-dd"),
+                            color,
+                            allDay = true,
+                            extendedProps = new
+                            {
+                                tipo = "DOCUMENTO",
+                                activoId = d.ActivoId,
+                                codigoVeh = v.Codigo,
+                                placa = v.Placa,
+                                marcaModelo = $"{v.Marca} {v.Modelo}",
+                                empresa = v.Empresa,
+                                subtitulo = d.TipoDocumento,
+                                numero = d.NumeroDocumento ?? "",
+                                fechaEmision = d.FechaEmision.HasValue ? d.FechaEmision.Value.ToString("dd/MM/yyyy") : "",
+                                detalle = d.Observacion ?? "",
+                                rutaArchivo = d.RutaArchivo ?? "",
+                                diasRestantes = (fv - hoy).Days
+                            }
+                        });
+                    }
+                }
+
+                // ------ 3) INFRACCIONES ------
+                if (tiposSet.Contains("INFRACCION"))
+                {
+                    var infrs = await _context.InfraccionVehiculo
+                        .Where(i => i.Estado && vehIds.Contains(i.ActivoId)
+                                    && i.FechaOcurrencia.HasValue
+                                    && i.FechaOcurrencia.Value >= fechaDesde
+                                    && i.FechaOcurrencia.Value <= fechaHasta)
+                        .Select(i => new
+                        {
+                            i.Id,
+                            i.ActivoId,
+                            i.Entidad,
+                            i.NroPapeleta,
+                            i.FechaOcurrencia,
+                            i.CodigoInfraccion,
+                            i.DescripcionFalta,
+                            i.ConductorDatos,
+                            i.Importe,
+                            i.SituacionPago
+                        }).ToListAsync();
+
+                    foreach (var i in infrs)
+                    {
+                        var v = vehDict.ContainsKey(i.ActivoId) ? vehDict[i.ActivoId] : null;
+                        if (v == null) continue;
+                        string color = (i.SituacionPago == null || i.SituacionPago == "PENDIENTE DE PAGO")
+                            ? "#dc3545" : "#6c757d";
+                        eventos.Add(new
+                        {
+                            id = $"INF-{i.Id}",
+                            title = $"🚨 {v.Placa} - {i.Entidad}",
+                            start = i.FechaOcurrencia!.Value.ToString("yyyy-MM-dd"),
+                            color,
+                            allDay = true,
+                            extendedProps = new
+                            {
+                                tipo = "INFRACCION",
+                                activoId = i.ActivoId,
+                                codigoVeh = v.Codigo,
+                                placa = v.Placa,
+                                marcaModelo = $"{v.Marca} {v.Modelo}",
+                                empresa = v.Empresa,
+                                subtitulo = $"{i.Entidad} · {i.NroPapeleta}",
+                                detalle = i.DescripcionFalta ?? "",
+                                codigoInfraccion = i.CodigoInfraccion ?? "",
+                                conductor = i.ConductorDatos ?? "",
+                                importe = i.Importe,
+                                moneda = "PEN",
+                                situacion = i.SituacionPago ?? "PENDIENTE DE PAGO"
+                            }
+                        });
+                    }
+                }
+
+                // ------ 4) GPS (vencimiento) ------
+                if (tiposSet.Contains("GPS"))
+                {
+                    var gpss = await _context.GpsVehiculo
+                        .Where(g => g.Estado && vehIds.Contains(g.ActivoId)
+                                    && g.FechaVencimiento.HasValue
+                                    && g.FechaVencimiento.Value >= fechaDesde
+                                    && g.FechaVencimiento.Value <= fechaHasta)
+                        .Select(g => new
+                        {
+                            g.Id,
+                            g.ActivoId,
+                            g.EmpresaGps,
+                            g.FechaVencimiento,
+                            g.Constancia,
+                            g.Endoso
+                        }).ToListAsync();
+
+                    var hoy = DateTime.Today;
+                    foreach (var g in gpss)
+                    {
+                        var v = vehDict.ContainsKey(g.ActivoId) ? vehDict[g.ActivoId] : null;
+                        if (v == null) continue;
+                        var fv = g.FechaVencimiento!.Value;
+                        string color = fv < hoy ? "#dc3545" : (fv - hoy).TotalDays <= 15 ? "#fd7e14" : "#20c997";
+                        eventos.Add(new
+                        {
+                            id = $"GPS-{g.Id}",
+                            title = $"📡 {v.Placa} - GPS {g.EmpresaGps}",
+                            start = fv.ToString("yyyy-MM-dd"),
+                            color,
+                            allDay = true,
+                            extendedProps = new
+                            {
+                                tipo = "GPS",
+                                activoId = g.ActivoId,
+                                codigoVeh = v.Codigo,
+                                placa = v.Placa,
+                                marcaModelo = $"{v.Marca} {v.Modelo}",
+                                empresa = v.Empresa,
+                                subtitulo = $"Vence GPS · {g.EmpresaGps}",
+                                detalle = $"Constancia: {g.Constancia ?? "-"} · Endoso: {g.Endoso ?? "-"}",
+                                diasRestantes = (fv - hoy).Days
+                            }
+                        });
+                    }
+                }
+
+                // ------ 5) SEGUROS (vencimiento) ------
+                if (tiposSet.Contains("SEGURO"))
+                {
+                    var segs = await _context.SeguroVehiculo
+                        .Where(s => s.Estado && vehIds.Contains(s.ActivoId)
+                                    && s.FechaVigencia.HasValue
+                                    && s.FechaVigencia.Value >= fechaDesde
+                                    && s.FechaVigencia.Value <= fechaHasta)
+                        .Select(s => new
+                        {
+                            s.Id,
+                            s.ActivoId,
+                            s.Aseguradora,
+                            s.NroPoliza,
+                            s.SumaAsegurada,
+                            s.MonedaSuma,
+                            s.FechaVigencia
+                        }).ToListAsync();
+
+                    var hoy = DateTime.Today;
+                    foreach (var s in segs)
+                    {
+                        var v = vehDict.ContainsKey(s.ActivoId) ? vehDict[s.ActivoId] : null;
+                        if (v == null) continue;
+                        var fv = s.FechaVigencia!.Value;
+                        string color = fv < hoy ? "#dc3545" : (fv - hoy).TotalDays <= 30 ? "#fd7e14" : "#6610f2";
+                        eventos.Add(new
+                        {
+                            id = $"SEG-{s.Id}",
+                            title = $"🛡️ {v.Placa} - {s.Aseguradora}",
+                            start = fv.ToString("yyyy-MM-dd"),
+                            color,
+                            allDay = true,
+                            extendedProps = new
+                            {
+                                tipo = "SEGURO",
+                                activoId = s.ActivoId,
+                                codigoVeh = v.Codigo,
+                                placa = v.Placa,
+                                marcaModelo = $"{v.Marca} {v.Modelo}",
+                                empresa = v.Empresa,
+                                subtitulo = $"Vence póliza · {s.Aseguradora}",
+                                detalle = $"Póliza: {s.NroPoliza ?? "-"} · Suma: {s.MonedaSuma} {s.SumaAsegurada:N2}",
+                                diasRestantes = (fv - hoy).Days
+                            }
+                        });
+                    }
+                }
+
+                return Json(new { status = true, data = eventos });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- PRÓXIMOS VENCIMIENTOS (timeline) ----------------------
+        [HttpGet]
+        public async Task<JsonResult> GetProximosVencimientos(int? empresaId, int dias = 30)
+        {
+            try
+            {
+                var hoy = DateTime.Today;
+                var limite = hoy.AddDays(dias);
+
+                var vehiculosQuery = from a in _context.Activo
+                                     join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                                     where t.Codigo == "VEHICULO" && a.Estado
+                                     select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    vehiculosQuery = vehiculosQuery.Where(a => a.EmpresaId == empresaId);
+                var vehIds = await vehiculosQuery.Select(a => a.Id).ToListAsync();
+
+                var docs = await (from d in _context.ActivoDocumento
+                                  join td in _context.TipoDocumentoActivo on d.TipoDocumentoActivoId equals td.Id
+                                  join a in _context.Activo on d.ActivoId equals a.Id
+                                  where d.Estado && vehIds.Contains(d.ActivoId)
+                                        && d.FechaVencimiento.HasValue
+                                        && d.FechaVencimiento.Value <= limite
+                                  select new
+                                  {
+                                      tipo = "DOCUMENTO",
+                                      concepto = td.Nombre,
+                                      placa = a.Placa,
+                                      codigoVeh = a.Codigo,
+                                      fecha = d.FechaVencimiento!.Value,
+                                      numero = d.NumeroDocumento
+                                  }).ToListAsync();
+
+                var gpss = await (from g in _context.GpsVehiculo
+                                  join a in _context.Activo on g.ActivoId equals a.Id
+                                  where g.Estado && vehIds.Contains(g.ActivoId)
+                                        && g.FechaVencimiento.HasValue
+                                        && g.FechaVencimiento.Value <= limite
+                                  select new
+                                  {
+                                      tipo = "GPS",
+                                      concepto = "Vencimiento GPS " + (g.EmpresaGps ?? ""),
+                                      placa = a.Placa,
+                                      codigoVeh = a.Codigo,
+                                      fecha = g.FechaVencimiento!.Value,
+                                      numero = g.Constancia
+                                  }).ToListAsync();
+
+                var segs = await (from s in _context.SeguroVehiculo
+                                  join a in _context.Activo on s.ActivoId equals a.Id
+                                  where s.Estado && vehIds.Contains(s.ActivoId)
+                                        && s.FechaVigencia.HasValue
+                                        && s.FechaVigencia.Value <= limite
+                                  select new
+                                  {
+                                      tipo = "SEGURO",
+                                      concepto = "Póliza " + (s.Aseguradora ?? ""),
+                                      placa = a.Placa,
+                                      codigoVeh = a.Codigo,
+                                      fecha = s.FechaVigencia!.Value,
+                                      numero = s.NroPoliza
+                                  }).ToListAsync();
+
+                var todo = docs.Concat(gpss).Concat(segs)
+                    .OrderBy(x => x.fecha)
+                    .Select(x => new
+                    {
+                        x.tipo,
+                        x.concepto,
+                        x.placa,
+                        x.codigoVeh,
+                        fecha = x.fecha.ToString("yyyy-MM-dd"),
+                        fechaFmt = x.fecha.ToString("dd/MM/yyyy"),
+                        diasRestantes = (x.fecha - hoy).Days,
+                        x.numero,
+                        estado = x.fecha < hoy ? "VENCIDO"
+                                 : (x.fecha - hoy).TotalDays <= 7 ? "CRITICO"
+                                 : (x.fecha - hoy).TotalDays <= 15 ? "URGENTE"
+                                 : "PROXIMO"
+                    }).ToList();
+
+                return Json(new { status = true, data = todo });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- GRÁFICO: MANTENIMIENTOS POR MES ----------------------
+        [HttpGet]
+        public async Task<JsonResult> GetMantenimientosPorMes(int? empresaId, int meses = 12)
+        {
+            try
+            {
+                var hoy = DateTime.Today;
+                var inicio = new DateTime(hoy.Year, hoy.Month, 1).AddMonths(-(meses - 1));
+
+                var vehIdsQuery = from a in _context.Activo
+                                  join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                                  where t.Codigo == "VEHICULO" && a.Estado
+                                  select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    vehIdsQuery = vehIdsQuery.Where(a => a.EmpresaId == empresaId);
+                var vehIds = await vehIdsQuery.Select(a => a.Id).ToListAsync();
+
+                var raw = await _context.MantenimientoVehiculo
+                    .Where(m => m.Estado && vehIds.Contains(m.ActivoId) && m.Fecha >= inicio)
+                    .Select(m => new { m.Fecha, m.Precio, m.TipoMantenimiento })
+                    .ToListAsync();
+
+                // Agrupamos en memoria
+                var porMes = Enumerable.Range(0, meses).Select(i =>
+                {
+                    var mesRef = inicio.AddMonths(i);
+                    var items = raw.Where(r => r.Fecha.Year == mesRef.Year && r.Fecha.Month == mesRef.Month).ToList();
+                    return new
+                    {
+                        label = mesRef.ToString("MMM yy", new System.Globalization.CultureInfo("es-PE")),
+                        mes = mesRef.ToString("yyyy-MM"),
+                        cantidad = items.Count,
+                        gasto = items.Sum(x => x.Precio ?? 0m)
+                    };
+                }).ToList();
+
+                var porTipo = raw.GroupBy(r => r.TipoMantenimiento ?? "SIN TIPO")
+                    .Select(g => new { tipo = g.Key, cantidad = g.Count(), gasto = g.Sum(x => x.Precio ?? 0m) })
+                    .OrderByDescending(x => x.cantidad).ToList();
+
+                return Json(new { status = true, porMes, porTipo });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- GRÁFICO: KILOMETRAJE MENSUAL POR VEHÍCULO ----------------------
+        [HttpGet]
+        public async Task<JsonResult> GetKilometrajeMensual(int? empresaId, int? activoId, int meses = 6)
+        {
+            try
+            {
+                var hoy = DateTime.Today;
+                var inicio = new DateTime(hoy.Year, hoy.Month, 1).AddMonths(-(meses - 1));
+
+                var vehQuery = from a in _context.Activo
+                               join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                               where t.Codigo == "VEHICULO" && a.Estado
+                               select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    vehQuery = vehQuery.Where(a => a.EmpresaId == empresaId);
+                if (activoId.HasValue && activoId > 0)
+                    vehQuery = vehQuery.Where(a => a.Id == activoId);
+
+                var vehs = await vehQuery.Select(a => new { a.Id, a.Placa, a.Codigo }).ToListAsync();
+                var vehIds = vehs.Select(v => v.Id).ToList();
+
+                var regs = await _context.BitacoraKilometraje
+                    .Where(b => b.Estado && vehIds.Contains(b.ActivoId) && b.Fecha >= inicio
+                                && b.Kilometraje.HasValue)
+                    .Select(b => new { b.ActivoId, b.Fecha, b.Kilometraje })
+                    .ToListAsync();
+
+                // Etiquetas de meses
+                var labels = Enumerable.Range(0, meses)
+                    .Select(i => inicio.AddMonths(i).ToString("MMM yy", new System.Globalization.CultureInfo("es-PE")))
+                    .ToList();
+
+                // Por cada vehículo: km recorrido por mes = max(mes) - max(mes-1)
+                var datasets = new List<object>();
+                foreach (var v in vehs)
+                {
+                    var maxPorMes = new decimal?[meses];
+                    for (int i = 0; i < meses; i++)
+                    {
+                        var mesRef = inicio.AddMonths(i);
+                        var ultimo = regs.Where(r => r.ActivoId == v.Id
+                                                     && r.Fecha.Year == mesRef.Year
+                                                     && r.Fecha.Month == mesRef.Month)
+                                         .OrderByDescending(r => r.Fecha)
+                                         .Select(r => r.Kilometraje)
+                                         .FirstOrDefault();
+                        maxPorMes[i] = ultimo;
+                    }
+
+                    var data = new decimal?[meses];
+                    decimal? ultimoConocido = null;
+                    for (int i = 0; i < meses; i++)
+                    {
+                        if (maxPorMes[i].HasValue && ultimoConocido.HasValue)
+                            data[i] = maxPorMes[i] - ultimoConocido;
+                        else
+                            data[i] = 0;
+                        if (maxPorMes[i].HasValue) ultimoConocido = maxPorMes[i];
+                    }
+
+                    // sólo incluir si hubo algún registro
+                    if (data.Any(d => d > 0))
+                    {
+                        datasets.Add(new { label = v.Placa ?? v.Codigo, data });
+                    }
+                }
+
+                return Json(new { status = true, labels, datasets });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- INFRACCIONES PENDIENTES (tabla) ----------------------
+        [HttpGet]
+        public async Task<JsonResult> GetInfraccionesPendientes(int? empresaId)
+        {
+            try
+            {
+                var vehQuery = from a in _context.Activo
+                               join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                               where t.Codigo == "VEHICULO" && a.Estado
+                               select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    vehQuery = vehQuery.Where(a => a.EmpresaId == empresaId);
+                var vehIds = await vehQuery.Select(a => a.Id).ToListAsync();
+
+                var data = await (from i in _context.InfraccionVehiculo
+                                  join a in _context.Activo on i.ActivoId equals a.Id
+                                  where i.Estado && vehIds.Contains(i.ActivoId)
+                                        && (i.SituacionPago == null || i.SituacionPago == "PENDIENTE DE PAGO")
+                                  orderby i.FechaOcurrencia descending
+                                  select new
+                                  {
+                                      i.Id,
+                                      placa = a.Placa,
+                                      codigoVeh = a.Codigo,
+                                      i.Entidad,
+                                      i.NroPapeleta,
+                                      FechaOcurrencia = i.FechaOcurrencia.HasValue
+                                            ? i.FechaOcurrencia.Value.ToString("dd/MM/yyyy") : "",
+                                      i.CodigoInfraccion,
+                                      i.DescripcionFalta,
+                                      i.ConductorDatos,
+                                      i.Importe,
+                                      i.SituacionPago
+                                  }).ToListAsync();
+
+                return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // ---------------------- COMBO DE VEHÍCULOS (para filtro) ----------------------
+        [HttpGet]
+        public async Task<JsonResult> GetVehiculosCombo(int? empresaId)
+        {
+            try
+            {
+                var q = from a in _context.Activo
+                        join t in _context.TipoActivo on a.TipoActivoId equals t.Id
+                        where t.Codigo == "VEHICULO" && a.Estado
+                        select a;
+                if (empresaId.HasValue && empresaId > 0)
+                    q = q.Where(a => a.EmpresaId == empresaId);
+                var data = await q.OrderBy(a => a.Placa)
+                    .Select(a => new { a.Id, a.Codigo, a.Placa, a.Marca, a.Modelo })
+                    .ToListAsync();
+                return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
     }
 }
