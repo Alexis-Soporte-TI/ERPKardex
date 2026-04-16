@@ -110,7 +110,6 @@ namespace ERPKardex.Controllers
                         UsuarioId = x.isa.UsuarioId,
                         FechaRegistro = x.isa.FechaRegistro,
                     })
-                    .Take(100) // Mejora rendimiento en consultas de solo lectura
                     .ToList();
 
                 return Json(new { data = movimientos, message = "Movimientos retornados exitosamente.", status = true });
