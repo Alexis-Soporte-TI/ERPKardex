@@ -59,7 +59,11 @@
         .badge-situacion-pagado    { background:#28a745; color:#fff; }
     </style>
 }
-
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index: 9999; background: rgba(0,0,0,0.5);">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -69,6 +73,10 @@
                 </h4>
             </div>
             <div class="col-sm-6 text-right">
+                <button class="btn btn-sm btn-danger mr-2" onclick="exportarPDF()">
+                    <i class="fas fa-file-pdf mr-1"></i> Exportar a PDF
+                </button>
+    
                 <button class="btn btn-sm btn-outline-secondary" onclick="refrescarTodo()">
                     <i class="fas fa-sync-alt mr-1"></i> Refrescar
                 </button>
@@ -77,7 +85,7 @@
     </div>
 </div>
 
-<div class="content">
+<div class="content" id="reportePDF">
     <div class="container-fluid">
 
         <!-- FILTROS -->
@@ -329,6 +337,8 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <!-- FullCalendar (incluido con AdminLTE 3) -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
@@ -348,10 +358,17 @@
 
         // ================= INIT =================
         document.addEventListener('DOMContentLoaded', async () => {
-            await cargarEmpresas();
-            await cargarVehiculosCombo();
-            initCalendar();
-            await refrescarTodo();
+            ShowSpinner(); // Muestra el spinner al entrar a la página
+            try {
+                await cargarEmpresas();
+                await cargarVehiculosCombo();
+                initCalendar();
+                await refrescarTodo();
+            } catch (error) {
+                console.error("Error en la inicialización:", error);
+            } finally {
+                HideSpinner(); // Oculta el spinner al terminar la carga inicial
+            }
         });
 
         // ================= COMBOS =================
@@ -391,15 +408,23 @@
             refrescarTodo();
         }
 
+        // ================= REFRESCAR =================
         async function refrescarTodo() {
-            await Promise.all([
-                cargarKpis(),
-                cargarCalendario(),
-                cargarVencimientos(),
-                cargarMantenimientosCharts(),
-                cargarKmChart(),
-                cargarInfracciones()
-            ]);
+            ShowSpinner(); // Muestra el spinner al hacer clic en Aplicar o Refrescar
+            try {
+                await Promise.all([
+                    cargarKpis(),
+                    cargarCalendario(),
+                    cargarVencimientos(),
+                    cargarMantenimientosCharts(),
+                    cargarKmChart(),
+                    cargarInfracciones()
+                ]);
+            } catch (error) {
+                console.error("Error al refrescar los datos:", error);
+            } finally {
+                HideSpinner(); // Oculta el spinner cuando todos los gráficos respondan
+            }
         }
 
         // ================= KPIs =================
@@ -757,5 +782,31 @@
             const d = new Date(iso + 'T00:00:00');
             return d.toLocaleDateString('es-PE', { year:'numeric', month:'long', day:'2-digit', weekday:'long' });
         }
+        // ================= EXPORTAR PDF =================
+        function exportarPDF() {
+            ShowSpinner(); // Bloqueamos la pantalla mientras se toma la "foto"
+    
+            const elemento = document.getElementById('reportePDF');
+    
+            const opciones = {
+                margin:       0.3,
+                filename:     'Reporte_Flota_Vehicular.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+            };
+
+            // Usamos las promesas para apagar el spinner al terminar
+            html2pdf().set(opciones).from(elemento).save().then(() => {
+                HideSpinner();
+            }).catch(err => {
+                console.error("Error al generar el PDF:", err);
+                HideSpinner();
+            });
+        }
+
+        // ================= SPINNER =================
+        function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }
+        function HideSpinner() { $('#efec-cargando').addClass('d-none'); }
     </script>
 }

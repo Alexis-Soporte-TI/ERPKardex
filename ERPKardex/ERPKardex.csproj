@@ -122,6 +122,7 @@
     <Folder Include="Views\Personal\" />
     <Folder Include="Workers\" />
     <Folder Include="wwwroot\uploads\actas\" />
+    <Folder Include="wwwroot\uploads\documentos_activo\" />
   </ItemGroup>
 
 </Project>
