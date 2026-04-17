@@ -119,6 +119,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Views\Personal\" />
     <Folder Include="Workers\" />
     <Folder Include="wwwroot\uploads\actas\" />
   </ItemGroup>

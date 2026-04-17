@@ -1,92 +1,45 @@
 ﻿@{
-    ViewData["Title"] = "Gestionar stock de productos";
-    var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
-    int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
+    ViewData["Title"] = "Catálogo de Productos";
 }
-<div class="card d-none" id="efec-cargando">
-    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark">
-        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
-    </div>
-</div>
-<div class="container-fluid p-4">
-    <div class="panel-heading">
-        <div class="row">
-            <div class="col-md-12">
-                <h1>Gestionar catálogo de productos</h1>
-            </div>
+
+<div class="container-fluid py-4">
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="m-0 font-weight-bold">Catálogo de Productos</h5>
         </div>
-    </div>
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-12">
-                <table id="tbl_Productos" class="table table-bordered table-striped">
-                    <thead>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tbl_Entidades" width="100%" cellspacing="0">
+                    <thead class="thead-light text-center">
                         <tr>
-                            <th class="text-center">PROVEEDOR</th>
-                            <th class="text-center">TIPO DOCUMENTO</th>
-                            <th class="text-center">DOCUMENTO</th>
-                            <th class="text-center">CÓDIGO</th>
-                            <th class="text-center">GRUPO</th>
-                            <th class="text-center">SUBGRUPO</th>
-                            <th class="text-center">DESCRIPCIÓN</th>
-                            <th class="text-center">DESCRIPCIÓN COM.</th>
-                            <th class="text-center">U. MEDIDA</th>
-                            <th class="text-center">CANTIDAD</th>
+                            <th>Código</th>
+                            <th>Grupo</th>
+                            <th>Subgrupo</th>
+                            <th>Descripción</th>
+                            <th>Descripción Comercial</th>
+                            <th>U. Medida</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
 <script>
-    var dtProductos;
-
     $(document).ready(function () {
-
-        $('#btn_Generar').on('click', function() {
-            if ($('#cbx_Almacen').val()) {
-                fct_IniciarTablaProductos('#tbl_Productos');
-            } else {
-                toastr.warning('Debe seleccionar un almacén');
-            }
-        });
-
-        fct_FillCombo('/Producto/GetSucursalesByEmpresa?empresaId=@empresaId', '#cbx_Sucursal', 'id', 'nombre', '-- SUCURSAL --', 'codigo');
-
-        $('#cbx_Sucursal').on('change', function () {
-            fct_FillCombo(`/Producto/GetAlmacenesBySucursal?sucursalId=${$(this).val()}&empresaId=@empresaId`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --', 'codigo');
-        });
-
-        // $('body').addClass('sidebar-collapse');
         var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
-        //CONFIGURACION POR DEFECTO DATATABLES
+
         $.extend($.fn.dataTable.defaults, {
             dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" + "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" + "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" + "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
-            // dom: "<'row pb-1'<'col-sm-9 d-flex'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-4'l><'col-sm-8 justify-content-start'f>>" + "<'row'<'col-sm-6'i><'col-sm-6 d-flex justify-content-end'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>>",
-            // dom: "<'row pb-1'<'col-sm-9'B><'col-sm-3 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-10'l><'col-sm-2'f>>" + "<'row'<'col-sm-6'i><'col-sm-6'p>>" + "rt" + "<'row'<'col-sm-6'i><'col-sm-6'p>>",
-            // dom: "<'row pb-1'<'col-sm-10'B><'col-sm-2 c1 d-flex justify-content-end'>>" + "<'row'<'col-sm-11'l><'col-sm-1'f>>" + "<'row'<'col-sm-10'i><'col-sm-2'p>>" + "rt" + "<'row'<'col-sm-10'i><'col-sm-2'p>>",
-            paging: true,
-            select: true,
-            scroller: false,
-            deferRender: true,
-            scrollY: windowHeight,
-            scrollX: true,
-            fixedHeader: true,
-            ordering: true,
-            destroy: true,
-            responsive: true,
-            autoWidth: false,
-            processing: true,
-            filter: true,
-            orderMulti: true,
-            stateSave: false,
-            serverSide: false,
+            paging: true, select: true, scroller: false, deferRender: true,
+            scrollY: windowHeight, scrollX: true, fixedHeader: true, ordering: true,
+            destroy: true, responsive: true, autoWidth: false, processing: true,
+            filter: true, orderMulti: true, stateSave: false, serverSide: false,
             language: {
-                processing: "Procesando...",
-                sSearch: "Buscar:",
+                processing: "Procesando...", sSearch: "Buscar:",
                 lengthMenu: "Mostrar _MENU_ registros",
                 info: "Mostrando del _START_ al _END_ de un total de _TOTAL_ registros",
                 infoEmpty: "Sin registros encontrados.",
@@ -94,205 +47,91 @@
                 loadingRecords: "Cargando...",
                 zeroRecords: "No se encontraron registros",
                 emptyTable: "No hay datos disponibles en la tabla",
-                paginate: {
-                    previous: "Anterior",
-                    next: "Siguiente",
-                    first: "Primero",
-                    last: "Último",
-                },
+                paginate: { previous: "Anterior", next: "Siguiente", first: "Primero", last: "Último" },
                 aria: {
                     sortAscending: ": Activar para ordenar la columna de manera ascendente",
                     sortDescending: ": Activar para ordenar la columna de manera descendente"
                 },
                 select: {
-                    rows: {
-                        _: "%d filas seleccionadas",
-                        0: "Haz clic en una fila para seleccionarla",
-                        1: "1 fila seleccionada"
-                    }
+                    rows: { _: "%d filas seleccionadas", 0: "Haz clic en una fila para seleccionarla", 1: "1 fila seleccionada" }
                 },
                 buttons: {
                     copyTitle: 'Copiado en el portapapeles',
                     copyKeys: 'Presiona <i>ctrl</i> o <i>\u2318</i> + <i>C</i> para copiar los datos de la tabla a tu portapapeles. <br><br>Para cancelar, haga clic en este mensaje o presione Esc.',
-                    copySuccess: {
-                        _: '%d registros copiados correctamente',
-                        1: '1 registro copiado correctamente'
-                    }
+                    copySuccess: { _: '%d registros copiados correctamente', 1: '1 registro copiado correctamente' }
                 }
             },
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
         });
 
+        cargarTabla();
     });
 
-    function fct_IniciarTablaProductos(IdTabla) {
-        // Inicializar DataTables con botones
-        dtProductos = $(IdTabla).DataTable({
+    function cargarTabla() {
+        $('#tbl_Entidades').DataTable({
             buttons: [
+                { extend: 'copy', text: '<i class="bi bi-back"></i>', titleAttr: 'Copiar en portapapeles', className: 'btn btn-primary' },
                 {
-                    extend: 'copy',
-                    text: '<i class="bi bi-back"></i>',
-                    titleAttr: 'Copiar en portapapeles',
-                    className: 'btn btn-primary',
-                },
-                {
-                    extend: 'excel',
-                    text: '<i class="bi bi-file-earmark-excel"></i>',
-                    titleAttr: 'Exportar a Excel',
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
-                        var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock / Sucursal: ' + sucursal + ' / Almacén: ' + almacen;
-                    },
+                    extend: 'excel', text: '<i class="bi bi-file-earmark-excel"></i>', titleAttr: 'Exportar a Excel',
                     className: 'btn btn-success',
                     filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
                     footer: true,
-                    exportOptions:
-                    {
-                        stripHtml: true,
-                    },
+                    exportOptions: { stripHtml: true, columns: ':not(:last-child)' },
                 },
                 {
-                    extend: 'pdf',
-                    text: '<i class="bi bi-file-earmark-pdf"></i>',
-                    titleAttr: 'Exportar a PDF',
+                    extend: 'pdf', text: '<i class="bi bi-file-earmark-pdf"></i>', titleAttr: 'Exportar a PDF',
                     className: 'btn btn-danger',
                     filename: 'Productos ' + moment().format('DD-MM-YYYY HH_mm'),
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
-                        var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
-                    },
-                    exportOptions: {
-                        stripHtml: true,
-                    },
-                    orientation: 'landscape',
-                    pageSize: 'LEGAL',
-                    customize: function (doc) {
-                        // Tu código de alineación a la derecha (mantenlo aquí)
-                        var colsRight = [8];
-                        doc.content[1].table.body.forEach(function (row) {
-                            colsRight.forEach(function (index) {
-                                if (row[index]) {
-                                    row[index].alignment = 'right';
-                                }
-                            });
-                        });
-
-                        // Opcional: Para centrar el título que acabamos de crear
-                        doc.styles.title.alignment = 'center';
-                        doc.styles.title.fontSize = 14;
-                    }
+                    exportOptions: { stripHtml: true, columns: ':not(:last-child)' },
+                    orientation: 'landscape', pageSize: 'LEGAL',
                 },
                 {
-                    extend: 'print',
-                    text: '<i class="bi bi-printer-fill"></i>',
-                    titleAttr: 'Imprimir',
+                    extend: 'print', text: '<i class="bi bi-printer-fill"></i>', titleAttr: 'Imprimir',
                     className: 'btn btn-info',
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
-                        var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        // Validación por si dice "-- SELECCIONE --" o está vacío
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
-                    },
-                    exportOptions:
-                    {
-                        stripHtml: true,
-                    },
+                    exportOptions: { stripHtml: true, columns: ':not(:last-child)' },
                 },
                 {
-                    extend: 'colvis',
-                    text: '<i class="bi bi-ui-checks"></i>',
-                    titleAttr: 'Seleccionar',
-                    className: 'btn btn-warning',
-                    columns: ':not(.noVis)',
+                    extend: 'colvis', text: '<i class="bi bi-ui-checks"></i>', titleAttr: 'Seleccionar',
+                    className: 'btn btn-warning', columns: ':not(.noVis)',
                 },
                 {
-                    text: '<i class= "bi bi-plus-circle" style="margin-right: 5px;"></i>Nuevo producto',
+                    text: '<i class="bi bi-plus-circle" style="margin-right: 5px;"></i>Nuevo producto',
                     className: 'btn bg-success m-1',
                     titleAttr: 'Nuevo',
-                    action: function (e, dt, node, config) {
-                        fct_ProductoNuevo();
-                    },
+                    action: function () { window.location.href = '/Producto/Registrar'; },
                 },
             ],
-            ajax: {
-                url: "/IngresoSalidaAlm/GetReporteStock",
-                type: "GET",
-                datatype: "json",
-                data: function (d) {
-                    d.almacenId = $('#cbx_Almacen').val();
-                },
-                dataSrc: function (json) {
-                    if (json.status === false) {
-                        toastr.error('Ocurrió un error inesperado al intentar listar la tabla');
-                        console.error(json.message);
-                        return [];
-                    }
-                    return json.data;
-                },
-                error: function (xhr, Status, error) {
-                    toastr.error('Ocurrió un error inesperado al intentar listar la tabla');
-                    console.error('Error en la solicitud Ajax. Status:', Status, 'Error:', error, 'XHR:', xhr);
-                },
-            },
+            ajax: { url: '/Producto/GetProductosData', type: 'GET' },
             columns: [
-                { data: "proveedor", name: "proveedor" },
-                { data: "tipoDocumento", name: "tipoDocumento" },
-                { data: "documento", name: "documento" },
-                { data: "codigo", name: "codigo" },
-                { data: "descripcionGrupo", name: "descripcionGrupo" },
-                { data: "descripcionSubgrupo", name: "descripcionSubgrupo" },
-                { data: "descripcionProducto", name: "descripcionProducto" },
+                { data: 'codigo', className: 'font-weight-bold text-nowrap' },
                 {
-                    data: "descripcionComercial",
-                    name: "descripcionComercial",
-                    render: function(data, type, row) {
-                        return data ? data : '-';
-                    },
-                },
-                { data: "codUnidadMedida", name: "codUnidadMedida" },
-                {
-                    data: "cantidad",
-                    name: "cantidad",
-                    render: function(data, type, row) {
-                        return formatearNumero(data);
-                    },
-                },
-            ],
-            columnDefs: [
-                {
-                    targets: [0],
-                    className: "text-center align-middle",
+                    data: null,
+                    render: function (row) {
+                        return (row.codGrupo ? row.codGrupo + ' - ' : '') + (row.descripcionGrupo || '-');
+                    }
                 },
                 {
-                    targets: [1, 2, 3, 4, 5, 6, 7, 8],
-                    className: 'align-middle',
+                    data: null,
+                    render: function (row) {
+                        return (row.codSubgrupo ? row.codSubgrupo + ' - ' : '') + (row.descripcionSubgrupo || '-');
+                    }
                 },
-                // {
-                //     targets: [],
-                //     orderable: false,
-                // },
+                { data: 'descripcionProducto', defaultContent: '-' },
+                { data: 'descripcionComercial', defaultContent: '-' },
+                { data: 'codUnidadMedida', className: 'text-center', defaultContent: '-' },
+                {
+                    data: 'id',
+                    className: 'text-center text-nowrap',
+                    render: function (data) {
+                        return `
+                            <a href="/Producto/Registrar?id=${data}" class="btn btn-sm btn-warning" title="Editar"><i class="fas fa-edit"></i></a>
+                            <button class="btn btn-sm btn-danger" onclick="eliminar(${data})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        `;
+                    }
+                }
             ],
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
-            initComplete: function (data, row, cell, start, end, display) {
+            initComplete: function () {
                 $('.dt-buttons button').addClass('m-1');
                 $('.dt-button-collection').appendTo('.dt-buttons');
                 $('.btn.btn-success').removeClass('dt-button btn-secondary buttons-excel buttons-html5');
@@ -300,7 +139,6 @@
                 $('.btn.btn-primary').removeClass('dt-button btn-secondary buttons-copy buttons-html5');
                 $('.btn.btn-info').removeClass('dt-button btn-secondary buttons-print');
                 $('.btn.btn-warning').removeClass('dt-button btn-secondary buttons-collection buttons-colvis');
-                //Botón Nuevo
                 $('button[title="Nuevo"]').attr('id', 'btn_Nuevo');
                 $('#btn_Nuevo').removeClass('dt-button');
                 $('#btn_Nuevo').appendTo('div.col-sm-4.c1.d-flex.justify-content-end');
@@ -308,11 +146,26 @@
         });
     }
 
-    function ShowSpinner() {
-        $('#efec-cargando').removeClass('d-none');
-    }
-
-    function HideSpinner() {
-        $('#efec-cargando').addClass('d-none');
+    function eliminar(id) {
+        Swal.fire({
+            title: '¿Eliminar producto?',
+            text: "El sistema validará si tiene movimientos antes de borrarlo.",
+            icon: 'warning',
+            showCancelButton: true,
+            reverseButtons: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Sí, eliminar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/Producto/Eliminar', { id: id }, function (res) {
+                    if (res.status) {
+                        Swal.fire('Eliminado', res.message, 'success');
+                        $('#tbl_Entidades').DataTable().ajax.reload();
+                    } else {
+                        Swal.fire('No se pudo eliminar', res.message, 'error');
+                    }
+                });
+            }
+        });
     }
 </script>

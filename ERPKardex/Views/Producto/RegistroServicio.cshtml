@@ -1,10 +1,13 @@
 ﻿@{
-    ViewData["Title"] = "Registro de Servicio";
+    var idEdicion = Context.Request.Query["id"].ToString();
+    bool esEdicion = !string.IsNullOrEmpty(idEdicion);
+    ViewData["Title"] = esEdicion ? "Edición de Servicio" : "Registro de Servicio";
 }
 
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            <input type="hidden" id="hdn_ProductoId" value="@idEdicion" />
             <div class="card shadow mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-concierge-bell"></i> Información del Servicio</h5>
@@ -20,11 +23,10 @@
                             <select id="cbx_Subgrupo" class="form-control"></select>
                         </div>
                     </div>
-
                     <div class="row">
                         <div class="col-md-8 mb-3">
                             <label for="txt_DescripcionProducto">Descripción del Servicio</label>
-                            <input type="text" id="txt_DescripcionProducto" class="form-control" placeholder="Ej: Servicio de Mantenimiento Preventivo...">
+                            <input type="text" id="txt_DescripcionProducto" class="form-control" placeholder="Ej: Servicio de Mantenimiento Preventivo..." oninput="this.value = this.value.toUpperCase();">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="cbx_UnidadMedida">Unidad de Medida</label>
@@ -33,7 +35,7 @@
                     </div>
                 </div>
                 <div class="card-footer text-right">
-                    <button id="btn_Cancelar" type="button" class="btn btn-danger d-none">Cancelar</button>
+                    <button id="btn_Cancelar" type="button" class="btn btn-danger">Cancelar</button>
                     <button id="btn_GuardarServicio" type="button" class="btn btn-success">
                         <i class="fas fa-save"></i> Guardar Servicio
                     </button>
@@ -44,10 +46,12 @@
 </div>
 
 <script>
+    var ES_EDICION = $('#hdn_ProductoId').val() !== '';
+    var PRODUCTO_ID = $('#hdn_ProductoId').val();
+
     $(document).ready(function () {
         fct_InitServicioCombos();
 
-        // --- CASCADA GRUPO -> SUBGRUPO ---
         $('#cbx_Grupo').on('change', function () {
             let grupoId = $(this).val();
             if (grupoId) {
@@ -57,7 +61,6 @@
             }
         });
 
-        // --- GUARDAR ---
         $("#btn_GuardarServicio").click(function () {
             let desc = $("#txt_DescripcionProducto").val().trim();
             let grupo = $("#cbx_Grupo").val();
@@ -69,32 +72,36 @@
             if (!unidad) { toastr.warning("Seleccione la unidad de medida"); return; }
 
             let servicio = {
+                Id: ES_EDICION ? parseInt(PRODUCTO_ID) : 0,
                 GrupoId: grupo,
                 DescripcionGrupo: $("#cbx_Grupo option:selected").text(),
                 SubgrupoId: subgrupo,
                 DescripcionSubgrupo: $("#cbx_Subgrupo option:selected").text(),
                 DescripcionProducto: desc,
                 CodUnidadMedida: unidad,
-                // Valores por defecto para servicios
                 Estado: true,
                 EsActivoFijo: false
             };
 
+            let urlDestino = ES_EDICION ? "/Producto/EditarServicio" : "/Producto/RegistrarServicio";
+            let titulo = ES_EDICION ? "¿Actualizar Servicio?" : "¿Guardar Servicio?";
+
             Swal.fire({
-                title: "¿Guardar Servicio?",
+                title: titulo,
                 icon: "question",
                 showCancelButton: true,
+                reverseButtons: true,
                 confirmButtonText: "Sí, guardar"
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: "/Producto/RegistrarServicio",
+                        url: urlDestino,
                         type: "POST",
                         data: { producto: servicio },
                         success: function (response) {
                             if (response.status) {
                                 toastr.success(response.message);
-                                setTimeout(() => { location.reload(); }, 1500);
+                                setTimeout(() => { window.location.href = '/Producto/CatalogoServicios'; }, 1500);
                             } else {
                                 toastr.error(response.message);
                             }
@@ -105,20 +112,49 @@
             });
         });
 
-        $('#btn_Cancelar').on('click', function() {
-            window.location.href = '/Producto/Index';
+        $('#btn_Cancelar').on('click', function () {
+            window.location.href = '/Producto/CatalogoServicios';
         });
     });
 
     function fct_InitServicioCombos() {
-        // Carga simplificada solo de lo necesario
         fct_FillCombo('/Producto/GetGruposServ', '#cbx_Grupo', 'id', 'descripcion', '-- SELECCIONAR --', 'codigo');
         fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR --', 'codigo');
 
-        // Select2
-        $('#cbx_Grupo, #cbx_Subgrupo, #cbx_UnidadMedida').select2({
-            theme: 'bootstrap4',
-            width: '100%'
+        $('#cbx_Grupo, #cbx_Subgrupo, #cbx_UnidadMedida').select2({ theme: 'bootstrap4', width: '100%' });
+
+        if (ES_EDICION) {
+            setTimeout(fct_CargarServicioEdicion, 400);
+        }
+    }
+
+    function fct_CargarServicioEdicion() {
+        $.getJSON('/Producto/GetProductoById?id=' + PRODUCTO_ID, function (res) {
+            if (!res.status) { toastr.error(res.message || "No se pudo cargar el servicio"); return; }
+            let p = res.data;
+
+            $('#cbx_Grupo').val(p.grupoId).trigger('change');
+            setTimeout(function () {
+                $('#cbx_Subgrupo').val(p.subgrupoId).trigger('change');
+            }, 500);
+
+            $('#txt_DescripcionProducto').val(p.descripcionProducto);
+            $('#cbx_UnidadMedida').val(p.codUnidadMedida).trigger('change');
+
+            // Bloquear campos que forman el código
+            $('#cbx_Grupo').prop('disabled', true).trigger('change.select2');
+            $('#cbx_Subgrupo').prop('disabled', true).trigger('change.select2');
+
+            if (!$('#lbl_CodigoServ').length) {
+                let badge = `<div class="alert alert-info mb-3">
+                    <strong>Código del servicio:</strong>
+                    <span id="lbl_CodigoServ" class="font-weight-bold">${p.codigo}</span>
+                    <small class="d-block text-muted">Este código no puede modificarse porque depende del grupo y subgrupo.</small>
+                </div>`;
+                $('.col-lg-8').prepend(badge);
+            }
+
+            $('#btn_GuardarServicio').html('<i class="fas fa-save"></i> Actualizar Servicio');
         });
     }
 

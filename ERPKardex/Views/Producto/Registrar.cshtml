@@ -5,15 +5,19 @@
     var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
     int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
 
-    // CONTROL, AGROQUIMEX, COMEXDI
     var idsEmpresasQuimicos = _context.Empresas.Where(e => new[] { "20607778338", "20612680842", "20609093561" }.Contains(e.Ruc)).Select(e => e.Id).ToList();
     string classDnone = !idsEmpresasQuimicos.Contains(empresaId) ? "d-none" : "";
+
+    // NUEVO: Modo edición
+    var idEdicion = Context.Request.Query["id"].ToString();
+    bool esEdicion = !string.IsNullOrEmpty(idEdicion);
+    ViewData["Title"] = esEdicion ? "Edición de Producto" : "Registro de Producto";
 }
 
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-
+            <input type="hidden" id="hdn_ProductoId" value="@idEdicion" />
             @* <div class="card shadow mb-4">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Selección de Entidad</h5>
@@ -277,23 +281,16 @@
 </div>
 <script>
     var LISTA_DETALLE_IA = [];
+    var ES_EDICION = $('#hdn_ProductoId').val() !== '';
+    var PRODUCTO_ID = $('#hdn_ProductoId').val();
 
     $(document).ready(function () {
 
-        let comercialModificado = false; // Bandera de control
-        // 1. Si el usuario escribe en el campo COMERCIAL, activamos la bandera
-        $('#txt_DescripcionComercialProducto').on('input', function() {
-            // Si el campo está vacío, permitimos que se vuelva a sincronizar
-            if ($(this).val() === '') {
-                comercialModificado = false;
-            } else {
-                comercialModificado = true;
-            }
+        let comercialModificado = false;
+        $('#txt_DescripcionComercialProducto').on('input', function () {
+            comercialModificado = $(this).val() !== '';
         });
-
-        // 2. Lógica de copiado desde PRODUCTO
-        $('#txt_DescripcionProducto').on('input', function() {
-            // Solo copiamos si el usuario NO ha personalizado el campo comercial
+        $('#txt_DescripcionProducto').on('input', function () {
             if (!comercialModificado) {
                 $('#txt_DescripcionComercialProducto').val($(this).val());
             }
@@ -301,7 +298,6 @@
 
         fct_InitAllCombos();
 
-        // --- ENLACE GRUPO -> SUBGRUPO ---
         $('#cbx_Grupo').on('change', function () {
             let grupoId = $(this).val();
             if (grupoId) {
@@ -311,7 +307,6 @@
             }
         });
 
-        // --- ENLACE MARCA -> MODELO ---
         $('#cbx_Marca').on('change', function () {
             let marcaId = $(this).val();
             if (marcaId) {
@@ -321,157 +316,193 @@
             }
         });
 
-        // Botón añadir a tabla
+        // Botón añadir IA (se queda igual que antes)
         $("#btn_AgregarIA").click(function () {
             let idIA = $("#cbx_IA_Busqueda").val();
             let nombreIA = $("#cbx_IA_Busqueda option:selected").text();
             let porcentajeRaw = $("#txt_IA_Porcentaje").val().trim();
 
-            if (!idIA || !porcentajeRaw) {
-                toastr.warning("Seleccione un ingrediente e ingrese el porcentaje");
-                return;
-            }
-
-            // Convertimos a número para que el JSON sea compatible con el decimal de C#
+            if (!idIA || !porcentajeRaw) { toastr.warning("Seleccione un ingrediente e ingrese el porcentaje"); return; }
             let porcentajeNum = parseFloat(porcentajeRaw);
+            if (isNaN(porcentajeNum)) { toastr.warning("El porcentaje debe ser un valor numérico"); return; }
+            if (LISTA_DETALLE_IA.find(x => x.IngredienteActivoId == idIA)) { toastr.error("Este ingrediente ya fue añadido"); return; }
 
-            if (isNaN(porcentajeNum)) {
-                toastr.warning("El porcentaje debe ser un valor numérico");
-                return;
-            }
-
-            // Evitar duplicados
-            if (LISTA_DETALLE_IA.find(x => x.IngredienteActivoId == idIA)) {
-                toastr.error("Este ingrediente ya fue añadido");
-                return;
-            }
-
-            // Agregar al array
-            LISTA_DETALLE_IA.push({
-                IngredienteActivoId: Number(idIA),
-                Nombre: nombreIA, // Se usa para la tabla visual, C# lo ignorará al mapear a DetalleIngredienteActivo
-                Porcentaje: porcentajeNum // Ahora es numérico
-            });
-
+            LISTA_DETALLE_IA.push({ IngredienteActivoId: Number(idIA), Nombre: nombreIA, Porcentaje: porcentajeNum });
             fct_RenderizarTablaIA();
-
-            // Limpiar inputs
             $("#cbx_IA_Busqueda").val("");
             $("#txt_IA_Porcentaje").val("");
         });
 
+        // GUARDAR (registro o edición)
         $("#btn_GuardarProducto").click(function () {
-                // 1. Recolección de Datos Maestro
-                let producto = {
-                    GrupoId: $("#cbx_Grupo").val(),
-                    DescripcionGrupo: $("#cbx_Grupo").val() ? $("#cbx_Grupo option:selected").text() : null,
-                    DescripcionComercial: $('#txt_DescripcionComercialProducto').val().trim(),
-                    SubgrupoId: $("#cbx_Subgrupo").val(),
-                    DescripcionSubgrupo: $("#cbx_Subgrupo").val() ? $("#cbx_Subgrupo option:selected").text() : null,
-                    DescripcionProducto: $("#txt_DescripcionProducto").val().trim(),
-                    Concentracion: parseFloat($("#txt_Concentracion").val()),
-                    CodUnidadMedida: $('#cbx_UnidadMedida').val(),
-                    CodFormulacionQuimica: $("#cbx_Formulacion").val(),
-                    // Lote: $("#txt_Lote").val().trim(),
-                    // FechaFabricacion: $("#dtp_FechaFabricacion").val(),
-                    // FechaVencimiento: $("#dtp_FechaVencimiento").val(),
-                    CodPeligrosidad: $("#cbx_Peligrosidad").val(),
-                    MarcaId: $("#cbx_Marca").val() ? parseInt($("#cbx_Marca").val()) : null,
-                    ModeloId: $("#cbx_Modelo").val() ? parseInt($("#cbx_Modelo").val()) : null,
-                    Serie: $("#txt_Serie").val().trim(),
-                    EsActivoFijo: $("#chk_EsActivoFijo").is(":checked"),
-                    TipoInsumoId: $("#cbx_TipoInsumo").val(),
-                    NumeroCas: $('#txt_NumeroCas').val().trim(),
-                    Estado: $("#cbx_Estado").val() === "1",
-                    // EmpresaId: 1 ? 1 : null // Empresa 1 por ahora, tiempo de desarrollo
-                };
+            let producto = {
+                Id: ES_EDICION ? parseInt(PRODUCTO_ID) : 0,
+                GrupoId: $("#cbx_Grupo").val(),
+                DescripcionGrupo: $("#cbx_Grupo").val() ? $("#cbx_Grupo option:selected").text() : null,
+                DescripcionComercial: $('#txt_DescripcionComercialProducto').val().trim(),
+                SubgrupoId: $("#cbx_Subgrupo").val(),
+                DescripcionSubgrupo: $("#cbx_Subgrupo").val() ? $("#cbx_Subgrupo option:selected").text() : null,
+                DescripcionProducto: $("#txt_DescripcionProducto").val().trim(),
+                Concentracion: parseFloat($("#txt_Concentracion").val()) || null,
+                CodUnidadMedida: $('#cbx_UnidadMedida').val(),
+                CodFormulacionQuimica: $("#cbx_Formulacion").val(),
+                CodPeligrosidad: $("#cbx_Peligrosidad").val(),
+                MarcaId: $("#cbx_Marca").val() ? parseInt($("#cbx_Marca").val()) : null,
+                ModeloId: $("#cbx_Modelo").val() ? parseInt($("#cbx_Modelo").val()) : null,
+                Serie: $("#txt_Serie").val().trim(),
+                EsActivoFijo: $("#chk_EsActivoFijo").is(":checked"),
+                TipoInsumoId: $("#cbx_TipoInsumo").val(),
+                NumeroCas: $('#txt_NumeroCas').val().trim(),
+                Estado: $("#cbx_Estado").val() === "1"
+            };
 
-                LISTA_DETALLE_IA.push({
-                    IngredienteActivoId: Number($('#cbx_IA_Individual').val()),
-                    Porcentaje: null // Ahora es numérico
-                });
+            // Validaciones mínimas
+            if (!producto.GrupoId || !producto.SubgrupoId || !producto.CodUnidadMedida || !producto.DescripcionProducto) {
+                toastr.warning("El grupo, subgrupo, unidad de medida y descripción son obligatorios.", "SISTEMA");
+                return;
+            }
 
-                // 2. Validaciones mínimas
-                if (!producto.GrupoId || !producto.SubgrupoId || !producto.CodUnidadMedida || !producto.DescripcionProducto) {
-                    toastr.warning("El grupo, subgrupo, unidad de medida y descripción son obligatorios.", "SISTEMA");
-                    return;
+            // En REGISTRO: agregamos el ingrediente activo individual si corresponde (comportamiento original)
+            if (!ES_EDICION) {
+                let idIAInd = $('#cbx_IA_Individual').val();
+                if (idIAInd) {
+                    LISTA_DETALLE_IA.push({ IngredienteActivoId: Number(idIAInd), Porcentaje: null });
                 }
+            }
 
-                // 3. Confirmación con SweetAlert2
-                Swal.fire({
-                    title: "¿Confirmar Registro?",
-                    text: "Se guardará el producto y su lista de ingredientes.",
-                    icon: "info",
-                    showCancelButton: true,
-                    confirmButtonColor: "#3085d6",
-                    cancelButtonColor: "#d33",
-                    reverseButtons: true,
-                    confirmButtonText: "Sí, guardar todo",
-                    cancelButtonText: "Revisar"
-                }).then((result) => {
-                    if (result.isConfirmed) {
+            let urlDestino = ES_EDICION ? "/Producto/EditarProductoCompleto" : "/Producto/RegistrarProductoCompleto";
+            let mensajeConfirm = ES_EDICION ? "Se actualizará el producto." : "Se guardará el producto y su lista de ingredientes.";
+            let tituloConfirm = ES_EDICION ? "¿Confirmar Edición?" : "¿Confirmar Registro?";
 
-                        // 4. Envío de Datos
-                        $.ajax({
-                            url: "/Producto/RegistrarProductoCompleto",
-                            type: "POST",
-                            data: {
-                                producto: producto,
-                                detallesJson: JSON.stringify(LISTA_DETALLE_IA) // Enviamos el array global serializado
-                            },
-                            success: function (response) {
-                                if (response.status) {
-                                    toastr.success(response.message, "ÉXITO");
-                                    // Redireccionar o limpiar formulario tras 1.5s
-                                    setTimeout(() => { location.reload(); }, 1500);
-                                } else {
-                                    toastr.error(response.message, "ERROR");
-                                }
-                            },
-                            error: function () {
-                                toastr.error("Error crítico en el servidor");
+            Swal.fire({
+                title: tituloConfirm,
+                text: mensajeConfirm,
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: urlDestino,
+                        type: "POST",
+                        data: { producto: producto, detallesJson: JSON.stringify(LISTA_DETALLE_IA) },
+                        success: function (response) {
+                            if (response.status) {
+                                toastr.success(response.message, "ÉXITO");
+                                setTimeout(() => { window.location.href = '/Producto/CatalogoProductos'; }, 1500);
+                            } else {
+                                toastr.error(response.message, "ERROR");
                             }
-                        });
-                    }
-                });
+                        },
+                        error: function () { toastr.error("Error crítico en el servidor"); }
+                    });
+                }
+            });
         });
 
-        $('#btn_Cancelar').on('click', function() {
-            window.location.href = '/Producto/Index';
+        $('#btn_Cancelar').on('click', function () {
+            window.location.href = '/Producto/CatalogoProductos';
         });
 
+        // Mostrar siempre el botón Cancelar
+        $('#btn_Cancelar').removeClass('d-none');
     });
-    
+
     function fct_InitAllCombos() {
-        // 1. Cargar datos inicialmente
         fct_FillCombo('/Producto/GetGrupos', '#cbx_Grupo', 'id', 'descripcion', '-- SELECCIONAR GRUPO --', 'codigo');
         fct_FillCombo('/Producto/GetMarcaData', '#cbx_Marca', 'id', 'nombre', '-- SELECCIONAR MARCA --', 'id');
         fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Individual', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --', 'id');
-        // fct_FillCombo('/Producto/GetIngredienteActivoData', '#cbx_IA_Busqueda', 'id', 'descripcion', '-- SELECCIONAR INGREDIENTE --', 'id');
         fct_FillCombo('/Producto/GetUMedidaData', '#cbx_UnidadMedida', 'codigo', 'descripcion', '-- SELECCIONAR U. MEDIDA --', 'codigo');
         fct_FillCombo('/Producto/GetFQData', '#cbx_Formulacion', 'codigo', 'nombre', '-- SELECCIONAR FORMULACIÓN --', 'codigo');
         fct_FillCombo('/Producto/GetPeligrosidadData', '#cbx_Peligrosidad', 'codigo', 'descripcion', '-- SELECCIONAR PELIGROSIDAD --', 'codigo');
         fct_FillCombo('/Producto/GetTipoInsumoData', '#cbx_TipoInsumo', 'id', 'nombre', '-- SELECCIONAR TIPO DE INSUMO --', 'id');
 
-        // 2. Inicializar hijos vacíos
-        $('#cbx_Grupo').html('<option value="">-- SELECCIONAR GRUPO --</option>');
         $('#cbx_Subgrupo').html('<option value="">-- SELECCIONAR SUBGRUPO --</option>');
         $('#cbx_Modelo').html('<option value="">-- SELECCIONAR MODELO --</option>');
 
-        // 3. Convertir a Select2 (puedes usar una clase común o IDs específicos)
-        // Agregamos el buscador a los campos más pesados
         $('#cbx_Grupo, #cbx_Subgrupo, #cbx_Marca, #cbx_Modelo, #cbx_IA_Busqueda, #cbx_UnidadMedida').select2({
-            theme: 'bootstrap4', // O el tema que estés usando
+            theme: 'bootstrap4',
             placeholder: "Buscar...",
             allowClear: true,
-            language: {
-                noResults: function () {
-                    return "No se encontraron resultados";
-                }
+            language: { noResults: function () { return "No se encontraron resultados"; } }
+        });
+
+        // Si es EDICIÓN, cargamos los datos del producto después de poblar los combos
+        if (ES_EDICION) {
+            setTimeout(fct_CargarProductoEdicion, 400);
+        }
+    }
+
+    function fct_CargarProductoEdicion() {
+        $.getJSON('/Producto/GetProductoById?id=' + PRODUCTO_ID, function (res) {
+            if (!res.status) {
+                toastr.error(res.message || "No se pudo cargar el producto");
+                return;
             }
+            let p = res.data;
+
+            // 1. Grupo: setear y disparar cascada para cargar subgrupos
+            $('#cbx_Grupo').val(p.grupoId).trigger('change');
+
+            // 2. Cuando llegue el subgrupo, lo seteamos (esperamos a que termine la llamada)
+            setTimeout(function () {
+                $('#cbx_Subgrupo').val(p.subgrupoId).trigger('change');
+            }, 500);
+
+            // 3. Marca -> Modelo
+            if (p.marcaId) {
+                $('#cbx_Marca').val(p.marcaId).trigger('change');
+                setTimeout(function () {
+                    $('#cbx_Modelo').val(p.modeloId).trigger('change');
+                }, 500);
+            }
+
+            // 4. Campos simples
+            $('#txt_DescripcionProducto').val(p.descripcionProducto);
+            $('#txt_DescripcionComercialProducto').val(p.descripcionComercial);
+            $('#txt_Concentracion').val(p.concentracion);
+            $('#cbx_UnidadMedida').val(p.codUnidadMedida).trigger('change');
+            $('#cbx_Formulacion').val(p.codFormulacionQuimica).trigger('change');
+            $('#cbx_Peligrosidad').val(p.codPeligrosidad).trigger('change');
+            $('#txt_Serie').val(p.serie);
+            $('#chk_EsActivoFijo').prop('checked', p.esActivoFijo === true);
+            $('#cbx_TipoInsumo').val(p.tipoInsumoId).trigger('change');
+            $('#txt_NumeroCas').val(p.numeroCas);
+            $('#cbx_Estado').val(p.estado ? "1" : "0");
+
+            // 5. Bloquear campos que generan el código (inmutables)
+            $('#cbx_Grupo').prop('disabled', true).trigger('change.select2');
+            $('#cbx_Subgrupo').prop('disabled', true).trigger('change.select2');
+
+            // 6. Mostrar el código generado en modo solo lectura
+            if (!$('#lbl_CodigoGenerado').length) {
+                let badge = `<div class="alert alert-info mb-3">
+                    <strong>Código del producto:</strong>
+                    <span id="lbl_CodigoGenerado" class="font-weight-bold">${p.codigo}</span>
+                    <small class="d-block text-muted">Este código no puede modificarse porque depende del grupo y subgrupo.</small>
+                </div>`;
+                $('.container-fluid.py-4 .col-lg-10').prepend(badge);
+            }
+
+            // 7. Cargar ingredientes activos
+            if (res.detallesIA && res.detallesIA.length > 0) {
+                LISTA_DETALLE_IA = res.detallesIA.map(d => ({
+                    IngredienteActivoId: d.ingredienteActivoId,
+                    Nombre: d.nombre,
+                    Porcentaje: d.porcentaje
+                }));
+                fct_RenderizarTablaIA();
+            }
+
+            // 8. Cambiar texto del botón
+            $('#btn_GuardarProducto').html('<i class="fas fa-save"></i> Actualizar Producto');
         });
     }
-    
+
     function fct_RenderizarTablaIA() {
         let html = "";
         LISTA_DETALLE_IA.forEach((item, index) => {
@@ -498,7 +529,6 @@
             let h = `<option value="">${ph}</option>`;
             if (res.status) res.data.forEach(i => h += `<option value="${i[valProp]}">${extra ? i[extra] + ' - ' : ''}${i[txtProp]}</option>`);
             $(id).html(h).trigger('change');
-            // --- NUEVO: Refrescar Select2 si está inicializado ---
             if ($(id).hasClass("select2-hidden-accessible")) {
                 $(id).trigger('change');
             }
