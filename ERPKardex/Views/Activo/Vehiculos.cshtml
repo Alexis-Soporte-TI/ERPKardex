@@ -241,6 +241,7 @@
                                         <th>Emisión</th>
                                         <th>Vencimiento</th>
                                         <th>Observación</th>
+                                        <th class="text-center" width="70">Archivo</th>
                                         <th width="80">Acc.</th>
                                     </tr>
                                 </thead>
@@ -532,6 +533,12 @@
                     <div class="col-md-6 form-group"><label>Vencimiento</label><input type="date" id="docVencimiento" class="form-control"></div>
                 </div>
                 <div class="form-group"><label>Observación</label><input type="text" id="docObs" class="form-control"></div>
+                
+                <div class="form-group">
+                    <label>Archivo adjunto (Opcional)</label>
+                    <input type="file" id="docArchivo" class="form-control-file" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+
             </div>
             <div class="modal-footer py-2">
                 <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -540,7 +547,6 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
 <script>
     const TIPO_CODIGO = 'VEHICULO';
@@ -837,20 +843,40 @@
         </tr>`).join('');
     }
 
-    function renderDocs(data) {
-        let tbody = document.getElementById('bodyDocs');
-        if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Sin documentos</td></tr>'; return; }
-        tbody.innerHTML = data.map(d => {
-            let vencido = d.fechaVencimiento && new Date(d.fechaVencimiento) < new Date();
-            return `<tr class="${vencido ? 'table-danger' : ''}">
-                <td>${d.tipoDocumento}</td><td>${d.numeroDocumento || '-'}</td>
-                <td>${d.fechaEmision || '-'}</td><td>${d.fechaVencimiento || '-'} ${vencido ? '<span class="badge badge-danger">VENCIDO</span>' : ''}</td>
-                <td>${d.observacion || '-'}</td>
-                <td><button class="btn btn-sm btn-outline-warning" onclick="abrirModalDoc(${d.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="eliminar('EliminarDocumento',${d.id})"><i class="fas fa-trash"></i></button></td>
-            </tr>`;
-        }).join('');
-    }
+            function renderDocs(data) {
+            let tbody = document.getElementById('bodyDocs');
+            // Actualizamos el colspan a 7
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Sin documentos</td></tr>';
+                return;
+            }
+    
+            tbody.innerHTML = data.map(d => {
+                let vencido = d.fechaVencimiento && new Date(d.fechaVencimiento) < new Date();
+        
+                // Verificamos si existe el archivo para pintar el botón
+                let btnArchivo = d.rutaArchivo
+                    ? `<a href="${d.rutaArchivo}" target="_blank" class="btn btn-sm btn-outline-info" title="Ver documento"><i class="fas fa-paperclip"></i></a>`
+                    : '<span class="text-muted">-</span>';
+
+                return `
+                <tr class="${vencido ? 'table-danger' : ''}">
+                    <td>${d.tipoDocumento}</td>
+                    <td>${d.numeroDocumento || '-'}</td>
+                    <td>${d.fechaEmision || '-'}</td>
+                    <td>
+                        ${d.fechaVencimiento || '-'}
+                        ${vencido ? '<span class="badge badge-danger">VENCIDO</span>' : ''}
+                    </td>
+                    <td>${d.observacion || '-'}</td>
+                    <td class="text-center align-middle">${btnArchivo}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-warning" onclick="abrirModalDoc(${d.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="eliminar('EliminarDocumento',${d.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
 
     // ======================== MODALES CRUD SUB-TABLAS ========================
 
@@ -1077,17 +1103,36 @@
         $('#modalDoc').modal('show');
     }
     async function guardarDoc() {
-        let params = new URLSearchParams({
-            id: document.getElementById('docId').value, activoId: fichaActivoId,
-            tipoDocumentoActivoId: document.getElementById('docTipo').value,
-            numeroDocumento: document.getElementById('docNumero').value,
-            fechaEmision: document.getElementById('docEmision').value || '',
-            fechaVencimiento: document.getElementById('docVencimiento').value || '',
-            observacion: document.getElementById('docObs').value
+        // 1. Usamos FormData en lugar de URLSearchParams para poder enviar archivos
+        let formData = new FormData();
+    
+        // 2. Agregamos los datos de texto
+        formData.append('id', document.getElementById('docId').value);
+        formData.append('activoId', fichaActivoId);
+        formData.append('tipoDocumentoActivoId', document.getElementById('docTipo').value);
+        formData.append('numeroDocumento', document.getElementById('docNumero').value);
+        formData.append('fechaEmision', document.getElementById('docEmision').value || '');
+        formData.append('fechaVencimiento', document.getElementById('docVencimiento').value || '');
+        formData.append('observacion', document.getElementById('docObs').value);
+
+        // 3. Capturamos y agregamos el archivo (si existe)
+        let inputArchivo = document.getElementById('docArchivo');
+        if (inputArchivo.files.length > 0) {
+            formData.append('archivo', inputArchivo.files[0]);
+        }
+
+        // 4. Enviamos la petición. Fetch se encarga automáticamente de los headers correctos para FormData.
+        let res = await fetch('/Activo/GuardarDocumento', { 
+            method: 'POST', 
+            body: formData 
         });
-        let res = await fetch('/Activo/GuardarDocumento', { method: 'POST', body: params });
+    
         let json = await res.json();
-        if (json.status) { $('#modalDoc').modal('hide'); verFicha(fichaActivoId); }
+    
+        if (json.status) { 
+            $('#modalDoc').modal('hide'); 
+            verFicha(fichaActivoId); 
+        }
         alert(json.message);
     }
 

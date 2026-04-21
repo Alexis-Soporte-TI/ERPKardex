@@ -45,6 +45,7 @@ namespace ERPKardex.Controllers
                                      where pro.EmpresaId == EmpresaUsuarioId // <--- CAMBIO AQUÍ
                                      select new
                                      {
+                                         pro.Id,
                                          pro.Codigo,
                                          pro.CodGrupo,
                                          pro.DescripcionGrupo,
@@ -76,6 +77,7 @@ namespace ERPKardex.Controllers
                                      where pro.EmpresaId == EmpresaUsuarioId // <--- CAMBIO AQUÍ
                                      select new
                                      {
+                                         pro.Id,
                                          pro.Codigo,
                                          pro.CodGrupo,
                                          pro.DescripcionGrupo,
@@ -666,6 +668,208 @@ namespace ERPKardex.Controllers
                 }
             }
         }
+        #endregion
+        #region EDICIÓN Y ELIMINACIÓN
+
+        // GET: Trae un producto por Id con todos sus detalles (para precargar el formulario de edición)
+        [HttpGet]
+        public JsonResult GetProductoById(int id)
+        {
+            try
+            {
+                var producto = _context.Productos
+                    .Where(p => p.Id == id && p.EmpresaId == EmpresaUsuarioId)
+                    .Select(p => new
+                    {
+                        p.Id,
+                        p.Codigo,
+                        p.GrupoId,
+                        p.CodGrupo,
+                        p.DescripcionGrupo,
+                        p.SubgrupoId,
+                        p.CodSubgrupo,
+                        p.DescripcionSubgrupo,
+                        p.DescripcionProducto,
+                        p.DescripcionComercial,
+                        p.Concentracion,
+                        p.CodUnidadMedida,
+                        p.CodFormulacionQuimica,
+                        p.CodPeligrosidad,
+                        p.MarcaId,
+                        p.ModeloId,
+                        p.Serie,
+                        p.EsActivoFijo,
+                        p.TipoInsumoId,
+                        p.NumeroCas,
+                        p.Estado
+                    })
+                    .FirstOrDefault();
+
+                if (producto == null)
+                    return Json(new { status = false, message = "Producto no encontrado." });
+
+                // Detalles de ingredientes activos (solo si aplica a productos químicos)
+                var detallesIA = _context.DetallesIngredientesActivos
+                    .Where(d => d.ProductoId == id)
+                    .Select(d => new
+                    {
+                        d.Id,
+                        d.IngredienteActivoId,
+                        Nombre = _context.IngredientesActivos
+                                    .Where(ia => ia.Id == d.IngredienteActivoId)
+                                    .Select(ia => ia.Descripcion)
+                                    .FirstOrDefault(),
+                        d.Porcentaje
+                    })
+                    .ToList();
+
+                return Json(new { status = true, data = producto, detallesIA });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
+            }
+        }
+
+        // POST: Editar producto (NO se cambia Codigo, GrupoId, SubgrupoId, CodGrupo, CodSubgrupo)
+        [HttpPost]
+        public JsonResult EditarProductoCompleto(Producto producto, string detallesJson)
+        {
+            using (var transaction = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    var existente = _context.Productos
+                        .FirstOrDefault(p => p.Id == producto.Id && p.EmpresaId == EmpresaUsuarioId);
+
+                    if (existente == null)
+                        return Json(new { status = false, message = "El producto no existe o no pertenece a su empresa." });
+
+                    // Campos inmutables: Codigo, GrupoId, SubgrupoId, CodGrupo, CodSubgrupo, EmpresaId, FechaRegistro
+                    existente.DescripcionProducto = producto.DescripcionProducto;
+                    existente.Concentracion = producto.Concentracion;
+                    existente.CodUnidadMedida = producto.CodUnidadMedida;
+                    existente.CodFormulacionQuimica = producto.CodFormulacionQuimica;
+                    existente.CodPeligrosidad = producto.CodPeligrosidad;
+                    existente.MarcaId = producto.MarcaId;
+                    existente.ModeloId = producto.ModeloId;
+                    existente.Serie = producto.Serie;
+                    existente.EsActivoFijo = producto.EsActivoFijo;
+                    existente.TipoInsumoId = producto.TipoInsumoId;
+                    existente.NumeroCas = producto.NumeroCas;
+
+                    // Recalcular descripción comercial si no fue ingresada manualmente
+                    if (string.IsNullOrEmpty(producto.DescripcionComercial))
+                    {
+                        if (!string.IsNullOrEmpty(existente.DescripcionProducto) &&
+                            existente.MarcaId != null && existente.ModeloId != null &&
+                            !string.IsNullOrEmpty(existente.Serie))
+                        {
+                            var marcaNom = _context.Marcas.Find(existente.MarcaId)?.Nombre;
+                            var modeloNom = _context.Modelos.Find(existente.ModeloId)?.Nombre;
+                            existente.DescripcionComercial = $"{existente.DescripcionProducto} {marcaNom} {modeloNom} {existente.Serie}".ToUpper();
+                        }
+                        else if (!string.IsNullOrEmpty(existente.DescripcionProducto) &&
+                                 existente.Concentracion != null &&
+                                 !string.IsNullOrEmpty(existente.CodFormulacionQuimica))
+                        {
+                            var fqNom = _context.FormulacionesQuimicas
+                                .FirstOrDefault(f => f.Codigo == existente.CodFormulacionQuimica)?.Nombre;
+                            existente.DescripcionComercial = $"{existente.DescripcionProducto} {existente.Concentracion} {fqNom}".ToUpper();
+                        }
+                    }
+                    else
+                    {
+                        existente.DescripcionComercial = producto.DescripcionComercial.ToUpper();
+                    }
+
+                    _context.SaveChanges();
+
+                    // Sincronizar ingredientes activos: borramos los existentes y reinsertamos
+                    var detallesExistentes = _context.DetallesIngredientesActivos
+                        .Where(d => d.ProductoId == existente.Id)
+                        .ToList();
+                    _context.DetallesIngredientesActivos.RemoveRange(detallesExistentes);
+                    _context.SaveChanges();
+
+                    if (!string.IsNullOrEmpty(detallesJson))
+                    {
+                        var listaDetalles = JsonConvert.DeserializeObject<List<DetalleIngredienteActivo>>(detallesJson);
+                        foreach (var detalle in listaDetalles)
+                        {
+                            detalle.Id = 0;
+                            detalle.ProductoId = existente.Id;
+                            _context.DetallesIngredientesActivos.Add(detalle);
+                        }
+                        _context.SaveChanges();
+                    }
+
+                    transaction.Commit();
+                    return Json(new { status = true, message = $"Producto {existente.Codigo} actualizado correctamente." });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return Json(new { status = false, message = "Error: " + (ex.InnerException?.Message ?? ex.Message) });
+                }
+            }
+        }
+
+        // POST: Editar servicio (solo descripción y unidad de medida; grupo/subgrupo/codigo bloqueados)
+        [HttpPost]
+        public JsonResult EditarServicio(Producto producto)
+        {
+            try
+            {
+                var existente = _context.Productos
+                    .FirstOrDefault(p => p.Id == producto.Id && p.EmpresaId == EmpresaUsuarioId);
+
+                if (existente == null)
+                    return Json(new { status = false, message = "El servicio no existe o no pertenece a su empresa." });
+
+                existente.DescripcionProducto = producto.DescripcionProducto;
+                existente.DescripcionComercial = producto.DescripcionProducto?.ToUpper();
+                existente.CodUnidadMedida = producto.CodUnidadMedida;
+
+                _context.SaveChanges();
+                return Json(new { status = true, message = $"Servicio {existente.Codigo} actualizado correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = "Error: " + (ex.InnerException?.Message ?? ex.Message) });
+            }
+        }
+
+        // POST: Eliminación lógica (para el usuario se ve como física porque el listado filtra Estado = true)
+        [HttpPost]
+        public JsonResult Eliminar(int id)
+        {
+            try
+            {
+                var producto = _context.Productos
+                    .FirstOrDefault(p => p.Id == id && p.EmpresaId == EmpresaUsuarioId);
+
+                if (producto == null)
+                    return Json(new { status = false, message = "El registro no existe o no pertenece a su empresa." });
+
+                // VALIDACIÓN DE HISTORIAL — descomenta cuando tengas la(s) tabla(s) referenciadas
+                // Ejemplo genérico: si el producto tiene movimientos de kardex, no se puede eliminar
+                //
+                // bool tieneMovimientos = _context.KardexMovimientos.Any(k => k.ProductoId == id);
+                // if (tieneMovimientos)
+                //     return Json(new { status = false, message = "No se puede eliminar: el producto tiene movimientos registrados." });
+
+                producto.Estado = false;
+                _context.SaveChanges();
+
+                return Json(new { status = true, message = "Registro eliminado correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = "Error: " + (ex.InnerException?.Message ?? ex.Message) });
+            }
+        }
+
         #endregion
     }
 }

@@ -284,16 +284,16 @@
                                     @if (await _permisos.TienePermiso("MAE_PROD_REG"))
                                     {
                                         <li class="nav-item">
-                                            <a href="/Producto/Registrar" class="nav-link @((controllerName == "Producto" && actionName == "Registrar") ? "active" : "")">
-                                                <i class="fas fa-box nav-icon text-info"></i><p>Nuevo Producto</p>
+                                            <a href="/Producto/CatalogoProductos" class="nav-link @((controllerName == "Producto" && new[]{ "CatalogoProductos", "Registrar" }.Contains(actionName)) ? "active" : "")">
+                                                <i class="fas fa-box nav-icon text-info"></i><p>Catálogo de Productos</p>
                                             </a>
                                         </li>
                                     }
                                     @if (await _permisos.TienePermiso("MAE_SERV_REG"))
                                     {
                                         <li class="nav-item">
-                                            <a href="/Producto/RegistroServicio" class="nav-link @((controllerName == "Producto" && actionName == "RegistroServicio") ? "active" : "")">
-                                                <i class="fas fa-tools nav-icon text-info"></i><p>Nuevo Servicio</p>
+                                            <a href="/Producto/CatalogoServicios" class="nav-link @((controllerName == "Producto" && new[] { "CatalogoServicios", "RegistroServicio" }.Contains(actionName)) ? "active" : "")">
+                                                <i class="fas fa-tools nav-icon text-info"></i><p>Catálogo de Servicios</p>
                                             </a>
                                         </li>
                                     }
@@ -683,10 +683,50 @@
                                             </a>
                                         </li>
                                     }
+
+                                    @if (await _permisos.TienePermiso("ACT_REPORTE_FLOTA"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Activo/ReporteVehiculos" class="nav-link @(isActivoController && actionName == "ReporteVehiculos" ? "active" : "")">
+                                                <i class="fas fa-chart-line nav-icon text-info"></i>
+                                                <p>Reporte de Flota</p>
+                                            </a>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
                         }
 
+                        @if (await _permisos.TienePermiso("MOD_PERSONAL"))
+                        {
+                            <li class="nav-header font-weight-bold">MÓDULO PERSONAL</li>
+    
+                            // Variables auxiliares para limpieza
+                            bool isPersonalController = controllerName == "Personal";
+
+                            <li class="nav-item @(isPersonalController ? "menu-open" : "")">
+                                <a href="#" class="nav-link @(isPersonalController ? "active" : "")">
+                                    <i class="nav-icon fas fa-users"></i>
+                                    <p>
+                                        Personal
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <ul class="nav nav-treeview">
+
+                                    @if (await _permisos.TienePermiso("PER_INDEX_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/Personal/Index" class="nav-link @(isPersonalController && actionName == "Index" ? "active" : "")">
+                                                <i class="fas fa-user-tie nav-icon text-primary"></i>
+                                                <p>Lista de Personal</p>
+                                            </a>
+                                        </li>
+                                    }
+
+                                </ul>
+                            </li>
+                        }
                     </ul>
                 </nav>
                 <!-- /.sidebar-menu -->

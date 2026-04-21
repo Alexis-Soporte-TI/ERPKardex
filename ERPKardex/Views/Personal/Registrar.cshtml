@@ -1,0 +1,194 @@
+@{
+    var idEdicion = Context.Request.Query["id"].ToString();
+    bool esEdicion = !string.IsNullOrEmpty(idEdicion);
+    ViewData["Title"] = esEdicion ? "Edición de Personal" : "Registro de Personal";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <input type="hidden" id="hdn_PersonalId" value="@idEdicion" />
+
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user"></i>
+                        @(esEdicion ? "Edición de Personal" : "Información del Personal")
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="cbx_Empresa">Empresa <span class="text-danger">*</span></label>
+                            <select id="cbx_Empresa" class="form-control"></select>
+                            <small class="form-text text-muted">Empresa a la que será asignado este personal</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="txt_Dni">DNI</label>
+                            <input type="text"
+                                   id="txt_Dni"
+                                   class="form-control"
+                                   maxlength="8"
+                                   placeholder="Ej: 70123456"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                            <small class="form-text text-muted">8 dígitos numéricos</small>
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label for="txt_NombresCompletos">Nombres Completos <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   id="txt_NombresCompletos"
+                                   class="form-control"
+                                   placeholder="Apellidos y nombres completos"
+                                   oninput="this.value = this.value.toUpperCase();">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="txt_Cargo">Cargo</label>
+                            <input type="text"
+                                   id="txt_Cargo"
+                                   class="form-control"
+                                   placeholder="Ej: JEFE DE ALMACÉN, ASISTENTE, CONDUCTOR..."
+                                   oninput="this.value = this.value.toUpperCase();">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-right">
+                    <button id="btn_Cancelar" type="button" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button id="btn_Guardar" type="button" class="btn btn-success">
+                        <i class="fas fa-save"></i> <span id="lbl_BtnGuardar">Guardar Personal</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var ES_EDICION = $('#hdn_PersonalId').val() !== '';
+    var PERSONAL_ID = $('#hdn_PersonalId').val();
+
+    $(document).ready(function () {
+
+        fct_InitCombos();
+
+        if (ES_EDICION) {
+            $('#lbl_BtnGuardar').text('Actualizar Personal');
+            // Esperamos a que el combo de empresas termine de cargar antes de precargar los datos
+            setTimeout(fct_CargarPersonalEdicion, 400);
+        }
+
+        // GUARDAR (registro o edición)
+        $("#btn_Guardar").click(function () {
+            let empresaId = $("#cbx_Empresa").val();
+            let dni = $("#txt_Dni").val().trim();
+            let nombres = $("#txt_NombresCompletos").val().trim();
+            let cargo = $("#txt_Cargo").val().trim();
+
+            // Validaciones
+            if (!empresaId) {
+                toastr.warning("Debe seleccionar una empresa.", "SISTEMA");
+                return;
+            }
+            if (!nombres) {
+                toastr.warning("Los nombres completos son obligatorios.", "SISTEMA");
+                return;
+            }
+            if (dni && dni.length !== 8) {
+                toastr.warning("El DNI debe tener exactamente 8 dígitos.", "SISTEMA");
+                return;
+            }
+
+            let personal = {
+                Id: ES_EDICION ? parseInt(PERSONAL_ID) : 0,
+                EmpresaId: parseInt(empresaId),
+                Dni: dni || null,
+                NombresCompletos: nombres,
+                Cargo: cargo || null
+            };
+
+            let urlDestino = ES_EDICION ? "/Personal/Editar" : "/Personal/Registrar";
+            let tituloConfirm = ES_EDICION ? "¿Confirmar Edición?" : "¿Confirmar Registro?";
+            let textoConfirm = ES_EDICION ? "Se actualizarán los datos del personal." : "Se registrará al personal en la empresa seleccionada.";
+
+            Swal.fire({
+                title: tituloConfirm,
+                text: textoConfirm,
+                icon: "info",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                reverseButtons: true,
+                confirmButtonText: "Sí, guardar",
+                cancelButtonText: "Revisar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: urlDestino,
+                        type: "POST",
+                        data: { personal: personal },
+                        success: function (response) {
+                            if (response.status) {
+                                toastr.success(response.message, "ÉXITO");
+                                setTimeout(() => { window.location.href = '/Personal/Index'; }, 1500);
+                            } else {
+                                toastr.error(response.message, "ERROR");
+                            }
+                        },
+                        error: function () {
+                            toastr.error("Error crítico en el servidor");
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#btn_Cancelar').on('click', function () {
+            window.location.href = '/Personal/Index';
+        });
+    });
+
+    function fct_InitCombos() {
+        fct_FillCombo('/Personal/GetEmpresas', '#cbx_Empresa', 'id', 'nombre', '-- SELECCIONAR EMPRESA --', 'ruc');
+
+        $('#cbx_Empresa').select2({
+            theme: 'bootstrap4',
+            placeholder: "Buscar empresa...",
+            allowClear: true,
+            width: '100%',
+            language: {
+                noResults: function () { return "No se encontraron resultados"; }
+            }
+        });
+    }
+
+    function fct_CargarPersonalEdicion() {
+        $.getJSON('/Personal/GetPersonalById?id=' + PERSONAL_ID, function (res) {
+            if (!res.status) {
+                toastr.error(res.message || "No se pudo cargar el personal");
+                setTimeout(() => { window.location.href = '/Personal/Index'; }, 2000);
+                return;
+            }
+            let p = res.data;
+            $('#cbx_Empresa').val(p.empresaId).trigger('change');
+            $('#txt_Dni').val(p.dni || '');
+            $('#txt_NombresCompletos').val(p.nombresCompletos || '');
+            $('#txt_Cargo').val(p.cargo || '');
+        });
+    }
+
+    function fct_FillCombo(url, id, valProp, txtProp, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => h += `<option value="${i[valProp]}">${extra ? i[extra] + ' - ' : ''}${i[txtProp]}</option>`);
+            $(id).html(h).trigger('change');
+            if ($(id).hasClass("select2-hidden-accessible")) {
+                $(id).trigger('change');
+            }
+        });
+    }
+</script>
