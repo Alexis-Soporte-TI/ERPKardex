@@ -718,6 +718,74 @@ namespace ERPKardex.Controllers
             catch (Exception ex) { return Json(new { status = false, message = "Error: " + ex.Message }); }
         }
 
+        // =====================================================================
+        // MOVIMIENTO - ACTUALIZAR (solo si no tiene acta firmada)
+        // =====================================================================
+
+        [HttpPost]
+        public async Task<JsonResult> ActualizarMovimiento(
+            int id, string tipoMovimiento, int empresaId, int personalId,
+            DateTime fechaMovimiento, string? observacion, string detalleJson)
+        {
+            try
+            {
+                var mov = await _context.MovimientoActivo.FirstOrDefaultAsync(m => m.Id == id && m.Estado);
+                if (mov == null) return Json(new { status = false, message = "Movimiento no encontrado." });
+                if (!string.IsNullOrEmpty(mov.RutaActa))
+                    return Json(new { status = false, message = "No se puede editar un movimiento que ya tiene acta firmada cargada." });
+
+                var detalleItems = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(detalleJson);
+                if (detalleItems == null || detalleItems.Count == 0)
+                    return Json(new { status = false, message = "Debe agregar al menos un activo al movimiento." });
+
+                // Revertir EstadoUso de activos del detalle anterior
+                var detallesAnteriores = await _context.DMovimientoActivo
+                    .Where(d => d.MovimientoActivoId == id && d.Estado).ToListAsync();
+                foreach (var d in detallesAnteriores)
+                {
+                    d.Estado = false;
+                    var activo = await _context.Activo.FirstOrDefaultAsync(a => a.Id == d.ActivoId && a.Estado);
+                    if (activo != null)
+                        activo.EstadoUso = mov.TipoMovimiento == "ENTREGA" ? "STOCK" : "ACTIVO";
+                }
+
+                // Actualizar cabecera
+                mov.TipoMovimiento = tipoMovimiento;
+                mov.EmpresaId = empresaId;
+                mov.PersonalId = personalId;
+                mov.FechaMovimiento = fechaMovimiento;
+                mov.Observacion = observacion;
+
+                await _context.SaveChangesAsync();
+
+                // Agregar nuevos detalles y actualizar EstadoUso
+                foreach (var item in detalleItems)
+                {
+                    var activoId = Convert.ToInt32(item["activoId"].ToString());
+                    var ubicacion = item.ContainsKey("ubicacion") ? item["ubicacion"]?.ToString() : null;
+                    var obs = item.ContainsKey("observacion") ? item["observacion"]?.ToString() : null;
+
+                    _context.DMovimientoActivo.Add(new DMovimientoActivo
+                    {
+                        MovimientoActivoId = mov.Id,
+                        ActivoId = activoId,
+                        Ubicacion = ubicacion,
+                        Observacion = obs,
+                        Estado = true,
+                        FechaRegistro = DateTime.Now
+                    });
+
+                    var activo = await _context.Activo.FirstOrDefaultAsync(a => a.Id == activoId && a.Estado);
+                    if (activo != null)
+                        activo.EstadoUso = tipoMovimiento == "ENTREGA" ? "ACTIVO" : "STOCK";
+                }
+
+                await _context.SaveChangesAsync();
+                return Json(new { status = true, message = $"Movimiento {mov.Codigo} actualizado correctamente." });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = "Error: " + ex.Message }); }
+        }
+
         [HttpPost]
         public async Task<JsonResult> EliminarMovimiento(int id)
         {

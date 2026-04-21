@@ -67,7 +67,7 @@
                                 <th>Empresa</th>
                                 <th>Personal</th>
                                 <th>Activos</th>
-                                <th class="text-center" style="width:160px;">Acciones</th>
+                                <th class="text-center" style="width:190px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="bodyMovimientos">
@@ -85,10 +85,11 @@
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Nuevo Movimiento de Cómputo</h5>
+                <h5 class="modal-title" id="modalMovimientoTitulo">Nuevo Movimiento de Cómputo</h5>
                 <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="movId" value="0">
                 <div class="card mb-3">
                     <div class="card-body py-2 bg-light">
                         <div class="row">
@@ -290,6 +291,7 @@
                     <td class="text-center">
                         <a href="/Activo/ActaImpresion?id=${m.id}" target="_blank" class="btn btn-sm btn-outline-primary mr-1" title="Imprimir Acta"><i class="fas fa-print"></i></a>
                         ${btnActa}
+                        ${!m.rutaActa ? `<button class="btn btn-sm btn-outline-warning mr-1" onclick="editarMovimiento(${m.id})" title="Editar movimiento"><i class="fas fa-edit"></i></button>` : ''}
                         <button class="btn btn-sm btn-outline-info mr-1" onclick="verDetalleMov(${m.id})"><i class="fas fa-eye"></i></button>
                         <button class="btn btn-sm btn-outline-danger" onclick="eliminarMovimiento(${m.id}, '${m.codigo}')"><i class="fas fa-trash"></i></button>
                     </td>
@@ -299,6 +301,8 @@
         }
 
         function abrirModalMovimiento() {
+            document.getElementById('movId').value = '0';
+            document.getElementById('modalMovimientoTitulo').textContent = 'Nuevo Movimiento de Cómputo';
             document.getElementById('movTipo').value = 'ENTREGA';
             document.getElementById('movFecha').value = new Date().toISOString().split('T')[0];
             document.getElementById('movEmpresa').value = '';
@@ -308,6 +312,37 @@
             document.getElementById('listaActivosBusqueda').innerHTML = '<tr><td colspan="2" class="text-center text-muted small">Use el buscador...</td></tr>';
             activosSeleccionados = [];
             renderizarSeleccionados();
+            $('#modalMovimiento').modal('show');
+        }
+
+        async function editarMovimiento(id) {
+            let res = await fetch(`/Activo/GetMovimientoById?id=${id}`);
+            let json = await res.json();
+            if (!json.status) { alert(json.message); return; }
+
+            let m = json.movimiento;
+            document.getElementById('movId').value = m.id;
+            document.getElementById('modalMovimientoTitulo').textContent = `Editar Movimiento: ${m.codigo}`;
+            document.getElementById('movTipo').value = m.tipoMovimiento;
+            document.getElementById('movFecha').value = m.fechaMovimiento;
+            document.getElementById('movObservacion').value = m.observacion || '';
+            document.getElementById('busquedaActivo').value = '';
+            document.getElementById('listaActivosBusqueda').innerHTML = '<tr><td colspan="2" class="text-center text-muted small">Use el buscador...</td></tr>';
+
+            // Cargar empresa y personal
+            document.getElementById('movEmpresa').value = m.empresaId;
+            await cargarPersonal();
+            document.getElementById('movPersonal').value = m.personalId;
+
+            // Cargar activos existentes
+            activosSeleccionados = json.detalle.map(d => ({
+                id: d.activoId,
+                codigo: d.codigo,
+                descripcion: `${d.subtipo || ''} ${d.marca || ''} ${d.modelo || ''}`.trim(),
+                ubicacion: d.ubicacion || ''
+            }));
+            renderizarSeleccionados();
+
             $('#modalMovimiento').modal('show');
         }
 
@@ -364,6 +399,7 @@
         function removerSeleccion(i) { activosSeleccionados.splice(i, 1); renderizarSeleccionados(); }
 
         async function guardarMovimiento() {
+            let id = parseInt(document.getElementById('movId').value) || 0;
             let empresaId = document.getElementById('movEmpresa').value;
             let personalId = document.getElementById('movPersonal').value;
             let fecha = document.getElementById('movFecha').value;
@@ -382,7 +418,15 @@
             params.append('observacion', document.getElementById('movObservacion').value);
             params.append('detalleJson', JSON.stringify(detalle));
 
-            let res = await fetch('/Activo/GuardarMovimiento', { method: 'POST', body: params });
+            let url, mensaje;
+            if (id > 0) {
+                params.append('id', id);
+                url = '/Activo/ActualizarMovimiento';
+            } else {
+                url = '/Activo/GuardarMovimiento';
+            }
+
+            let res = await fetch(url, { method: 'POST', body: params });
             let json = await res.json();
             if (json.status) { alert(json.message); $('#modalMovimiento').modal('hide'); cargarMovimientos(); }
             else alert(json.message);

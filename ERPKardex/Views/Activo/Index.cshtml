@@ -74,7 +74,7 @@
                                 <th>Nro. Serie</th>
                                 <th>Estado</th>
                                 <th>Condición</th>
-                                <th class="text-center" style="width:120px;">Acciones</th>
+                                <th class="text-center" style="width:155px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="bodyActivos">
@@ -212,8 +212,29 @@
     </div>
 </div>
 
+<!-- Modal QR -->
+<div class="modal fade" id="modalQR" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title"><i class="fas fa-qrcode mr-1"></i>Código QR del Activo</h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body text-center py-3">
+                <div id="qrCanvas" class="d-inline-block mb-2"></div>
+                <div><strong id="qrCodigo" class="text-dark" style="font-size:1.1rem;letter-spacing:1px;"></strong></div>
+            </div>
+            <div class="modal-footer py-2 justify-content-center">
+                <button class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                <button class="btn btn-dark btn-sm" onclick="imprimirQR()"><i class="fas fa-print mr-1"></i>Imprimir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script>
         const TIPO_CODIGO = 'COMPUTO';
@@ -305,6 +326,9 @@
                         </button>
                         <button class="btn btn-sm btn-outline-warning" onclick="abrirModalActivo(${a.id})" title="Editar">
                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-dark" onclick="mostrarQR('${a.codigo}')" title="Generar QR">
+                            <i class="fas fa-qrcode"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="eliminarActivo(${a.id}, '${a.codigo}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
@@ -494,6 +518,37 @@
             document.getElementById('modalDetalleTitulo').textContent = `Detalle: ${a.codigo}`;
             document.getElementById('detalleContenido').innerHTML = html;
             $('#modalDetalle').modal('show');
+        }
+
+        // ======================== QR ========================
+        function mostrarQR(codigo) {
+            document.getElementById('qrCodigo').textContent = codigo;
+            let qrDiv = document.getElementById('qrCanvas');
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, {
+                text: codigo,
+                width: 200,
+                height: 200,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            $('#modalQR').modal('show');
+        }
+
+        function imprimirQR() {
+            let codigo = document.getElementById('qrCodigo').textContent;
+            let canvas = document.querySelector('#qrCanvas canvas');
+            if (!canvas) { alert('El QR aún no está listo, intente de nuevo.'); return; }
+            let imgData = canvas.toDataURL();
+            let w = window.open('', '_blank', 'width=350,height=450');
+            w.document.write(`<!DOCTYPE html><html><head><title>QR ${codigo}</title>
+                <style>body{font-family:Arial,sans-serif;text-align:center;padding:30px;margin:0;}
+                img{display:block;margin:0 auto;}h3{margin-top:12px;font-size:18px;letter-spacing:1px;}
+                </style></head>
+                <body onload="window.print();window.close()">
+                    <img src="${imgData}" width="200" height="200">
+                    <h3>${codigo}</h3>
+                <\/body><\/html>`);
+            w.document.close();
         }
 
         // ======================== EXPORTAR EXCEL ========================
