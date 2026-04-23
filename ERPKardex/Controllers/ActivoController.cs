@@ -1698,6 +1698,118 @@ namespace ERPKardex.Controllers
                     }
                 }
 
+                // ------ 6) PROYECCIONES DE MANTENIMIENTO ------
+                // ------ 6) PROYECCIONES DE MANTENIMIENTO (BASADO EN HISTORIAL REAL) ------
+                if (tiposSet.Contains("PROYECCION"))
+                {
+                    // 1. Obtenemos la regla de cada vehículo (ej. cada 5000 km)
+                    var specsMto = await _context.ActivoDetalle
+                        .Where(d => d.Estado && d.Clave == "rango_km_mantenimiento" && vehIds.Contains(d.ActivoId))
+                        .ToListAsync();
+
+                    // 2. Traemos la bitácora para saber el KM actual y calcular la velocidad diaria
+                    var bitacoras = await _context.BitacoraKilometraje
+                        .Where(b => b.Estado && vehIds.Contains(b.ActivoId) && b.Kilometraje.HasValue)
+                        .OrderBy(b => b.Fecha)
+                        .Select(b => new { b.ActivoId, b.Fecha, b.Kilometraje })
+                        .ToListAsync();
+
+                    // 3. NUEVO: Traemos el ÚLTIMO mantenimiento registrado de cada vehículo
+                    var ultimosMantenimientos = await _context.MantenimientoVehiculo
+                        .Where(m => m.Estado && vehIds.Contains(m.ActivoId))
+                        .GroupBy(m => m.ActivoId)
+                        .Select(g => g.OrderByDescending(m => m.Fecha).FirstOrDefault())
+                        .ToListAsync();
+
+                    foreach (var v in vehiculos)
+                    {
+                        // A) Verificamos regla
+                        var spec = specsMto.FirstOrDefault(s => s.ActivoId == v.Id);
+                        if (spec == null || !decimal.TryParse(spec.Valor, out decimal rangoKm) || rangoKm <= 0)
+                            continue;
+
+                        // B) Verificamos bitácora
+                        var vBitacoras = bitacoras.Where(b => b.ActivoId == v.Id).ToList();
+                        if (!vBitacoras.Any()) continue;
+
+                        var ultimoRegistro = vBitacoras.Last();
+                        decimal kmActual = ultimoRegistro.Kilometraje.Value;
+
+                        // C) NUEVO: Calcular la Meta basándonos en el historial
+                        decimal proxMantenimientoKm;
+                        var ultimoMto = ultimosMantenimientos.FirstOrDefault(m => m.ActivoId == v.Id);
+
+                        if (ultimoMto != null && (ultimoMto.KmMantenimiento > 0 || ultimoMto.KmAlServicio > 0))
+                        {
+                            // Priorizamos el KM programado, si no existe usamos el KM real al que entró al taller
+                            decimal baseKm = (ultimoMto.KmMantenimiento ?? 0) > 0
+                                                ? ultimoMto.KmMantenimiento.Value
+                                                : (ultimoMto.KmAlServicio ?? 0);
+
+                            proxMantenimientoKm = baseKm + rangoKm;
+
+                            // Seguridad: Si ya superó la fecha por falta de registro, calculamos el siguiente intervalo
+                            while (proxMantenimientoKm <= kmActual)
+                            {
+                                proxMantenimientoKm += rangoKm;
+                            }
+                        }
+                        else
+                        {
+                            // Si el vehículo es nuevo y NO tiene mantenimientos previos, usamos la predicción simple
+                            proxMantenimientoKm = Math.Ceiling(kmActual / rangoKm) * rangoKm;
+                            if (proxMantenimientoKm == kmActual) proxMantenimientoKm += rangoKm;
+                        }
+
+                        // D) Calculamos el promedio diario de recorrido
+                        decimal kmPromedioDiario = 50; // Fallback para vehículos sin historial suficiente
+                        if (vBitacoras.Count > 1)
+                        {
+                            var primerRegistro = vBitacoras.First();
+                            var diasDiff = (ultimoRegistro.Fecha - primerRegistro.Fecha).TotalDays;
+                            if (diasDiff > 0)
+                            {
+                                var kmDiff = kmActual - primerRegistro.Kilometraje.Value;
+                                if (kmDiff > 0) kmPromedioDiario = (decimal)(kmDiff / (decimal)diasDiff);
+                            }
+                        }
+
+                        // E) Proyectamos la fecha
+                        decimal kmFaltantes = proxMantenimientoKm - kmActual;
+                        int diasFaltantes = (int)Math.Ceiling(kmFaltantes / kmPromedioDiario);
+
+                        DateTime fechaProyectada = ultimoRegistro.Fecha.AddDays(diasFaltantes);
+
+                        if (fechaProyectada >= fechaDesde && fechaProyectada <= fechaHasta)
+                        {
+                            string msjBase = ultimoMto != null
+                                ? $"Basado en su último mantenimiento a los {(ultimoMto.KmMantenimiento > 0 ? ultimoMto.KmMantenimiento : ultimoMto.KmAlServicio):N0} km"
+                                : "Vehículo sin mantenimientos previos registrados";
+
+                            eventos.Add(new
+                            {
+                                id = $"PROY-{v.Id}",
+                                title = $"⚙️ {v.Placa} - Proy. {proxMantenimientoKm:N0} km",
+                                start = fechaProyectada.ToString("yyyy-MM-dd"),
+                                color = "#6f42c1",
+                                allDay = true,
+                                extendedProps = new
+                                {
+                                    tipo = "PROYECCION",
+                                    activoId = v.Id,
+                                    codigoVeh = v.Codigo,
+                                    placa = v.Placa,
+                                    marcaModelo = $"{v.Marca} {v.Modelo}",
+                                    empresa = v.Empresa,
+                                    subtitulo = $"Próximo Mto: {proxMantenimientoKm:N0} km",
+                                    detalle = $"{msjBase}.<br>Al ritmo actual de <b>{kmPromedioDiario:N1} km/día</b>, se alcanzará este hito el {fechaProyectada:dd/MM/yyyy}.",
+                                    diasRestantes = (fechaProyectada - DateTime.Today).Days
+                                }
+                            });
+                        }
+                    }
+                }
+
                 return Json(new { status = true, data = eventos });
             }
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
