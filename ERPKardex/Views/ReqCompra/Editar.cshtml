@@ -1,0 +1,389 @@
+@inject ERPKardex.Services.IPermisoService _permisos
+@{
+    ViewData["Title"] = "Editar Requerimiento de Compra";
+    string puedeIngresarSolicitante = await _permisos.TienePermiso("REQ_COMPRA_SOLICITANTE") ? "" : "d-none";
+    int reqId = ViewBag.ReqId;
+}
+
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index: 9999; background: rgba(0,0,0,0.5);">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+
+            <div class="card shadow mb-4 border-left-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Editar Requerimiento de Bienes &mdash; <span id="lbl_Numero">...</span></h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label>Fecha Emisión</label>
+                            <input type="date" id="dtp_FechaEmision" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="font-weight-bold text-danger">Fecha Necesaria (*)</label>
+                            <input type="date" id="dtp_FechaNecesaria" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Lugar de entrega</label>
+                            <input type="text" id="txt_Observacion" class="form-control" placeholder="Ej: Almacén...">
+                        </div>
+                    </div>
+                    <div class="row @puedeIngresarSolicitante">
+                        <div class="col-md-6 mb-3">
+                            <label>Área Solicitante</label>
+                            <select id="cbx_AreaSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una área...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Persona Solicitante</label>
+                            <select id="cbx_PersonalSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una persona...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white"><h5 class="mb-0">Productos a Solicitar</h5></div>
+                <div class="card-body bg-light">
+
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-3">
+                            <label>Producto (*)</label>
+                            <select id="cbx_ProductoBusqueda" class="form-control select2-busqueda"></select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-primary font-weight-bold">Centro de Costo (*)</label>
+                            <select id="cbx_CentroCosto" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 mb-3">
+                            <label>U.M.</label>
+                            <input type="text" id="txt_DetUnidad" class="form-control" readonly style="background-color: #e9ecef;">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label>Cantidad (*)</label>
+                            <input type="number" id="txt_DetCantidad" class="form-control font-weight-bold" step="0.01" value="1.00">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <button id="btn_AgregarDetalle" type="button" class="btn btn-success btn-block font-weight-bold">
+                                <i class="bi bi-plus-lg"></i> AGREGAR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 d-none">
+                            <label>Orden de producción</label>
+                            <select id="cbx_OrdenesBusqueda" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label>Finalidad del Req (*)</label>
+                            <input type="text" id="txt_DetLugar" class="form-control form-control-sm" placeholder="Observación específica para este ítem">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-3">
+                        <table id="tbl_Detalle" class="table table-bordered table-hover text-center bg-white shadow-sm">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th style="width: 50px;">Item</th>
+                                    <th>Producto</th>
+                                    <th style="width: 200px;">Centro Costo</th>
+                                    <th style="width: 80px;">U.M.</th>
+                                    <th style="width: 100px;">Cant.</th>
+                                    <th>Finalidad</th>
+                                    <th style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-right mb-5">
+                <a href="/ReqCompra/Index" class="btn btn-danger btn-lg mr-2"><i class="bi bi-x-circle"></i> Cancelar</a>
+                <button id="btn_Actualizar" class="btn btn-warning btn-lg text-dark"><i class="bi bi-save"></i> GUARDAR CAMBIOS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var REQ_ID = @reqId;
+    var LISTA_DETALLE = [];
+    var PRODUCTOS_TEMP = [];
+    var ORDENES_TEMP = [];
+
+    $(document).ready(function () {
+        $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Buscar Producto --' });
+        $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' });
+        $('.select2-custom').select2({
+            theme: 'bootstrap4', width: '100%', placeholder: "Buscar...",
+            allowClear: true, language: { noResults: () => "No se encontraron resultados" }
+        });
+
+        cargarCombosSolicitantes();
+        fct_CargarProductos();
+        fct_CargarOrdenesProduccion();
+        fct_CargarCentrosCosto();
+
+        $('#cbx_ProductoBusqueda').on('change', function () {
+            let id = $(this).val();
+            let p = PRODUCTOS_TEMP.find(x => x.id == id);
+            $("#txt_DetUnidad").val(p ? p.codUnidadMedida : "");
+            if (p) $("#txt_DetCantidad").focus().select();
+        });
+
+        $("#btn_AgregarDetalle").click(function () {
+            let idProd = $("#cbx_ProductoBusqueda").val();
+            let txtProd = $("#cbx_ProductoBusqueda option:selected").text();
+            let idCC = $("#cbx_CentroCosto").val();
+            let txtCC = $("#cbx_CentroCosto option:selected").text();
+            let idOP = $("#cbx_OrdenesBusqueda").val();
+            let txtOP = $("#cbx_OrdenesBusqueda option:selected").text();
+            let um = $("#txt_DetUnidad").val();
+            let can = parseFloat($("#txt_DetCantidad").val());
+            let lugarItem = $("#txt_DetLugar").val();
+
+            if (!idProd) return toastr.warning("Debe seleccionar un producto.");
+            if (!idCC) return toastr.warning("Debe seleccionar un Centro de Costo.");
+            if (isNaN(can) || can <= 0) return toastr.warning("La cantidad debe ser mayor a 0.");
+
+            let codProd = "", nomProd = txtProd;
+            if (txtProd.includes('-')) {
+                let parts = txtProd.split('-');
+                codProd = parts[0].trim();
+                nomProd = parts.slice(1).join('-').trim();
+            }
+
+            LISTA_DETALLE.push({
+                Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
+                ProductoId: parseInt(idProd),
+                CentroCostoId: parseInt(idCC),
+                IdOrdenProduccionErpCorpsaf: idOP ? idOP : null,
+                DescOrdenProduccionErpCorpsaf: idOP ? txtOP : "--",
+                Codigo: codProd,
+                DescripcionProducto: nomProd,
+                NombreCentroCosto: txtCC,
+                UnidadMedida: um,
+                CantidadSolicitada: can,
+                Lugar: lugarItem
+            });
+
+            fct_RenderDetalle();
+            fct_LimpiarInputsDetalle();
+        });
+
+        $("#btn_Actualizar").click(function () {
+            if (LISTA_DETALLE.length === 0) return Swal.fire("Error", "Debe agregar al menos un producto.", "error");
+            if (!$("#dtp_FechaNecesaria").val()) return toastr.warning("La fecha necesaria es obligatoria.");
+
+            let cabecera = {
+                FechaEmision: $("#dtp_FechaEmision").val(),
+                FechaNecesaria: $("#dtp_FechaNecesaria").val(),
+                Observacion: $("#txt_Observacion").val(),
+                AreaSolicitanteId: $('#cbx_AreaSoli').val(),
+                PersonalSolicitanteId: $("#cbx_PersonalSoli").val()
+            };
+
+            Swal.fire({
+                title: "¿Guardar cambios?",
+                text: "Se actualizará el requerimiento de compra.",
+                icon: "question",
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonColor: "#f0ad4e",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, Guardar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ShowSpinner();
+                    $.ajax({
+                        url: "/ReqCompra/Actualizar",
+                        type: "POST",
+                        data: {
+                            id: REQ_ID,
+                            cabecera: cabecera,
+                            detallesJson: JSON.stringify(LISTA_DETALLE)
+                        },
+                        success: function (res) {
+                            if (res.status) {
+                                Swal.fire("¡Actualizado!", res.message, "success").then(() => {
+                                    window.location.href = "/ReqCompra/Index";
+                                });
+                            } else {
+                                Swal.fire("Error", res.message, "error");
+                            }
+                            HideSpinner();
+                        },
+                        error: function () {
+                            toastr.error("Error de conexión con el servidor.");
+                            HideSpinner();
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    function fct_CargarProductos() {
+        $.getJSON('/ReqCompra/GetProductos', function (res) {
+            if (res.status) {
+                PRODUCTOS_TEMP = res.data;
+                let h = '<option value="">-- BUSCAR --</option>';
+                res.data.forEach(x => h += `<option value="${x.id}">${x.codigo} - ${x.descripcionComercial}</option>`);
+                $('#cbx_ProductoBusqueda').html(h);
+                // Una vez cargados los productos, cargar los datos del requerimiento
+                fct_CargarDatosReq();
+            }
+        });
+    }
+
+    function fct_CargarOrdenesProduccion() {
+        $.getJSON('/ReqCompra/GetOrdenesProduccion', function (res) {
+            if (res.status) {
+                if (res.data.length > 0) {
+                    ORDENES_TEMP = res.data;
+                    let h = '<option value="">-- BUSCAR --</option>';
+                    res.data.forEach(x => h += `<option value="${x.idOrden}">${x.idOrden} - ${x.objetivo}</option>`);
+                    $('#cbx_OrdenesBusqueda').html(h);
+                } else {
+                    let h = '<option value=""> SIN ORDENES REGISTRADAS</option>';
+                    $('#cbx_OrdenesBusqueda').html(h);
+                }
+            }
+        });
+    }
+
+    function fct_CargarCentrosCosto() {
+        $.getJSON('/ReqCompra/GetCentrosCosto', function (res) {
+            if (res.status) {
+                let h = '<option value="">-- Seleccione --</option>';
+                res.data.forEach(x => h += `<option value="${x.id}">${x.codigo} - ${x.nombre}</option>`);
+                $('#cbx_CentroCosto').html(h);
+            }
+        });
+    }
+
+    function fct_CargarDatosReq() {
+        $.getJSON('/ReqCompra/GetDetalleParaEdicion?id=' + REQ_ID, function (res) {
+            if (!res.status) {
+                Swal.fire("Error", res.message, "error").then(() => window.location.href = "/ReqCompra/Index");
+                return;
+            }
+
+            let cab = res.cabecera;
+            $('#lbl_Numero').text(cab.numero);
+            $('#dtp_FechaEmision').val(cab.fechaEmision);
+            $('#dtp_FechaNecesaria').val(cab.fechaNecesaria);
+            $('#txt_Observacion').val(cab.observacion || '');
+
+            // Seleccionar área y personal
+            if (cab.areaSolicitanteId) {
+                $('#cbx_AreaSoli').val(cab.areaSolicitanteId).trigger('change');
+            }
+            if (cab.personalSolicitanteId) {
+                $('#cbx_PersonalSoli').val(cab.personalSolicitanteId).trigger('change');
+            }
+
+            // Cargar detalles
+            LISTA_DETALLE = [];
+            res.detalles.forEach(d => {
+                // Buscar nombre del producto en el combo
+                let prod = PRODUCTOS_TEMP.find(x => x.id == d.productoId);
+                let nomProd = d.descripcionProducto;
+                let codProd = "";
+                if (prod) {
+                    codProd = prod.codigo;
+                    nomProd = prod.descripcionComercial;
+                }
+
+                LISTA_DETALLE.push({
+                    Item: d.item,
+                    ProductoId: d.productoId,
+                    CentroCostoId: d.centroCostoId,
+                    IdOrdenProduccionErpCorpsaf: d.idOrdenProduccionErpCorpsaf,
+                    DescOrdenProduccionErpCorpsaf: d.descOrdenProduccionErpCorpsaf || "--",
+                    Codigo: codProd,
+                    DescripcionProducto: nomProd,
+                    NombreCentroCosto: d.nombreCentroCosto,
+                    UnidadMedida: d.unidadMedida,
+                    CantidadSolicitada: parseFloat(d.cantidadSolicitada),
+                    Lugar: d.lugar || ''
+                });
+            });
+
+            fct_RenderDetalle();
+        });
+    }
+
+    function fct_RenderDetalle() {
+        let html = "";
+        LISTA_DETALLE.forEach((d, index) => {
+            html += `<tr>
+                <td class="align-middle font-weight-bold">${d.Item}</td>
+                <td class="align-middle text-left">
+                    <small class="d-block text-muted">${d.Codigo}</small>
+                    ${d.DescripcionProducto}
+                </td>
+                <td class="align-middle text-primary small font-weight-bold">${d.NombreCentroCosto}</td>
+                <td class="align-middle">${d.UnidadMedida}</td>
+                <td class="align-middle font-weight-bold" style="font-size: 1.1rem;">${d.CantidadSolicitada.toFixed(2)}</td>
+                <td class="align-middle text-left small text-muted">${d.Lugar || '-'}</td>
+                <td class="align-middle">
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="fct_EliminarDetalle(${index})" title="Quitar">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            </tr>`;
+        });
+        if (LISTA_DETALLE.length === 0) html = '<tr><td colspan="7" class="text-center py-3 text-muted">Ningún producto agregado</td></tr>';
+        $("#tbl_Detalle tbody").html(html);
+    }
+
+    function fct_EliminarDetalle(index) {
+        LISTA_DETALLE.splice(index, 1);
+        LISTA_DETALLE.forEach((d, i) => d.Item = (i + 1).toString().padStart(3, '0'));
+        fct_RenderDetalle();
+    }
+
+    function fct_LimpiarInputsDetalle() {
+        $("#cbx_ProductoBusqueda").val("").trigger("change");
+        $("#txt_DetCantidad").val("1.00");
+        $("#txt_DetLugar").val("");
+        $("#cbx_ProductoBusqueda").select2('open');
+    }
+
+    function cargarCombosSolicitantes() {
+        $.getJSON('/ReqCompra/GetAreasSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_AreaSoli');
+                $combo.empty().append('<option value="">Seleccione una área...</option>');
+                response.data.forEach(item => $combo.append(new Option(item.nombre, item.id)));
+            }
+        });
+        $.getJSON('/ReqCompra/GetPersonalSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_PersonalSoli');
+                $combo.empty().append('<option value="">Seleccione una persona...</option>');
+                response.data.forEach(item => $combo.append(new Option(item.nombre, item.id)));
+            }
+        });
+    }
+
+    function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }
+    function HideSpinner() { $('#efec-cargando').addClass('d-none'); }
+</script>

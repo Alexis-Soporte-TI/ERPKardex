@@ -27,6 +27,7 @@ namespace ERPKardex.Controllers
         #region 1. VISTAS
         public IActionResult Index() => View();
         public IActionResult Registrar() => View();
+        public IActionResult Editar(int id) { ViewBag.ReqId = id; return View(); }
         #endregion
 
         #region 2. LISTADOS (GET)
@@ -64,6 +65,55 @@ namespace ERPKardex.Controllers
                             }).ToList();
 
                 return Json(new { status = true, data });
+            }
+            catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
+        }
+
+        // DETALLE PARA EDICIÓN
+        [HttpGet]
+        public async Task<JsonResult> GetDetalleParaEdicion(int id)
+        {
+            try
+            {
+                var cabecera = await (from r in _context.ReqServicios
+                                      join est in _context.Estados on r.EstadoId equals est.Id
+                                      where r.Id == id
+                                      select new
+                                      {
+                                          r.Id,
+                                          r.Numero,
+                                          FechaEmision = r.FechaEmision.GetValueOrDefault().ToString("yyyy-MM-dd"),
+                                          FechaNecesaria = r.FechaNecesaria.GetValueOrDefault().ToString("yyyy-MM-dd"),
+                                          r.Observacion,
+                                          r.AreaSolicitanteId,
+                                          r.PersonalSolicitanteId,
+                                          r.PeriodoContableId,
+                                          EstadoNombre = est.Nombre
+                                      }).FirstOrDefaultAsync();
+
+                if (cabecera == null) return Json(new { status = false, message = "No encontrado." });
+                if (cabecera.EstadoNombre != "Pendiente")
+                    return Json(new { status = false, message = "Solo se pueden editar requerimientos en estado Pendiente." });
+
+                var detalles = await (from d in _context.DReqServicios
+                                      join cc in _context.CentroCostos on d.CentroCostoId equals cc.Id into ccJoin
+                                      from cc in ccJoin.DefaultIfEmpty()
+                                      where d.ReqServicioId == id
+                                      select new
+                                      {
+                                          d.Item,
+                                          d.ProductoId,
+                                          d.CentroCostoId,
+                                          NombreCentroCosto = cc != null ? cc.Codigo + " - " + cc.Nombre : "",
+                                          d.IdOrdenProduccionErpCorpsaf,
+                                          d.DescOrdenProduccionErpCorpsaf,
+                                          d.DescripcionServicio,
+                                          d.UnidadMedida,
+                                          d.CantidadSolicitada,
+                                          d.Lugar
+                                      }).ToListAsync();
+
+                return Json(new { status = true, cabecera, detalles });
             }
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }
         }
@@ -342,6 +392,84 @@ namespace ERPKardex.Controllers
 
                     // Si todo sale perfecto (Guardado + Correo enviado)
                     return Json(new { status = true, message = $"Requerimiento {cabecera.Numero} generado correctamente." });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return Json(new { status = false, message = ex.Message });
+                }
+            }
+        }
+
+        // ACTUALIZAR REQUERIMIENTO (solo si está Pendiente)
+        [HttpPost]
+        public JsonResult Actualizar(int id, ReqServicio cabecera, string detallesJson)
+        {
+            using (var transaction = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    var req = _context.ReqServicios.Find(id);
+                    if (req == null) return Json(new { status = false, message = "No encontrado." });
+
+                    var estadoPendienteREQ = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "REQ");
+                    var estadoPendienteDREQ = _context.Estados.FirstOrDefault(e => e.Nombre == "Pendiente" && e.Tabla == "DREQ");
+
+                    if (req.EstadoId != estadoPendienteREQ?.Id)
+                        return Json(new { status = false, message = "Solo se pueden editar requerimientos en estado Pendiente." });
+
+                    var empresaId = EmpresaUsuarioId;
+
+                    // Actualizar cabecera
+                    req.FechaEmision = cabecera.FechaEmision;
+                    req.FechaNecesaria = cabecera.FechaNecesaria;
+                    req.Observacion = cabecera.Observacion;
+                    req.AreaSolicitanteId = cabecera.AreaSolicitanteId;
+                    req.PersonalSolicitanteId = cabecera.PersonalSolicitanteId;
+
+                    // Reemplazar detalles
+                    var detallesAnteriores = _context.DReqServicios.Where(d => d.ReqServicioId == id).ToList();
+                    _context.DReqServicios.RemoveRange(detallesAnteriores);
+
+                    if (!string.IsNullOrEmpty(detallesJson))
+                    {
+                        var lista = JsonConvert.DeserializeObject<List<DReqServicio>>(detallesJson);
+                        int item = 1;
+                        foreach (var det in lista)
+                        {
+                            det.Id = 0;
+                            det.ReqServicioId = id;
+                            det.EmpresaId = empresaId;
+                            det.Item = item.ToString("D3");
+                            det.EstadoId = estadoPendienteDREQ.Id;
+
+                            if (string.IsNullOrEmpty(det.DescripcionServicio))
+                            {
+                                var prod = _context.Productos.Find(det.ProductoId);
+                                if (prod != null)
+                                {
+                                    det.DescripcionServicio = prod.DescripcionProducto;
+                                    det.UnidadMedida = prod.CodUnidadMedida;
+                                }
+                            }
+                            else if (string.IsNullOrEmpty(det.UnidadMedida))
+                            {
+                                var prod = _context.Productos.Find(det.ProductoId);
+                                if (prod != null) det.UnidadMedida = prod.CodUnidadMedida;
+                            }
+
+                            if (det.IdOrdenProduccionErpCorpsaf == null)
+                                det.DescOrdenProduccionErpCorpsaf = null;
+
+                            _context.DReqServicios.Add(det);
+                            item++;
+                        }
+                    }
+
+                    _context.SaveChanges();
+                    transaction.Commit();
+
+                    return Json(new { status = true, message = $"Requerimiento {req.Numero} actualizado correctamente." });
                 }
                 catch (Exception ex)
                 {

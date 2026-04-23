@@ -154,8 +154,14 @@
                         data: null, className: "text-center",
                         render: function (data) {
                             let botonesGestion = '';
+                            if(data.estado === 'Pendiente') {
+                                botonesGestion += `
+                                <a class="btn btn-sm btn-warning" title="Editar" href="/ReqServicio/Editar?id=${data.id}">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>`;
+                            }
                             if(data.estado === 'Pendiente' && auditarReqs) {
-                                botonesGestion = `
+                                botonesGestion += `
                                 <button class="btn btn-sm btn-success" title="Aprobar" onclick="cambiarEstado(${data.id}, 'Aprobado')">
                                     <i class="bi bi-check-lg"></i>
                                 </button>

@@ -1,0 +1,360 @@
+@inject ERPKardex.Services.IPermisoService _permisos
+@{
+    ViewData["Title"] = "Editar Requerimiento de Servicio";
+    string puedeIngresarSolicitante = await _permisos.TienePermiso("REQ_SERVICIO_SOLICITANTE") ? "" : "d-none";
+    int reqId = ViewBag.ReqId;
+}
+
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index: 9999; background: rgba(0,0,0,0.5);">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+
+            <div class="card shadow mb-4 border-left-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Editar Requerimiento de Servicio &mdash; <span id="lbl_Numero">...</span></h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label>Fecha Emisión</label>
+                            <input type="date" id="dtp_FechaEmision" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="font-weight-bold text-danger">Fecha Necesaria (*)</label>
+                            <input type="date" id="dtp_FechaNecesaria" class="form-control">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label>Observación General</label>
+                            <input type="text" id="txt_Observacion" class="form-control" placeholder="Ej: Mantenimiento de aires acondicionados...">
+                        </div>
+                    </div>
+                    <div class="row @puedeIngresarSolicitante">
+                        <div class="col-md-6 mb-3">
+                            <label>Área Solicitante</label>
+                            <select id="cbx_AreaSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una área...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Persona Solicitante</label>
+                            <select id="cbx_PersonalSoli" class="form-control select2-custom">
+                                <option value="">Seleccione una persona...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header bg-secondary text-white"><h5 class="mb-0">Servicios a Solicitar</h5></div>
+                <div class="card-body bg-light">
+
+                    <div class="row align-items-end">
+                        <div class="col-md-4 mb-3">
+                            <label>Servicio (*)</label>
+                            <select id="cbx_ServicioBusqueda" class="form-control select2-busqueda"></select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-info font-weight-bold">Centro de Costo (*)</label>
+                            <select id="cbx_CentroCosto" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 mb-3">
+                            <label>U.M.</label>
+                            <input type="text" id="txt_DetUnidad" class="form-control" readonly style="background-color: #e9ecef;">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label>Cantidad (*)</label>
+                            <input type="number" id="txt_DetCantidad" class="form-control font-weight-bold" step="0.01" value="1.00">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <button id="btn_AgregarDetalle" type="button" class="btn btn-info btn-block font-weight-bold">
+                                <i class="bi bi-plus-lg"></i> AGREGAR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Orden de producción</label>
+                            <select id="cbx_OrdenesBusqueda" class="form-control select2-basic">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Lugar de entrega (*)</label>
+                            <input type="text" id="txt_DetLugar" class="form-control form-control-sm" placeholder="Lugar específico del servicio">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mt-3">
+                        <table id="tbl_Detalle" class="table table-bordered table-hover text-center bg-white shadow-sm">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th style="width: 50px;">Item</th>
+                                    <th>Servicio / Descripción</th>
+                                    <th style="width: 200px;">Centro Costo</th>
+                                    <th>Orden Producción</th>
+                                    <th style="width: 100px;">Cant.</th>
+                                    <th>Lugar</th>
+                                    <th style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-right mb-5">
+                <a href="/ReqServicio/Index" class="btn btn-danger btn-lg mr-2"><i class="bi bi-x-circle"></i> Cancelar</a>
+                <button id="btn_Actualizar" class="btn btn-warning btn-lg text-dark"><i class="bi bi-save"></i> GUARDAR CAMBIOS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var REQ_ID = @reqId;
+    var LISTA_DETALLE = [];
+    var SERVICIOS_TEMP = [];
+
+    $(document).ready(function () {
+        $('.select2-custom').select2({
+            theme: 'bootstrap4', width: '100%', placeholder: "Buscar...",
+            allowClear: true, language: { noResults: () => "No se encontraron resultados" }
+        });
+        $('.select2-busqueda').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Buscar Servicio --' });
+        $('.select2-basic').select2({ theme: 'bootstrap4', width: '100%' });
+
+        cargarCombosSolicitantes();
+        fct_CargarServicios();
+        fct_CargarOrdenesProduccion();
+        fct_CargarCentrosCosto();
+
+        $('#cbx_ServicioBusqueda').on('change', function () {
+            let id = $(this).val();
+            let s = SERVICIOS_TEMP.find(x => x.id == id);
+            $("#txt_DetUnidad").val(s ? s.codUnidadMedida : "");
+            if (s) $("#txt_DetCantidad").focus().select();
+        });
+
+        $("#btn_AgregarDetalle").click(function () {
+            let idServ = $("#cbx_ServicioBusqueda").val();
+            let txtServ = $("#cbx_ServicioBusqueda option:selected").text();
+            let idCC = $("#cbx_CentroCosto").val();
+            let txtCC = $("#cbx_CentroCosto option:selected").text();
+            let idOP = $("#cbx_OrdenesBusqueda").val();
+            let txtOP = $("#cbx_OrdenesBusqueda option:selected").text();
+            let can = parseFloat($("#txt_DetCantidad").val());
+            let lugarItem = $("#txt_DetLugar").val();
+
+            if (!idServ) return toastr.warning("Seleccione un servicio.");
+            if (!idCC) return toastr.warning("Seleccione un Centro de Costo.");
+            if (isNaN(can) || can <= 0) return toastr.warning("Cantidad inválida.");
+
+            let nomServ = txtServ;
+            if (txtServ.includes('-')) nomServ = txtServ.split('-').slice(1).join('-').trim();
+
+            LISTA_DETALLE.push({
+                Item: (LISTA_DETALLE.length + 1).toString().padStart(3, '0'),
+                ProductoId: parseInt(idServ),
+                CentroCostoId: parseInt(idCC),
+                IdOrdenProduccionErpCorpsaf: idOP ? idOP : null,
+                DescOrdenProduccionErpCorpsaf: idOP ? txtOP : "--",
+                DescripcionServicio: nomServ,
+                NombreCentroCosto: txtCC,
+                CantidadSolicitada: can,
+                Lugar: lugarItem
+            });
+
+            fct_RenderDetalle();
+            fct_LimpiarInputs();
+        });
+
+        $("#btn_Actualizar").click(function () {
+            if (LISTA_DETALLE.length === 0) return Swal.fire("Error", "Agregue al menos un servicio.", "error");
+
+            let cabecera = {
+                FechaEmision: $("#dtp_FechaEmision").val(),
+                FechaNecesaria: $("#dtp_FechaNecesaria").val(),
+                Observacion: $("#txt_Observacion").val(),
+                AreaSolicitanteId: $('#cbx_AreaSoli').val(),
+                PersonalSolicitanteId: $("#cbx_PersonalSoli").val()
+            };
+
+            Swal.fire({
+                title: "¿Guardar cambios?",
+                text: "Se actualizará el requerimiento de servicio.",
+                icon: "question",
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonColor: "#f0ad4e",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, Guardar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ShowSpinner();
+                    $.ajax({
+                        url: "/ReqServicio/Actualizar",
+                        type: "POST",
+                        data: {
+                            id: REQ_ID,
+                            cabecera: cabecera,
+                            detallesJson: JSON.stringify(LISTA_DETALLE)
+                        },
+                        success: function (res) {
+                            if (res.status) {
+                                Swal.fire("¡Actualizado!", res.message, "success").then(() => {
+                                    window.location.href = "/ReqServicio/Index";
+                                });
+                            } else {
+                                Swal.fire("Error", res.message, "error");
+                            }
+                            HideSpinner();
+                        },
+                        error: function () {
+                            toastr.error("Error de conexión con el servidor.");
+                            HideSpinner();
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    function fct_CargarServicios() {
+        $.getJSON('/ReqServicio/GetServicios', function (res) {
+            if (res.status) {
+                SERVICIOS_TEMP = res.data;
+                let h = '<option value="">-- BUSCAR --</option>';
+                res.data.forEach(x => h += `<option value="${x.id}">${x.codigo} - ${x.descripcionComercial}</option>`);
+                $('#cbx_ServicioBusqueda').html(h);
+                // Una vez cargados los servicios, cargar los datos del requerimiento
+                fct_CargarDatosReq();
+            }
+        });
+    }
+
+    function fct_CargarOrdenesProduccion() {
+        $.getJSON('/ReqCompra/GetOrdenesProduccion', function (res) {
+            if (res.status) {
+                if (res.data.length > 0) {
+                    let h = '<option value="">-- BUSCAR --</option>';
+                    res.data.forEach(x => h += `<option value="${x.idOrden}">${x.idOrden} - ${x.objetivo}</option>`);
+                    $('#cbx_OrdenesBusqueda').html(h);
+                } else {
+                    $('#cbx_OrdenesBusqueda').html('<option value=""> SIN ORDENES REGISTRADAS</option>');
+                }
+            }
+        });
+    }
+
+    function fct_CargarCentrosCosto() {
+        $.getJSON('/ReqServicio/GetCentrosCosto', function (res) {
+            if (res.status) {
+                let h = '<option value="">-- Seleccione --</option>';
+                res.data.forEach(x => h += `<option value="${x.id}">${x.codigo} - ${x.nombre}</option>`);
+                $('#cbx_CentroCosto').html(h);
+            }
+        });
+    }
+
+    function fct_CargarDatosReq() {
+        $.getJSON('/ReqServicio/GetDetalleParaEdicion?id=' + REQ_ID, function (res) {
+            if (!res.status) {
+                Swal.fire("Error", res.message, "error").then(() => window.location.href = "/ReqServicio/Index");
+                return;
+            }
+
+            let cab = res.cabecera;
+            $('#lbl_Numero').text(cab.numero);
+            $('#dtp_FechaEmision').val(cab.fechaEmision);
+            $('#dtp_FechaNecesaria').val(cab.fechaNecesaria);
+            $('#txt_Observacion').val(cab.observacion || '');
+
+            if (cab.areaSolicitanteId) $('#cbx_AreaSoli').val(cab.areaSolicitanteId).trigger('change');
+            if (cab.personalSolicitanteId) $('#cbx_PersonalSoli').val(cab.personalSolicitanteId).trigger('change');
+
+            LISTA_DETALLE = [];
+            res.detalles.forEach(d => {
+                let serv = SERVICIOS_TEMP.find(x => x.id == d.productoId);
+                let nomServ = d.descripcionServicio;
+                if (serv) nomServ = serv.descripcionComercial;
+
+                LISTA_DETALLE.push({
+                    Item: d.item,
+                    ProductoId: d.productoId,
+                    CentroCostoId: d.centroCostoId,
+                    IdOrdenProduccionErpCorpsaf: d.idOrdenProduccionErpCorpsaf,
+                    DescOrdenProduccionErpCorpsaf: d.descOrdenProduccionErpCorpsaf || "--",
+                    DescripcionServicio: nomServ,
+                    NombreCentroCosto: d.nombreCentroCosto,
+                    CantidadSolicitada: parseFloat(d.cantidadSolicitada),
+                    Lugar: d.lugar || ''
+                });
+            });
+
+            fct_RenderDetalle();
+        });
+    }
+
+    function fct_RenderDetalle() {
+        let html = "";
+        LISTA_DETALLE.forEach((d, index) => {
+            html += `<tr>
+                <td class="align-middle font-weight-bold">${d.Item}</td>
+                <td class="align-middle text-left">${d.DescripcionServicio}</td>
+                <td class="align-middle text-info small font-weight-bold">${d.NombreCentroCosto}</td>
+                <td class="align-middle text-info small font-weight-bold">${d.DescOrdenProduccionErpCorpsaf}</td>
+                <td class="align-middle font-weight-bold">${d.CantidadSolicitada.toFixed(2)}</td>
+                <td class="align-middle text-left small text-muted">${d.Lugar || '-'}</td>
+                <td class="align-middle">
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="fct_Eliminar(${index})"><i class="bi bi-trash-fill"></i></button>
+                </td>
+            </tr>`;
+        });
+        if (LISTA_DETALLE.length === 0) html = '<tr><td colspan="7" class="text-center py-3 text-muted">Sin servicios agregados</td></tr>';
+        $("#tbl_Detalle tbody").html(html);
+    }
+
+    function fct_Eliminar(index) {
+        LISTA_DETALLE.splice(index, 1);
+        LISTA_DETALLE.forEach((d, i) => d.Item = (i + 1).toString().padStart(3, '0'));
+        fct_RenderDetalle();
+    }
+
+    function fct_LimpiarInputs() {
+        $("#cbx_ServicioBusqueda").val("").trigger("change");
+        $("#txt_DetCantidad").val("1.00");
+        $("#txt_DetLugar").val("");
+        $("#cbx_ServicioBusqueda").select2('open');
+    }
+
+    function cargarCombosSolicitantes() {
+        $.getJSON('/ReqServicio/GetAreasSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_AreaSoli');
+                $combo.empty().append('<option value="">Seleccione una área...</option>');
+                response.data.forEach(item => $combo.append(new Option(item.nombre, item.id)));
+            }
+        });
+        $.getJSON('/ReqServicio/GetPersonalSolicitante', function (response) {
+            if (response.status) {
+                let $combo = $('#cbx_PersonalSoli');
+                $combo.empty().append('<option value="">Seleccione una persona...</option>');
+                response.data.forEach(item => $combo.append(new Option(item.nombre, item.id)));
+            }
+        });
+    }
+
+    function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }
+    function HideSpinner() { $('#efec-cargando').addClass('d-none'); }
+</script>
