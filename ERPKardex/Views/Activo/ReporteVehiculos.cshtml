@@ -112,6 +112,7 @@
                             <label title="Infracciones"       style="background:#f8d7da;"><input type="checkbox" class="flt-tipo" value="INFRACCION" checked> Infracc.</label>
                             <label title="GPS"                style="background:#d1f3e8;"><input type="checkbox" class="flt-tipo" value="GPS" checked> GPS</label>
                             <label title="Seguros"            style="background:#e2d7f8;"><input type="checkbox" class="flt-tipo" value="SEGURO" checked> Seguros</label>
+                            <label title="Proyecciones" style="background:#e0d4f5;"><input type="checkbox" class="flt-tipo" value="PROYECCION" checked> Proy. Mtos</label>
                         </div>
                     </div>
                     <div class="col-md-2 text-right">
@@ -212,6 +213,7 @@
                             <span><span class="badge-color" style="background:#dc3545"></span>Vencido / Infr.</span>&nbsp;
                             <span><span class="badge-color" style="background:#6610f2"></span>Seguro</span>&nbsp;
                             <span><span class="badge-color" style="background:#20c997"></span>GPS</span>
+                            <span><span class="badge-color" style="background:#6f42c1"></span>Proyección</span>
                         </div>
                     </div>
                     <div class="card-body">
@@ -351,7 +353,7 @@
         let chartMtosMes = null;
         let chartMtosTipo = null;
         let chartKm = null;
-        let currentFilters = { empresaId: '', activoId: '', tipos: 'MANTENIMIENTO,DOCUMENTO,INFRACCION,GPS,SEGURO' };
+        let currentFilters = { empresaId: '', activoId: '', tipos: 'MANTENIMIENTO,DOCUMENTO,INFRACCION,GPS,SEGURO,PROYECCION' };
 
         // Paleta para kilometraje (datasets)
         const paletaKm = ['#007bff','#28a745','#ffc107','#dc3545','#17a2b8','#6610f2','#fd7e14','#20c997','#6c757d','#343a40'];
@@ -513,6 +515,7 @@
                 case 'INFRACCION':    bg = 'bg-danger'; icono = 'fas fa-exclamation-triangle'; break;
                 case 'GPS':           bg = 'bg-success'; icono = 'fas fa-satellite-dish'; break;
                 case 'SEGURO':        bg = 'bg-primary'; icono = 'fas fa-shield-alt'; break;
+                case 'PROYECCION':    bg = 'bg-purple'; icono = 'fas fa-cogs'; break;
             }
             header.classList.add(bg);
 
@@ -545,6 +548,12 @@
                 const etiquetaDias = dias < 0
                     ? `<span class="badge badge-danger">Vencido hace ${Math.abs(dias)} días</span>`
                     : `<span class="badge badge-warning">Vence en ${dias} días</span>`;
+                tablaExtra = `<tr><th style="width:35%">Estado</th><td>${etiquetaDias}</td></tr>`;
+            } else if (p.tipo === 'PROYECCION') {
+                const dias = p.diasRestantes;
+                const etiquetaDias = dias < 0
+                    ? `<span class="badge badge-danger">Atrasado ${Math.abs(dias)} días</span>`
+                    : `<span class="badge badge-warning">Estimado en ${dias} días</span>`;
                 tablaExtra = `<tr><th style="width:35%">Estado</th><td>${etiquetaDias}</td></tr>`;
             }
 
