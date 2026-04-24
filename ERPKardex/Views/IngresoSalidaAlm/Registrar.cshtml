@@ -188,6 +188,16 @@
     var LABORES_EXT_TEMP = [];
     var MOVIMIENTO_ID = @(movimientoId.HasValue ? movimientoId.Value.ToString() : "0");
 
+    // Manejador global de errores AJAX - Detectar 401 Unauthorized
+    $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
+        if (jqxhr.status === 401) {
+            toastr.warning("Su sesión ha expirado. Será redirigido a iniciar sesión.");
+            setTimeout(function () {
+                window.location.href = '/Identity/Account/Login';
+            }, 1500);
+        }
+    });
+
     $(document).ready(function () {
         $('.select2-busqueda').select2({ theme: 'bootstrap4', allowClear: true });
         fct_InitCombos();
@@ -433,8 +443,31 @@
         fct_CargarOrdenesProduccion();
         fct_CargarActividadesExt();
     }
-    function cargarComboEntidades() { $.get('/IngresoSalidaAlm/GetProveedores', function (res) { let ops = '<option value="">-- Seleccione --</option>'; if(res.status) res.data.forEach(i => ops += `<option value="${i.id}">${i.tipoDocumentoIdentidad}: ${i.numeroDocumento} - ${i.razonSocial}</option>`); $('#cbx_Proveedor').html(ops); }); }
-    function fct_FillCombo(url, id, val, txt, ph, extra) { $.getJSON(url, function (res) { let h = `<option value="">${ph}</option>`; if (res.status) res.data.forEach(i => h += `<option value="${i[val]}">${extra ? i[extra] + ' - ' : ''}${i[txt]}</option>`); $(id).html(h); }); }
+    function cargarComboEntidades() {
+        $.get('/IngresoSalidaAlm/GetProveedores', function (res) {
+            let ops = '<option value="">-- Seleccione --</option>';
+            if(res.status) res.data.forEach(i => ops += `<option value="${i.id}">${i.tipoDocumentoIdentidad}: ${i.numeroDocumento} - ${i.razonSocial}</option>`);
+            $('#cbx_Proveedor').html(ops);
+        }).fail(function(xhr) {
+            if(xhr.status === 401) {
+                toastr.warning("Su sesión ha expirado. Será redirigido a iniciar sesión.");
+                setTimeout(function() { window.location.href = '/Identity/Account/Login'; }, 1500);
+            }
+        });
+    }
+
+    function fct_FillCombo(url, id, val, txt, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => h += `<option value="${i[val]}">${extra ? i[extra] + ' - ' : ''}${i[txt]}</option>`);
+            $(id).html(h);
+        }).fail(function(xhr) {
+            if(xhr.status === 401) {
+                toastr.warning("Su sesión ha expirado. Será redirigido a iniciar sesión.");
+                setTimeout(function() { window.location.href = '/Identity/Account/Login'; }, 1500);
+            }
+        });
+    }
 
     function fct_CargarParaEdicion(id) {
         $('#efec-cargando').removeClass('d-none');
