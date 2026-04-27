@@ -35,6 +35,8 @@ namespace ERPKardex.Controllers
         public IActionResult ReporteStock() => View();
         public IActionResult ReporteKardex() => View();
         public IActionResult Valorizacion() => View();
+        public IActionResult StockValorizado() => View();
+        public IActionResult ValidarPrecioUnitario() => View();
         public IActionResult ObtenerVistaRegistroEntidad()
         {
             return PartialView("_RegistroEntidad");
@@ -1530,6 +1532,110 @@ namespace ERPKardex.Controllers
             catch (Exception ex)
             {
                 return Json(new { data = (object)null, message = ex.Message, status = false });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetStockValorizado(int? almacenId, int? productoId)
+        {
+            try
+            {
+                var query = from sa in _context.StockAlmacenes
+                            join p in _context.Productos on sa.ProductoId equals p.Id
+                            join a in _context.Almacenes on sa.AlmacenId equals a.Id
+                            where sa.EmpresaId == EmpresaUsuarioId
+                               && p.Estado == true
+                               && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
+                               && (!productoId.HasValue || sa.ProductoId == productoId.Value)
+                            select new
+                            {
+                                sa.Id,
+                                p.Codigo,
+                                p.DescripcionProducto,
+                                p.DescripcionComercial,
+                                p.CodUnidadMedida,
+                                Almacen = a.Nombre,
+                                Cantidad = sa.StockActual,
+                                PrecioUnitario = sa.PrecioUnitario,
+                                ValorizacionTotal = sa.StockActual != null && sa.PrecioUnitario != null
+                                    ? sa.StockActual * sa.PrecioUnitario
+                                    : (decimal?)0
+                            };
+
+                var data = query.OrderBy(x => x.DescripcionProducto).ToList()
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.Codigo,
+                        x.DescripcionProducto,
+                        x.DescripcionComercial,
+                        x.CodUnidadMedida,
+                        x.Almacen,
+                        Cantidad = x.Cantidad,
+                        PrecioUnitario = x.PrecioUnitario.HasValue ? Math.Round(x.PrecioUnitario.Value, 2) : (decimal?)null,
+                        ValorizacionTotal = x.ValorizacionTotal.HasValue ? Math.Round(x.ValorizacionTotal.Value, 2) : (decimal?)0
+                    }).ToList();
+
+                return Json(new { data, status = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { data = (object)null, message = ex.Message, status = false });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetPreciosUnitarios(int? almacenId, int? productoId)
+        {
+            try
+            {
+                var query = from sa in _context.StockAlmacenes
+                            join p in _context.Productos on sa.ProductoId equals p.Id
+                            join a in _context.Almacenes on sa.AlmacenId equals a.Id
+                            where sa.EmpresaId == EmpresaUsuarioId
+                               && p.Estado == true
+                               && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
+                               && (!productoId.HasValue || sa.ProductoId == productoId.Value)
+                            select new
+                            {
+                                sa.Id,
+                                AlmacenId = sa.AlmacenId,
+                                Almacen = a.Nombre,
+                                ProductoId = sa.ProductoId,
+                                p.Codigo,
+                                p.DescripcionProducto,
+                                p.CodUnidadMedida,
+                                Cantidad = sa.StockActual,
+                                PrecioUnitario = sa.PrecioUnitario,
+                                sa.UltimaActualizacion
+                            };
+
+                var data = query.OrderBy(x => x.DescripcionProducto).ToList();
+                return Json(new { data, status = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { data = (object)null, message = ex.Message, status = false });
+            }
+        }
+
+        [HttpPost]
+        public JsonResult ActualizarPrecioUnitario(int id, decimal precioUnitario)
+        {
+            try
+            {
+                var stock = _context.StockAlmacenes.FirstOrDefault(s => s.Id == id && s.EmpresaId == EmpresaUsuarioId);
+                if (stock == null) return Json(new { status = false, message = "Registro no encontrado." });
+
+                stock.PrecioUnitario = precioUnitario;
+                stock.UltimaActualizacion = DateTime.Now;
+                _context.SaveChanges();
+
+                return Json(new { status = true, message = "Precio actualizado." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { status = false, message = ex.Message });
             }
         }
 

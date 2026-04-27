@@ -20,5 +20,8 @@ namespace ERPKardex.Models
         public int? EmpresaId { get; set; }
         [Column("ultima_actualizacion")]
         public DateTime? UltimaActualizacion { get; set; }
+        [Column("precio_unitario")]
+        [Precision(10, 2)]
+        public decimal? PrecioUnitario { get; set; }
     }
 }

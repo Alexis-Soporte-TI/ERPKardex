@@ -1,0 +1,267 @@
+@{
+    ViewData["Title"] = "Validar Precio Unitario";
+    var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
+    int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
+}
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+<div class="container-fluid p-4">
+    <div class="panel-heading">
+        <div class="row align-items-end">
+            <div class="col-md-12 mb-2">
+                <h1>Validar Precio Unitario</h1>
+                <small class="text-muted">Permite ajustar manualmente el precio unitario snapshot por producto/almacén. Use durante carga masiva inicial.</small>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Sucursal</label>
+                <select id="cbx_Sucursal" class="form-control select2-busqueda"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Almacén <span class="text-muted">(opcional)</span></label>
+                <select id="cbx_Almacen" class="form-control select2-busqueda">
+                    <option value="">-- TODOS --</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Producto <span class="text-muted">(opcional)</span></label>
+                <select id="cbx_Producto" class="form-control select2-busqueda">
+                    <option value="">-- TODOS --</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3 text-right">
+                <button id="btn_Buscar" class="btn btn-primary btn-lg">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-12">
+                <table id="tbl_Precios" class="table table-bordered table-striped w-100">
+                    <thead>
+                        <tr>
+                            <th class="text-center">ALMACÉN</th>
+                            <th class="text-center">CÓDIGO</th>
+                            <th class="text-center">DESCRIPCIÓN</th>
+                            <th class="text-center">U. MEDIDA</th>
+                            <th class="text-center">STOCK ACTUAL</th>
+                            <th class="text-center">PRECIO UNITARIO</th>
+                            <th class="text-center noVis">ÚLTIMA ACT.</th>
+                            <th class="text-center noVis">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal editar precio -->
+<div class="modal fade" id="modal_EditarPrecio" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Editar Precio Unitario</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="inp_StockId" />
+                <div class="form-group">
+                    <label id="lbl_Producto" class="font-weight-bold"></label>
+                    <label class="text-muted d-block" id="lbl_Almacen"></label>
+                </div>
+                <div class="form-group">
+                    <label>Nuevo Precio Unitario</label>
+                    <input type="number" id="inp_Precio" class="form-control" step="0.01" min="0" placeholder="0.00" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btn_GuardarPrecio">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var dtPrecios;
+
+    $(document).ready(function () {
+        fct_FillCombo('/Producto/GetSucursalesByEmpresa?empresaId=@empresaId', '#cbx_Sucursal', 'id', 'nombre', '-- SUCURSAL --', 'codigo');
+
+        $('#cbx_Sucursal').on('change', function () {
+            fct_FillCombo(`/Producto/GetAlmacenesBySucursal?sucursalId=${$(this).val()}&empresaId=@empresaId`, '#cbx_Almacen', 'id', 'nombre', '-- TODOS --', 'codigo');
+        });
+
+        $.getJSON('/IngresoSalidaAlm/GetProductos', function (res) {
+            let h = '<option value="">-- TODOS --</option>';
+            if (res.status) res.data.forEach(p => {
+                h += `<option value="${p.id}">${p.codigo} - ${p.descripcionProducto}</option>`;
+            });
+            $('#cbx_Producto').html(h);
+            if ($.fn.select2) $('#cbx_Producto').select2({ placeholder: '-- TODOS --' });
+        });
+
+        $('#btn_Buscar').on('click', function () {
+            fct_IniciarTabla('#tbl_Precios');
+        });
+
+        $('#btn_GuardarPrecio').on('click', function () {
+            var id = $('#inp_StockId').val();
+            var precio = parseFloat($('#inp_Precio').val());
+
+            if (!id || isNaN(precio) || precio < 0) {
+                toastr.warning('Ingrese un precio válido.');
+                return;
+            }
+
+            $.ajax({
+                url: '/IngresoSalidaAlm/ActualizarPrecioUnitario',
+                type: 'POST',
+                data: { id: id, precioUnitario: precio },
+                success: function (res) {
+                    if (res.status) {
+                        toastr.success(res.message);
+                        $('#modal_EditarPrecio').modal('hide');
+                        dtPrecios.ajax.reload(null, false);
+                    } else {
+                        toastr.error(res.message);
+                    }
+                },
+                error: function () { toastr.error('Error inesperado.'); }
+            });
+        });
+
+        var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
+        $.extend($.fn.dataTable.defaults, {
+            dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" +
+                 "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" +
+                 "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" +
+                 "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
+            paging: true, select: false, scroller: false, deferRender: true,
+            scrollY: windowHeight, scrollX: true, fixedHeader: true, ordering: true,
+            destroy: true, responsive: true, autoWidth: false, processing: true,
+            filter: true, orderMulti: true, stateSave: false, serverSide: false,
+            language: {
+                processing: "Procesando...", sSearch: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando del _START_ al _END_ de un total de _TOTAL_ registros",
+                infoEmpty: "Sin registros encontrados.", zeroRecords: "No se encontraron registros",
+                emptyTable: "No hay datos disponibles en la tabla",
+                paginate: { previous: "Anterior", next: "Siguiente", first: "Primero", last: "Último" }
+            },
+            lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
+        });
+    });
+
+    function fct_IniciarTabla(IdTabla) {
+        dtPrecios = $(IdTabla).DataTable({
+            buttons: [
+                { extend: 'copy',  text: '<i class="bi bi-back"></i>', titleAttr: 'Copiar', className: 'btn btn-primary' },
+                {
+                    extend: 'excel', text: '<i class="bi bi-file-earmark-excel"></i>', titleAttr: 'Excel',
+                    className: 'btn btn-success',
+                    title: 'Precios Unitarios - ' + moment().format('DD/MM/YYYY'),
+                    filename: 'Precios_Unitarios_' + moment().format('DD-MM-YYYY_HH_mm'),
+                    footer: true, exportOptions: { stripHtml: true, columns: ':not(.noVis)' }
+                },
+                { extend: 'colvis', text: '<i class="bi bi-ui-checks"></i>', titleAttr: 'Columnas', className: 'btn btn-warning', columns: ':not(.noVis)' },
+            ],
+            ajax: {
+                url: '/IngresoSalidaAlm/GetPreciosUnitarios',
+                type: 'GET',
+                datatype: 'json',
+                data: function (d) {
+                    d.almacenId = $('#cbx_Almacen').val() || null;
+                    d.productoId = $('#cbx_Producto').val() || null;
+                },
+                dataSrc: function (json) {
+                    if (!json.status) { toastr.error('Error al cargar datos'); return []; }
+                    return json.data;
+                },
+                error: function () { toastr.error('Error inesperado.'); }
+            },
+            columns: [
+                { data: 'almacen', name: 'almacen' },
+                { data: 'codigo', name: 'codigo' },
+                { data: 'descripcionProducto', name: 'descripcionProducto' },
+                { data: 'codUnidadMedida', name: 'codUnidadMedida', className: 'text-center' },
+                {
+                    data: 'cantidad', name: 'cantidad', className: 'text-right font-weight-bold',
+                    render: function (d) { return formatearNumero(d, 4); }
+                },
+                {
+                    data: 'precioUnitario', name: 'precioUnitario', className: 'text-right',
+                    render: function (d) {
+                        return d !== null && d !== undefined
+                            ? formatearNumero(d)
+                            : '<span class="badge badge-warning">Sin precio</span>';
+                    }
+                },
+                {
+                    data: 'ultimaActualizacion', name: 'ultimaActualizacion', className: 'text-center',
+                    render: function (d) {
+                        return d ? moment(d).format('DD/MM/YYYY HH:mm') : '-';
+                    }
+                },
+                {
+                    data: null, className: 'text-center noVis',
+                    render: function (d, t, row) {
+                        return `<button class="btn btn-sm btn-warning btn-editar"
+                                    data-id="${row.id}"
+                                    data-producto="${row.descripcionProducto}"
+                                    data-almacen="${row.almacen}"
+                                    data-precio="${row.precioUnitario || ''}">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>`;
+                    },
+                    orderable: false
+                }
+            ],
+            initComplete: function () {
+                $('.dt-buttons button').addClass('m-1');
+                $('.dt-button-collection').appendTo('.dt-buttons');
+                $('.btn.btn-success').removeClass('dt-button btn-secondary buttons-excel buttons-html5');
+                $('.btn.btn-primary').removeClass('dt-button btn-secondary buttons-copy buttons-html5');
+                $('.btn.btn-warning').removeClass('dt-button btn-secondary buttons-collection buttons-colvis');
+
+                // Delegación de eventos para botones dinámicos
+                $('#tbl_Precios tbody').on('click', '.btn-editar', function () {
+                    $('#inp_StockId').val($(this).data('id'));
+                    $('#lbl_Producto').text($(this).data('producto'));
+                    $('#lbl_Almacen').text('Almacén: ' + $(this).data('almacen'));
+                    $('#inp_Precio').val($(this).data('precio'));
+                    $('#modal_EditarPrecio').modal('show');
+                    setTimeout(function () { $('#inp_Precio').focus().select(); }, 400);
+                });
+            },
+        });
+    }
+
+    function fct_FillCombo(url, id, val, txt, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => {
+                let display = extra ? `${i[extra]} - ${i[txt]}` : i[txt];
+                h += `<option value="${i[val]}">${display}</option>`;
+            });
+            $(id).html(h).trigger('change');
+        });
+    }
+
+    function formatearNumero(numero, decimales = 2) {
+        if (numero === null || numero === undefined || isNaN(numero)) return '0.00';
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: decimales,
+            maximumFractionDigits: decimales
+        }).format(parseFloat(numero));
+    }
+</script>
