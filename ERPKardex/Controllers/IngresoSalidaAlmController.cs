@@ -655,19 +655,40 @@ namespace ERPKardex.Controllers
                     {
                         var detalles = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == id).ToList();
 
-                        foreach (var det in detalles)
+                        // Esto evita procesar el mismo producto varias veces en el bucle.
+                        var detallesAgrupados = detalles
+                            .GroupBy(d => new { d.ProductoId, d.CodProducto, d.DescripcionProducto })
+                            .Select(g => new
+                            {
+                                ProductoId = g.Key.ProductoId,
+                                CodProducto = g.Key.CodProducto,
+                                DescripcionProducto = g.Key.DescripcionProducto,
+                                CantidadTotal = g.Sum(d => d.Cantidad ?? 0) // Sumamos todas las líneas de este producto
+                            }).ToList();
+
+                        // Ahora iteramos sobre la lista agrupada en lugar de los detalles originales
+                        foreach (var det in detallesAgrupados)
                         {
-                            var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+                            var stock = _context.StockAlmacenes.FirstOrDefault(s =>
+                                s.AlmacenId == cabecera.AlmacenId &&
+                                s.ProductoId == det.ProductoId &&
+                                s.EmpresaId == EmpresaUsuarioId);
 
                             if (stock == null)
                             {
                                 if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
-                                stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                                stock = new StockAlmacen
+                                {
+                                    AlmacenId = cabecera.AlmacenId ?? 0,
+                                    ProductoId = det.ProductoId ?? 0,
+                                    StockActual = 0,
+                                    EmpresaId = EmpresaUsuarioId
+                                };
                                 _context.StockAlmacenes.Add(stock);
                             }
 
                             decimal stockActual = stock.StockActual ?? 0;
-                            decimal cantidadMovimiento = det.Cantidad ?? 0;
+                            decimal cantidadMovimiento = det.CantidadTotal; // Usamos la cantidad sumada
 
                             if (cabecera.TipoMovimiento == true) // Es Ingreso
                             {
@@ -675,13 +696,13 @@ namespace ERPKardex.Controllers
                             }
                             else if (cabecera.TipoMovimiento == false) // Es Salida
                             {
-                                if (stock.StockActual >= det.Cantidad)
+                                if (stock.StockActual >= cantidadMovimiento)
                                 {
                                     stock.StockActual = Math.Round(stockActual - cantidadMovimiento, 2, MidpointRounding.AwayFromZero);
                                 }
                                 else
                                 {
-                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}");
+                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}, Requerido: {cantidadMovimiento}");
                                 }
                             }
 
