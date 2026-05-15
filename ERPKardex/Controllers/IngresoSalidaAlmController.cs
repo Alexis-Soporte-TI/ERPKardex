@@ -1,6 +1,7 @@
 ﻿using ERPKardex.Data;
 using ERPKardex.Models;
 using ERPKardex.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -1468,6 +1469,7 @@ namespace ERPKardex.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public JsonResult GetReporteStock(int? almacenId)
         {
             try
