@@ -1470,10 +1470,16 @@ namespace ERPKardex.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public JsonResult GetReporteStock(int? almacenId)
+        public JsonResult GetReporteStock(int? almacenId, int? empresaId = null)
         {
             try
             {
+                // Usar el empresaId del parámetro si viene, sino del claim del usuario autenticado
+                int idEmpresa = empresaId ?? EmpresaUsuarioId;
+
+                if (idEmpresa == 0)
+                    return Json(new { data = (object)null, message = "Se requiere empresaId como parámetro o estar autenticado.", status = false });
+
                 // 1. Obtener el estado Aprobado
                 var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
                 int idAprobado = estadoAprobado?.Id ?? -1;
@@ -1482,9 +1488,10 @@ namespace ERPKardex.Controllers
                 // Paso A: Proyectamos las operaciones básicas antes de agrupar para que SQL lo entienda bien
                 var queryCostos = from d in _context.DIngresoSalidaAlms
                                   join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
-                                  where c.EmpresaId == EmpresaUsuarioId
+                                  where c.EmpresaId == idEmpresa
                                      && c.TipoMovimiento == true
                                      && c.EstadoId == idAprobado
+                                     && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
                                      && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
                                   select new
                                   {
@@ -1513,7 +1520,7 @@ namespace ERPKardex.Controllers
                 // 3. Consultar la tabla de StockAlmacenes que tiene el SALDO REAL ACTUAL
                 var queryStock = from sa in _context.StockAlmacenes
                                  join p in _context.Productos on sa.ProductoId equals p.Id
-                                 where sa.EmpresaId == EmpresaUsuarioId
+                                 where sa.EmpresaId == idEmpresa
                                     && p.Estado == true
                                     && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
                                  select new
