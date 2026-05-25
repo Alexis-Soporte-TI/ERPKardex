@@ -1566,55 +1566,6 @@ namespace ERPKardex.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetStockValorizado(int? almacenId, int? productoId)
-        {
-            try
-            {
-                var query = from sa in _context.StockAlmacenes
-                            join p in _context.Productos on sa.ProductoId equals p.Id
-                            join a in _context.Almacenes on sa.AlmacenId equals a.Id
-                            where sa.EmpresaId == EmpresaUsuarioId
-                               && p.Estado == true
-                               && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
-                               && (!productoId.HasValue || sa.ProductoId == productoId.Value)
-                            select new
-                            {
-                                sa.Id,
-                                p.Codigo,
-                                p.DescripcionProducto,
-                                p.DescripcionComercial,
-                                p.CodUnidadMedida,
-                                Almacen = a.Nombre,
-                                Cantidad = sa.StockActual,
-                                PrecioUnitario = sa.PrecioUnitario,
-                                ValorizacionTotal = sa.StockActual != null && sa.PrecioUnitario != null
-                                    ? sa.StockActual * sa.PrecioUnitario
-                                    : (decimal?)0
-                            };
-
-                var data = query.OrderBy(x => x.DescripcionProducto).ToList()
-                    .Select(x => new
-                    {
-                        x.Id,
-                        x.Codigo,
-                        x.DescripcionProducto,
-                        x.DescripcionComercial,
-                        x.CodUnidadMedida,
-                        x.Almacen,
-                        Cantidad = x.Cantidad,
-                        PrecioUnitario = x.PrecioUnitario.HasValue ? Math.Round(x.PrecioUnitario.Value, 2) : (decimal?)null,
-                        ValorizacionTotal = x.ValorizacionTotal.HasValue ? Math.Round(x.ValorizacionTotal.Value, 2) : (decimal?)0
-                    }).ToList();
-
-                return Json(new { data, status = true });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { data = (object)null, message = ex.Message, status = false });
-            }
-        }
-
-        [HttpGet]
         public JsonResult GetReporteStockVencimiento(int? almacenId)
         {
             try

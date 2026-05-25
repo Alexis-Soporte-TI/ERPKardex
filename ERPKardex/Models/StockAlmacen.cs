@@ -19,12 +19,9 @@ namespace ERPKardex.Models
         [Column("empresa_id")]
         public int? EmpresaId { get; set; }
         [Column("precio_unitario")]
-        [Precision(14, 4)]
+        [Precision(10, 2)]
         public decimal? PrecioUnitario { get; set; }
         [Column("ultima_actualizacion")]
         public DateTime? UltimaActualizacion { get; set; }
-        [Column("precio_unitario")]
-        [Precision(10, 2)]
-        public decimal? PrecioUnitario { get; set; }
     }
 }
