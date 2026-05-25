@@ -1,6 +1,7 @@
 ﻿using ERPKardex.Data;
 using ERPKardex.Models;
 using ERPKardex.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -35,6 +36,8 @@ namespace ERPKardex.Controllers
         public IActionResult ReporteStock() => View();
         public IActionResult ReporteKardex() => View();
         public IActionResult Valorizacion() => View();
+        public IActionResult StockValorizado() => View();
+        public IActionResult ValidarPrecioUnitario() => View();
         public IActionResult ObtenerVistaRegistroEntidad()
         {
             return PartialView("_RegistroEntidad");
@@ -653,19 +656,40 @@ namespace ERPKardex.Controllers
                     {
                         var detalles = _context.DIngresoSalidaAlms.Where(d => d.IngresoSalidaAlmId == id).ToList();
 
-                        foreach (var det in detalles)
+                        // Esto evita procesar el mismo producto varias veces en el bucle.
+                        var detallesAgrupados = detalles
+                            .GroupBy(d => new { d.ProductoId, d.CodProducto, d.DescripcionProducto })
+                            .Select(g => new
+                            {
+                                ProductoId = g.Key.ProductoId,
+                                CodProducto = g.Key.CodProducto,
+                                DescripcionProducto = g.Key.DescripcionProducto,
+                                CantidadTotal = g.Sum(d => d.Cantidad ?? 0) // Sumamos todas las líneas de este producto
+                            }).ToList();
+
+                        // Ahora iteramos sobre la lista agrupada en lugar de los detalles originales
+                        foreach (var det in detallesAgrupados)
                         {
-                            var stock = _context.StockAlmacenes.FirstOrDefault(s => s.AlmacenId == cabecera.AlmacenId && s.ProductoId == det.ProductoId && s.EmpresaId == EmpresaUsuarioId);
+                            var stock = _context.StockAlmacenes.FirstOrDefault(s =>
+                                s.AlmacenId == cabecera.AlmacenId &&
+                                s.ProductoId == det.ProductoId &&
+                                s.EmpresaId == EmpresaUsuarioId);
 
                             if (stock == null)
                             {
                                 if (cabecera.TipoMovimiento == false) throw new Exception($"Sin stock para producto {det.CodProducto}.");
-                                stock = new StockAlmacen { AlmacenId = cabecera.AlmacenId ?? 0, ProductoId = det.ProductoId ?? 0, StockActual = 0, EmpresaId = EmpresaUsuarioId };
+                                stock = new StockAlmacen
+                                {
+                                    AlmacenId = cabecera.AlmacenId ?? 0,
+                                    ProductoId = det.ProductoId ?? 0,
+                                    StockActual = 0,
+                                    EmpresaId = EmpresaUsuarioId
+                                };
                                 _context.StockAlmacenes.Add(stock);
                             }
 
                             decimal stockActual = stock.StockActual ?? 0;
-                            decimal cantidadMovimiento = det.Cantidad ?? 0;
+                            decimal cantidadMovimiento = det.CantidadTotal; // Usamos la cantidad sumada
 
                             if (cabecera.TipoMovimiento == true) // Es Ingreso
                             {
@@ -673,13 +697,13 @@ namespace ERPKardex.Controllers
                             }
                             else if (cabecera.TipoMovimiento == false) // Es Salida
                             {
-                                if (stock.StockActual >= det.Cantidad)
+                                if (stock.StockActual >= cantidadMovimiento)
                                 {
                                     stock.StockActual = Math.Round(stockActual - cantidadMovimiento, 2, MidpointRounding.AwayFromZero);
                                 }
                                 else
                                 {
-                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}");
+                                    throw new Exception($"Error: No hay stock suficiente para el producto: {det.DescripcionProducto}. Stock actual: {stock.StockActual}, Requerido: {cantidadMovimiento}");
                                 }
                             }
 
@@ -1445,10 +1469,17 @@ namespace ERPKardex.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetReporteStock(int? almacenId)
+        [AllowAnonymous]
+        public JsonResult GetReporteStock(int? almacenId, int? empresaId = null)
         {
             try
             {
+                // Usar el empresaId del parámetro si viene, sino del claim del usuario autenticado
+                int idEmpresa = empresaId ?? EmpresaUsuarioId;
+
+                if (idEmpresa == 0)
+                    return Json(new { data = (object)null, message = "Se requiere empresaId como parámetro o estar autenticado.", status = false });
+
                 // 1. Obtener el estado Aprobado
                 var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
                 int idAprobado = estadoAprobado?.Id ?? -1;
@@ -1457,9 +1488,10 @@ namespace ERPKardex.Controllers
                 // Paso A: Proyectamos las operaciones básicas antes de agrupar para que SQL lo entienda bien
                 var queryCostos = from d in _context.DIngresoSalidaAlms
                                   join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
-                                  where c.EmpresaId == EmpresaUsuarioId
+                                  where c.EmpresaId == idEmpresa
                                      && c.TipoMovimiento == true
                                      && c.EstadoId == idAprobado
+                                     && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
                                      && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
                                   select new
                                   {
@@ -1488,7 +1520,7 @@ namespace ERPKardex.Controllers
                 // 3. Consultar la tabla de StockAlmacenes que tiene el SALDO REAL ACTUAL
                 var queryStock = from sa in _context.StockAlmacenes
                                  join p in _context.Productos on sa.ProductoId equals p.Id
-                                 where sa.EmpresaId == EmpresaUsuarioId
+                                 where sa.EmpresaId == idEmpresa
                                     && p.Estado == true
                                     && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
                                  select new
@@ -1526,6 +1558,55 @@ namespace ERPKardex.Controllers
                 }).OrderBy(x => x.DescripcionProducto).ToList();
 
                 return Json(new { data = reporte, message = "Reporte de stock generado exitosamente.", status = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { data = (object)null, message = ex.Message, status = false });
+            }
+        }
+
+        [HttpGet]
+        public JsonResult GetStockValorizado(int? almacenId, int? productoId)
+        {
+            try
+            {
+                var query = from sa in _context.StockAlmacenes
+                            join p in _context.Productos on sa.ProductoId equals p.Id
+                            join a in _context.Almacenes on sa.AlmacenId equals a.Id
+                            where sa.EmpresaId == EmpresaUsuarioId
+                               && p.Estado == true
+                               && (!almacenId.HasValue || sa.AlmacenId == almacenId.Value)
+                               && (!productoId.HasValue || sa.ProductoId == productoId.Value)
+                            select new
+                            {
+                                sa.Id,
+                                p.Codigo,
+                                p.DescripcionProducto,
+                                p.DescripcionComercial,
+                                p.CodUnidadMedida,
+                                Almacen = a.Nombre,
+                                Cantidad = sa.StockActual,
+                                PrecioUnitario = sa.PrecioUnitario,
+                                ValorizacionTotal = sa.StockActual != null && sa.PrecioUnitario != null
+                                    ? sa.StockActual * sa.PrecioUnitario
+                                    : (decimal?)0
+                            };
+
+                var data = query.OrderBy(x => x.DescripcionProducto).ToList()
+                    .Select(x => new
+                    {
+                        x.Id,
+                        x.Codigo,
+                        x.DescripcionProducto,
+                        x.DescripcionComercial,
+                        x.CodUnidadMedida,
+                        x.Almacen,
+                        Cantidad = x.Cantidad,
+                        PrecioUnitario = x.PrecioUnitario.HasValue ? Math.Round(x.PrecioUnitario.Value, 2) : (decimal?)null,
+                        ValorizacionTotal = x.ValorizacionTotal.HasValue ? Math.Round(x.ValorizacionTotal.Value, 2) : (decimal?)0
+                    }).ToList();
+
+                return Json(new { data, status = true });
             }
             catch (Exception ex)
             {

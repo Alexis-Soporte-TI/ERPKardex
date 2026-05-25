@@ -475,6 +475,40 @@ namespace ERPKardex.Controllers
                     orden.FechaAprobacion = DateTime.Now;
                     _context.SaveChanges();
 
+                    // 5. ACTUALIZAR PRECIO UNITARIO SNAPSHOT EN STOCK_ALMACEN
+                    if (orden.AlmacenId.HasValue)
+                    {
+                        foreach (var det in detalles)
+                        {
+                            if (det.ProductoId.HasValue && det.PrecioUnitario.HasValue && det.PrecioUnitario > 0)
+                            {
+                                var stockRow = _context.StockAlmacenes.FirstOrDefault(s =>
+                                    s.AlmacenId == orden.AlmacenId.Value &&
+                                    s.ProductoId == det.ProductoId.Value &&
+                                    s.EmpresaId == orden.EmpresaId);
+
+                                if (stockRow != null)
+                                {
+                                    stockRow.PrecioUnitario = det.PrecioUnitario;
+                                    stockRow.UltimaActualizacion = DateTime.Now;
+                                }
+                                else
+                                {
+                                    _context.StockAlmacenes.Add(new StockAlmacen
+                                    {
+                                        AlmacenId = orden.AlmacenId.Value,
+                                        ProductoId = det.ProductoId.Value,
+                                        EmpresaId = orden.EmpresaId,
+                                        StockActual = 0,
+                                        PrecioUnitario = det.PrecioUnitario,
+                                        UltimaActualizacion = DateTime.Now
+                                    });
+                                }
+                            }
+                        }
+                        _context.SaveChanges();
+                    }
+
                     transaction.Commit();
                     return Json(new { status = true, message = "Orden Aprobada." });
                 }

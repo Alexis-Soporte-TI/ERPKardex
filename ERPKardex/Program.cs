@@ -30,6 +30,9 @@ builder.Services.AddAuthentication("Cookies")
     {
         options.LoginPath = "/Home/Login";
         options.AccessDeniedPath = "/Home/AccesoDenegado";
+        // Configurar expiración de cookie para que sea sensible a inactividad
+        options.ExpireTimeSpan = TimeSpan.FromHours(2); // Duración máxima de la sesión
+        options.SlidingExpiration = true; // La cookie se extiende en cada solicitud
     });
 
 // Usar Session

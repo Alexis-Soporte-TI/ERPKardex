@@ -195,7 +195,10 @@
                 PeriodoManager.setActual($(this).val());
             });
         });
+
     </script>
+
+    <script src="~/js/token-refresh-manager.js"></script>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="hold-transition sidebar-mini layout-footer-fixed">
@@ -345,7 +348,9 @@
                                 @if (await _permisos.TienePermiso("SUP_INV_MOV_VER") ||
                                 await _permisos.TienePermiso("SUP_INV_MOV_VALORIZAR") ||
                                 await _permisos.TienePermiso("SUP_INV_STOCK_VER") ||
-                                await _permisos.TienePermiso("SUP_INV_KARDEX_VER")
+                                await _permisos.TienePermiso("SUP_INV_KARDEX_VER") ||
+                                await _permisos.TienePermiso("SUP_INV_STOCK_VALORIZADO_VER") ||
+                                await _permisos.TienePermiso("SUP_INV_PRECIO_UNIT_VER")
                                 )
                                 {
                                     <a href="#" class="nav-link @(isInvOpen ? "active" : "")">
@@ -386,6 +391,22 @@
                                         <li class="nav-item">
                                             <a href="/IngresoSalidaAlm/ReporteKardex" class="nav-link @((controllerName == "IngresoSalidaAlm" && actionName == "ReporteKardex") ? "active" : "")">
                                                 <i class="fas fa-chart-line nav-icon"></i><p>Reporte Kardex</p>
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (await _permisos.TienePermiso("SUP_INV_STOCK_VALORIZADO_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/IngresoSalidaAlm/StockValorizado" class="nav-link @((controllerName == "IngresoSalidaAlm" && actionName == "StockValorizado") ? "active" : "")">
+                                                <i class="fas fa-dollar-sign nav-icon"></i><p>Stock Valorizado</p>
+                                            </a>
+                                        </li>
+                                    }
+                                    @if (await _permisos.TienePermiso("SUP_INV_PRECIO_UNIT_VER"))
+                                    {
+                                        <li class="nav-item">
+                                            <a href="/IngresoSalidaAlm/ValidarPrecioUnitario" class="nav-link @((controllerName == "IngresoSalidaAlm" && actionName == "ValidarPrecioUnitario") ? "active" : "")">
+                                                <i class="fas fa-tag nav-icon"></i><p>Validar Precio Unitario</p>
                                             </a>
                                         </li>
                                     }

@@ -74,6 +74,7 @@
                                 <th>Nro. Serie</th>
                                 <th>Estado</th>
                                 <th>Condición</th>
+                                <th style="display:none;">Especificaciones</th>
                                 <th class="text-center" style="width:155px;">Acciones</th>
                             </tr>
                         </thead>
@@ -297,7 +298,7 @@
             let tbody = document.getElementById('bodyActivos');
 
             if (!json.status || json.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No se encontraron activos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">No se encontraron activos.</td></tr>';
                 return;
             }
 
@@ -310,7 +311,7 @@
                 let badgeCond = a.condicion === 'BUENA' ? 'badge-success' :
                                 a.condicion === 'REGULAR' ? 'badge-warning' : 'badge-danger';
 
-                html += `<tr>
+                html += `<tr data-especificaciones="${encodeURIComponent(JSON.stringify(a.especificaciones || []))}">
                     <td><strong>${a.codigo}</strong></td>
                     <td>${a.empresa}</td>
                     <td>${a.grupo}</td>
@@ -320,6 +321,7 @@
                     <td><small>${a.numeroSerie || ''}</small></td>
                     <td><span class="badge ${badgeEstado}">${a.estadoUso}</span></td>
                     <td><span class="badge ${badgeCond}">${a.condicion || ''}</span></td>
+                    <td style="display:none;"></td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-outline-info" onclick="verDetalle(${a.id})" title="Ver detalle">
                             <i class="fas fa-eye"></i>
@@ -558,13 +560,13 @@
             // 1. Clonar la tabla para no modificar la vista del usuario
             let tablaClon = tablaOriginal.cloneNode(true);
 
-            // 2. Remover la última columna (Acciones) de la cabecera
+            // 2. Remover la columna de Acciones (última) de la cabecera
             let ths = tablaClon.querySelectorAll('thead tr th');
             if (ths.length > 0) {
                 ths[ths.length - 1].remove();
             }
 
-            // 3. Remover la última columna de los datos
+            // 3. Remover la columna de Acciones de los datos
             let trs = tablaClon.querySelectorAll('tbody tr');
             let hayDatos = false;
 
@@ -572,7 +574,19 @@
                 let tds = tr.querySelectorAll('td');
                 // Si tiene más de 1 columna, es una fila de datos reales
                 if (tds.length > 1) {
-                    tds[tds.length - 1].remove();
+                    tds[tds.length - 1].remove(); // Remover columna Acciones
+
+                    // Rellenar columna de Especificaciones
+                    let especificacionesCol = tds[9]; // Columna 10 (índice 9) - Especificaciones
+                    if (especificacionesCol) {
+                        let especJsonStr = tr.getAttribute('data-especificaciones');
+                        if (especJsonStr) {
+                            let especificaciones = JSON.parse(decodeURIComponent(especJsonStr));
+                            let especText = especificaciones.map(e => `${e.clave}: ${e.valor}`).join('\n');
+                            especificacionesCol.textContent = especText;
+                        }
+                    }
+
                     hayDatos = true;
                 }
             });
@@ -586,11 +600,17 @@
             // 4. Convertir la tabla HTML a un libro de Excel
             let wb = XLSX.utils.table_to_book(tablaClon, { sheet: "Activos" });
 
-            // 5. Generar un nombre de archivo con la fecha actual
+            // 5. Ajustar el ancho de la columna de Especificaciones
+            if (!wb.Sheets["Activos"]["!cols"]) {
+                wb.Sheets["Activos"]["!cols"] = [];
+            }
+            wb.Sheets["Activos"]["!cols"][9] = { wch: 35 }; // Ancho para columna de especificaciones
+
+            // 6. Generar un nombre de archivo con la fecha actual
             let fecha = new Date().toISOString().slice(0, 10);
             let nombreArchivo = `Activos_Computo_${fecha}.xlsx`;
 
-            // 6. Descargar el archivo
+            // 7. Descargar el archivo
             XLSX.writeFile(wb, nombreArchivo);
         }
     </script>

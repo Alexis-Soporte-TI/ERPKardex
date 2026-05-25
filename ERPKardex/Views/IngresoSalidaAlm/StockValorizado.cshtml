@@ -1,0 +1,230 @@
+@{
+    ViewData["Title"] = "Stock Valorizado";
+    var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
+    int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
+}
+<div class="card d-none" id="efec-cargando">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
+    </div>
+</div>
+<div class="container-fluid p-4">
+    <div class="panel-heading">
+        <div class="row align-items-end">
+            <div class="col-md-12 mb-2">
+                <h1>Stock Valorizado</h1>
+                <small class="text-muted">Precio unitario tomado del snapshot de la última orden de compra aprobada.</small>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Sucursal</label>
+                <select id="cbx_Sucursal" class="form-control select2-busqueda"></select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Almacén</label>
+                <select id="cbx_Almacen" class="form-control select2-busqueda">
+                    <option value="">-- TODOS --</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label>Producto <span class="text-muted">(opcional)</span></label>
+                <select id="cbx_Producto" class="form-control select2-busqueda">
+                    <option value="">-- TODOS --</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3 text-right">
+                <button id="btn_Generar" class="btn btn-primary btn-lg">
+                    <i class="bi bi-play-fill"></i> Generar Reporte
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-12">
+                <table id="tbl_StockValorizado" class="table table-bordered table-striped w-100">
+                    <thead>
+                        <tr>
+                            <th class="text-center">ALMACÉN</th>
+                            <th class="text-center">CÓDIGO</th>
+                            <th class="text-center">DESCRIPCIÓN</th>
+                            <th class="text-center">DESC. COMERCIAL</th>
+                            <th class="text-center">U. MEDIDA</th>
+                            <th class="text-center">CANTIDAD</th>
+                            <th class="text-center">PRECIO UNIT.</th>
+                            <th class="text-center">TOTAL VALORIZADO</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="7" class="text-right">TOTAL GENERAL:</th>
+                            <th class="text-right font-weight-bold text-success" id="td_TotalGeneral">0.00</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var dtStock;
+
+    $(document).ready(function () {
+        fct_FillCombo('/Producto/GetSucursalesByEmpresa?empresaId=@empresaId', '#cbx_Sucursal', 'id', 'nombre', '-- SUCURSAL --', 'codigo');
+
+        $('#cbx_Sucursal').on('change', function () {
+            fct_FillCombo(`/Producto/GetAlmacenesBySucursal?sucursalId=${$(this).val()}&empresaId=@empresaId`, '#cbx_Almacen', 'id', 'nombre', '-- TODOS --', 'codigo');
+        });
+
+        $.getJSON('/IngresoSalidaAlm/GetProductos', function (res) {
+            let h = '<option value="">-- TODOS --</option>';
+            if (res.status) res.data.forEach(p => {
+                h += `<option value="${p.id}">${p.codigo} - ${p.descripcionProducto}</option>`;
+            });
+            $('#cbx_Producto').html(h);
+            if ($.fn.select2) $('#cbx_Producto').select2({ placeholder: '-- TODOS --' });
+        });
+
+        $('#btn_Generar').on('click', function () {
+            fct_IniciarTabla('#tbl_StockValorizado');
+        });
+
+        var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
+        $.extend($.fn.dataTable.defaults, {
+            dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" +
+                 "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" +
+                 "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" +
+                 "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
+            paging: true, select: true, scroller: false, deferRender: true,
+            scrollY: windowHeight, scrollX: true, fixedHeader: true, ordering: true,
+            destroy: true, responsive: true, autoWidth: false, processing: true,
+            filter: true, orderMulti: true, stateSave: false, serverSide: false,
+            language: {
+                processing: "Procesando...", sSearch: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "Mostrando del _START_ al _END_ de un total de _TOTAL_ registros",
+                infoEmpty: "Sin registros encontrados.",
+                infoFiltered: "(Total de _MAX_ registros filtrados)",
+                loadingRecords: "Cargando...", zeroRecords: "No se encontraron registros",
+                emptyTable: "No hay datos disponibles en la tabla",
+                paginate: { previous: "Anterior", next: "Siguiente", first: "Primero", last: "Último" },
+                buttons: { copyTitle: 'Copiado en el portapapeles' }
+            },
+            lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
+        });
+    });
+
+    function fct_IniciarTabla(IdTabla) {
+        dtStock = $(IdTabla).DataTable({
+            buttons: [
+                { extend: 'copy',  text: '<i class="bi bi-back"></i>', titleAttr: 'Copiar', className: 'btn btn-primary' },
+                {
+                    extend: 'excel', text: '<i class="bi bi-file-earmark-excel"></i>', titleAttr: 'Excel',
+                    className: 'btn btn-success',
+                    title: function () {
+                        var alm = $('#cbx_Almacen option:selected').text().trim() || 'Todos';
+                        return 'Stock Valorizado / Almacén: ' + alm;
+                    },
+                    filename: 'Stock_Valorizado_' + moment().format('DD-MM-YYYY_HH_mm'),
+                    footer: true, exportOptions: { stripHtml: true }
+                },
+                {
+                    extend: 'pdf', text: '<i class="bi bi-file-earmark-pdf"></i>', titleAttr: 'PDF',
+                    className: 'btn btn-danger', orientation: 'landscape', pageSize: 'LEGAL',
+                    filename: 'Stock_Valorizado_' + moment().format('DD-MM-YYYY_HH_mm'),
+                    title: function () {
+                        var alm = $('#cbx_Almacen option:selected').text().trim() || 'Todos';
+                        return 'Stock Valorizado\nAlmacén: ' + alm;
+                    },
+                    exportOptions: { stripHtml: true },
+                    customize: function (doc) {
+                        var colsRight = [5, 6, 7];
+                        doc.content[1].table.body.forEach(function (row) {
+                            colsRight.forEach(function (i) { if (row[i]) row[i].alignment = 'right'; });
+                        });
+                        doc.styles.title.alignment = 'center';
+                        doc.styles.title.fontSize = 14;
+                    }
+                },
+                { extend: 'print', text: '<i class="bi bi-printer-fill"></i>', titleAttr: 'Imprimir', className: 'btn btn-info', exportOptions: { stripHtml: true } },
+                { extend: 'colvis', text: '<i class="bi bi-ui-checks"></i>', titleAttr: 'Columnas', className: 'btn btn-warning', columns: ':not(.noVis)' },
+            ],
+            ajax: {
+                url: '/IngresoSalidaAlm/GetStockValorizado',
+                type: 'GET',
+                datatype: 'json',
+                data: function (d) {
+                    d.almacenId = $('#cbx_Almacen').val() || null;
+                    d.productoId = $('#cbx_Producto').val() || null;
+                },
+                dataSrc: function (json) {
+                    if (!json.status) {
+                        toastr.error('Error al cargar el reporte');
+                        return [];
+                    }
+                    // Calcular total general
+                    var total = json.data.reduce(function (acc, r) {
+                        return acc + (parseFloat(r.valorizacionTotal) || 0);
+                    }, 0);
+                    $('#td_TotalGeneral').text(formatearNumero(total));
+                    return json.data;
+                },
+                error: function () { toastr.error('Error inesperado al cargar datos'); }
+            },
+            columns: [
+                { data: 'almacen', name: 'almacen' },
+                { data: 'codigo', name: 'codigo' },
+                { data: 'descripcionProducto', name: 'descripcionProducto' },
+                {
+                    data: 'descripcionComercial', name: 'descripcionComercial',
+                    render: function (d) { return d ? d : '-'; }
+                },
+                { data: 'codUnidadMedida', name: 'codUnidadMedida', className: 'text-center' },
+                {
+                    data: 'cantidad', name: 'cantidad', className: 'text-right font-weight-bold',
+                    render: function (d) { return formatearNumero(d, 4); }
+                },
+                {
+                    data: 'precioUnitario', name: 'precioUnitario', className: 'text-right',
+                    render: function (d) {
+                        return d !== null && d !== undefined ? formatearNumero(d) : '<span class="text-warning">Sin precio</span>';
+                    }
+                },
+                {
+                    data: 'valorizacionTotal', name: 'valorizacionTotal', className: 'text-right font-weight-bold text-success',
+                    render: function (d) { return formatearNumero(d); }
+                }
+            ],
+            initComplete: function () {
+                $('.dt-buttons button').addClass('m-1');
+                $('.dt-button-collection').appendTo('.dt-buttons');
+                $('.btn.btn-success').removeClass('dt-button btn-secondary buttons-excel buttons-html5');
+                $('.btn.btn-danger').removeClass('dt-button btn-secondary buttons-pdf buttons-html5');
+                $('.btn.btn-primary').removeClass('dt-button btn-secondary buttons-copy buttons-html5');
+                $('.btn.btn-info').removeClass('dt-button btn-secondary buttons-print');
+                $('.btn.btn-warning').removeClass('dt-button btn-secondary buttons-collection buttons-colvis');
+            },
+        });
+    }
+
+    function fct_FillCombo(url, id, val, txt, ph, extra) {
+        $.getJSON(url, function (res) {
+            let h = `<option value="">${ph}</option>`;
+            if (res.status) res.data.forEach(i => {
+                let display = extra ? `${i[extra]} - ${i[txt]}` : i[txt];
+                h += `<option value="${i[val]}">${display}</option>`;
+            });
+            $(id).html(h).trigger('change');
+        });
+    }
+
+    function formatearNumero(numero, decimales = 2) {
+        if (numero === null || numero === undefined || isNaN(numero)) return '0.00';
+        return new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: decimales,
+            maximumFractionDigits: decimales
+        }).format(parseFloat(numero));
+    }
+</script>

@@ -132,7 +132,7 @@ namespace ERPKardex.Controllers
                         (x.a.Subtipo != null && x.a.Subtipo.ToLower().Contains(buscar)));
                 }
 
-                var data = await query.OrderByDescending(x => x.a.Id)
+                var activos = await query.OrderByDescending(x => x.a.Id)
                     .Select(x => new
                     {
                         x.a.Id,
@@ -150,6 +150,40 @@ namespace ERPKardex.Controllers
                         x.a.EstadoUso,
                         x.a.Condicion
                     }).ToListAsync();
+
+                // Obtener especificaciones para cada activo
+                var activoIds = activos.Select(x => x.Id).ToList();
+                var especificacionesPorActivo = await _context.ActivoDetalle
+                    .Where(d => activoIds.Contains(d.ActivoId) && d.Estado)
+                    .OrderBy(d => d.Orden)
+                    .Select(d => new { d.ActivoId, d.Clave, d.Valor })
+                    .ToListAsync();
+
+                // Agrupar especificaciones por Activo
+                var especDict = especificacionesPorActivo
+                    .GroupBy(x => x.ActivoId)
+                    .ToDictionary(g => g.Key, g => g.Select(x => new { x.Clave, x.Valor }).ToList());
+
+                // Agregar especificaciones a cada activo
+                var data = activos.Select(x => new
+                {
+                    x.Id,
+                    x.Codigo,
+                    x.Tipo,
+                    x.Empresa,
+                    x.Ruc,
+                    x.Grupo,
+                    x.Marca,
+                    x.Modelo,
+                    x.NumeroSerie,
+                    x.Placa,
+                    x.Subtipo,
+                    x.AnioFabricacion,
+                    x.EstadoUso,
+                    x.Condicion,
+                    Especificaciones = (object)(especDict.ContainsKey(x.Id) ? especDict[x.Id] : Enumerable.Empty<object>().ToList())
+                }).ToList();
+
                 return Json(new { status = true, data });
             }
             catch (Exception ex) { return Json(new { status = false, message = ex.Message }); }

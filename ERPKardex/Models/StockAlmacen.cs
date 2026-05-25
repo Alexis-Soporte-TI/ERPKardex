@@ -23,5 +23,8 @@ namespace ERPKardex.Models
         public decimal? PrecioUnitario { get; set; }
         [Column("ultima_actualizacion")]
         public DateTime? UltimaActualizacion { get; set; }
+        [Column("precio_unitario")]
+        [Precision(10, 2)]
+        public decimal? PrecioUnitario { get; set; }
     }
 }
