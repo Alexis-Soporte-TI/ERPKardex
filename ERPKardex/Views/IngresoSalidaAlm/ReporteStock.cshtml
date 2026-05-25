@@ -1,46 +1,71 @@
-﻿@{
-    ViewData["Title"] = "Gestionar stock de productos";
+@{
+    ViewData["Title"] = "Reporte de Stock por Vencimiento";
     var empresaIdClaim = User.FindFirst("EmpresaId")?.Value;
     int empresaId = !string.IsNullOrEmpty(empresaIdClaim) ? int.Parse(empresaIdClaim) : 0;
 }
+
 <div class="card d-none" id="efec-cargando">
-    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center overlay dark" style="z-index:9999; background:rgba(0,0,0,0.5);">
         <i class="fas fa-3x fa-sync-alt fa-spin text-white"></i>
     </div>
 </div>
-<div class="container-fluid p-4">
-    <div class="panel-heading">
-        <div class="row">
-            <div class="col-md-12">
-                <h1>Reporte de Stock Valorizado</h1>
+
+<div class="container-fluid py-4">
+
+    <!-- FILTROS -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="bi bi-funnel-fill"></i> Filtros — Reporte de Stock por Vencimiento</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-4 mb-3">
+                    <label>Sucursal</label>
+                    <select id="cbx_Sucursal" class="form-control select2-busqueda"></select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label>Almacén</label>
+                    <select id="cbx_Almacen" class="form-control select2-busqueda">
+                        <option value="">-- SELECCIONE --</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-end">
+                    <button id="btn_Generar" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-play-fill"></i> Generar Reporte
+                    </button>
+                </div>
             </div>
-            <div class="col-md-4 mb-3"><label>Sucursal</label><select id="cbx_Sucursal" class="form-control select2-busqueda"></select></div>
-            <div class="col-md-4 mb-3"><label>Almacén</label><select id="cbx_Almacen" class="form-control select2-busqueda"><option value="">-- SELECCIONE --</option></select></div>
-            <div class="col-md-4 text-right">
-                <button id="btn_Generar" class="btn btn-primary btn-lg"><i class="bi bi-play-fill"></i> Generar Reporte</button>
+
+            <!-- Leyenda semáforo -->
+            <div class="row mt-1">
+                <div class="col-12">
+                    <span class="badge me-2 px-3 py-2" style="background:#dc3545; font-size:.85rem;">&#9632; CRÍTICO — Vencido o &lt; 18 meses</span>
+                    <span class="badge me-2 px-3 py-2" style="background:#ffc107; color:#000; font-size:.85rem;">&#9632; ALERTA — Entre 18 meses y 2 años</span>
+                    <span class="badge me-2 px-3 py-2" style="background:#198754; font-size:.85rem;">&#9632; ÓPTIMO — Mayor a 2 años</span>
+                    <span class="badge px-3 py-2" style="background:#6c757d; font-size:.85rem;">&#9632; SIN FECHA registrada</span>
+                </div>
             </div>
         </div>
     </div>
-    
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-12">
-                <table id="tbl_Productos" class="table table-bordered table-striped w-100">
-                    <thead>
+
+    <!-- TABLA -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tbl_StockVencimiento" class="table table-bordered table-hover w-100">
+                    <thead class="table-dark">
                         <tr>
                             <th class="text-center">CÓDIGO</th>
-                            <th class="text-center">GRUPO</th>
-                            <th class="text-center">SUBGRUPO</th>
                             <th class="text-center">DESCRIPCIÓN</th>
-                            <th class="text-center">DESCRIPCIÓN COM.</th>
+                            <th class="text-center">LOTE</th>
                             <th class="text-center">U. MEDIDA</th>
-                            <th class="text-center">CANTIDAD</th>
-                            <th class="text-center">PRECIO UNIT.</th>
-                            <th class="text-center">TOTAL (VALORIZADO)</th>
+                            <th class="text-center">STOCK ACTUAL</th>
+                            <th class="text-center">FECHA VENCIMIENTO</th>
+                            <th class="text-center">DÍAS PARA VENCER</th>
+                            <th class="text-center">ESTADO</th>
                         </tr>
                     </thead>
-                    <tbody>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -48,42 +73,39 @@
 </div>
 
 <script>
-    var dtProductos;
+    var dtStock;
+
     $(document).ready(function () {
 
-        $('#btn_Generar').on('click', function() {
-            if ($('#cbx_Almacen').val()) {
-                fct_IniciarTablaProductos('#tbl_Productos');
-            } else {
-                toastr.warning('Debe seleccionar un almacén');
-            }
-        });
-
         fct_FillCombo('/Producto/GetSucursalesByEmpresa?empresaId=@empresaId', '#cbx_Sucursal', 'id', 'nombre', '-- SUCURSAL --', 'codigo');
-        
+
         $('#cbx_Sucursal').on('change', function () {
             fct_FillCombo(`/Producto/GetAlmacenesBySucursal?sucursalId=${$(this).val()}&empresaId=@empresaId`, '#cbx_Almacen', 'id', 'nombre', '-- ALMACÉN --', 'codigo');
         });
 
-        var windowHeight = $('body > div.wrapper > div.content-wrapper').height() / 2;
-        
-        // CONFIGURACION POR DEFECTO DATATABLES
+        $('#btn_Generar').on('click', function () {
+            if (!$('#cbx_Almacen').val()) {
+                toastr.warning('Debe seleccionar un almacén');
+                return;
+            }
+            fct_IniciarTabla();
+        });
+
+        // Configuración global DataTables
         $.extend($.fn.dataTable.defaults, {
-            dom: "<'row align-items-center'<'col-sm-8 justify-content-start'f><'col-sm-4 c1 d-flex justify-content-end'>>" + "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 justify-content-start d-flex'B>" + "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" + "rt" + "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
+            dom: "<'row align-items-center'<'col-sm-8'f><'col-sm-4 d-flex justify-content-end'>>" +
+                 "<'row align-items-center'<'col-sm-6'l><'col-sm-6 my-3 d-flex justify-content-start'B>" +
+                 "<'col-sm-6'i><'col-sm-6 mb-3 d-flex justify-content-end'p>" +
+                 "rt" +
+                 "<'col-sm-6'i><'col-sm-6 mt-1 d-flex justify-content-end'p>",
             paging: true,
-            select: true,
-            scroller: false,
-            deferRender: true,
-            scrollY: windowHeight,
             scrollX: true,
-            fixedHeader: true,
             ordering: true,
             destroy: true,
             responsive: true,
             autoWidth: false,
             processing: true,
             filter: true,
-            orderMulti: true,
             stateSave: false,
             serverSide: false,
             language: {
@@ -92,204 +114,162 @@
                 lengthMenu: "Mostrar _MENU_ registros",
                 info: "Mostrando del _START_ al _END_ de un total de _TOTAL_ registros",
                 infoEmpty: "Sin registros encontrados.",
-                infoFiltered: "(Total de _MAX_ registros filtrados)",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
                 loadingRecords: "Cargando...",
                 zeroRecords: "No se encontraron registros",
-                emptyTable: "No hay datos disponibles en la tabla",
-                paginate: {
-                    previous: "Anterior",
-                    next: "Siguiente",
-                    first: "Primero",
-                    last: "Último",
-                },
-                aria: {
-                    sortAscending: ": Activar para ordenar la columna de manera ascendente",
-                    sortDescending: ": Activar para ordenar la columna de manera descendente"
-                },
-                select: {
-                    rows: {
-                        _: "%d filas seleccionadas",
-                        0: "Haz clic en una fila para seleccionarla",
-                        1: "1 fila seleccionada"
-                    }
-                },
+                emptyTable: "No hay datos disponibles",
+                paginate: { previous: "Anterior", next: "Siguiente", first: "Primero", last: "Último" },
+                select: { rows: { _: "%d filas seleccionadas", 0: "Haz clic en una fila para seleccionarla", 1: "1 fila seleccionada" } },
                 buttons: {
                     copyTitle: 'Copiado en el portapapeles',
-                    copyKeys: 'Presiona <i>ctrl</i> o <i>\u2318</i> + <i>C</i> para copiar los datos de la tabla a tu portapapeles.<br><br>Para cancelar, haga clic en este mensaje o presione Esc.',
-                    copySuccess: {
-                        _: '%d registros copiados correctamente',
-                        1: '1 registro copiado correctamente'
-                    }
+                    copySuccess: { _: '%d registros copiados', 1: '1 registro copiado' }
                 }
             },
             lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
         });
     });
 
-    function fct_IniciarTablaProductos(IdTabla) {
-        dtProductos = $(IdTabla).DataTable({
+    function fct_IniciarTabla() {
+        dtStock = $('#tbl_StockVencimiento').DataTable({
             buttons: [
                 {
                     extend: 'copy',
                     text: '<i class="bi bi-back"></i>',
-                    titleAttr: 'Copiar en portapapeles',
+                    titleAttr: 'Copiar al portapapeles',
                     className: 'btn btn-primary',
                 },
                 {
                     extend: 'excel',
                     text: '<i class="bi bi-file-earmark-excel"></i>',
                     titleAttr: 'Exportar a Excel',
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
-                        var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock Valorizado / Sucursal: ' + sucursal + ' / Almacén: ' + almacen;
-                    },
                     className: 'btn btn-success',
-                    filename: 'Reporte_Stock_' + moment().format('DD-MM-YYYY_HH_mm'),
-                    footer: true,
-                    exportOptions: {
-                        stripHtml: true,
+                    filename: 'ReporteStockVencimiento_' + moment().format('DD-MM-YYYY_HH_mm'),
+                    title: function () {
+                        var almacen = $('#cbx_Almacen option:selected').text().trim();
+                        return 'Reporte de Stock por Vencimiento — Almacén: ' + almacen;
                     },
+                    footer: true,
+                    exportOptions: { stripHtml: true },
                 },
                 {
                     extend: 'pdf',
                     text: '<i class="bi bi-file-earmark-pdf"></i>',
                     titleAttr: 'Exportar a PDF',
                     className: 'btn btn-danger',
-                    filename: 'Reporte_Stock_' + moment().format('DD-MM-YYYY_HH_mm'),
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
+                    filename: 'ReporteStockVencimiento_' + moment().format('DD-MM-YYYY_HH_mm'),
+                    title: function () {
                         var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock Valorizado\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
+                        return 'Reporte de Stock por Vencimiento\nAlmacén: ' + almacen;
                     },
-                    exportOptions: {
-                        stripHtml: true,
-                    },
+                    exportOptions: { stripHtml: true },
                     orientation: 'landscape',
                     pageSize: 'LEGAL',
-                    customize: function (doc) {
-                        // Alineación a la derecha para Cantidad (6), Precio Unit. (7) y Total (8)
-                        var colsRight = [6, 7, 8];
-                        doc.content[1].table.body.forEach(function (row) {
-                            colsRight.forEach(function (index) {
-                                if (row[index]) {
-                                    row[index].alignment = 'right';
-                                }
-                            });
-                        });
-                        doc.styles.title.alignment = 'center';
-                        doc.styles.title.fontSize = 14;
-                    }
                 },
                 {
                     extend: 'print',
                     text: '<i class="bi bi-printer-fill"></i>',
                     titleAttr: 'Imprimir',
                     className: 'btn btn-info',
-                    title: function() {
-                        var sucursal = $('#cbx_Sucursal option:selected').text().trim();
-                        var almacen = $('#cbx_Almacen option:selected').text().trim();
-
-                        if (almacen === "" || almacen === "-- SELECCIONE --") {
-                            almacen = "Todos";
-                        }
-
-                        return 'Reporte de Stock Valorizado\nSucursal: ' + sucursal + ' - Almacén: ' + almacen;
-                    },
-                    exportOptions: {
-                        stripHtml: true,
-                    },
+                    exportOptions: { stripHtml: true },
                 },
                 {
                     extend: 'colvis',
                     text: '<i class="bi bi-ui-checks"></i>',
-                    titleAttr: 'Seleccionar',
+                    titleAttr: 'Columnas visibles',
                     className: 'btn btn-warning',
-                    columns: ':not(.noVis)',
                 },
             ],
             ajax: {
-                url: "/IngresoSalidaAlm/GetReporteStock",
-                type: "GET",
-                datatype: "json",
+                url: '/IngresoSalidaAlm/GetReporteStockVencimiento',
+                type: 'GET',
+                datatype: 'json',
                 data: function (d) {
                     d.almacenId = $('#cbx_Almacen').val();
                 },
                 dataSrc: function (json) {
-                    if (json.status === false) {
-                        toastr.error('Ocurrió un error inesperado al intentar listar la tabla');
+                    HideSpinner();
+                    if (!json.status) {
+                        toastr.error('Error al generar el reporte');
                         console.error(json.message);
                         return [];
                     }
                     return json.data;
                 },
-                error: function (xhr, Status, error) {
-                    toastr.error('Ocurrió un error inesperado al intentar listar la tabla');
-                    console.error('Error en la solicitud Ajax. Status:', Status, 'Error:', error, 'XHR:', xhr);
+                error: function (xhr, status, error) {
+                    HideSpinner();
+                    toastr.error('Error inesperado al consultar el reporte');
+                    console.error(error);
                 },
+                beforeSend: function () { ShowSpinner(); },
             },
             columns: [
-                { data: "codigo", name: "codigo" },
-                { data: "descripcionGrupo", name: "descripcionGrupo" },
-                { data: "descripcionSubgrupo", name: "descripcionSubgrupo" },
-                { data: "descripcionProducto", name: "descripcionProducto" },
+                { data: 'codProducto', name: 'codProducto', className: 'align-middle' },
+                { data: 'descripcionProducto', name: 'descripcionProducto', className: 'align-middle' },
+                { data: 'lote', name: 'lote', className: 'align-middle text-center' },
+                { data: 'codUnidadMedida', name: 'codUnidadMedida', className: 'align-middle text-center' },
                 {
-                    data: "descripcionComercial",
-                    name: "descripcionComercial",
-                    render: function(data, type, row) {
-                        return data ? data : '-';
-                    },
-                },
-                { data: "codUnidadMedida", name: "codUnidadMedida", className: "text-center" },
-                {
-                    data: "cantidad",
-                    name: "cantidad",
-                    className: "text-right font-weight-bold",
-                    render: function(data, type, row) {
+                    data: 'stockActual',
+                    name: 'stockActual',
+                    className: 'align-middle text-right font-weight-bold',
+                    render: function (data) {
                         return formatearNumero(data, 4);
                     },
                 },
                 {
-                    data: "precioUnitario",
-                    name: "precioUnitario",
-                    className: "text-right",
-                    render: function(data, type, row) {
-                        return formatearNumero(data);
+                    data: 'fechaVencimiento',
+                    name: 'fechaVencimiento',
+                    className: 'align-middle text-center',
+                    render: function (data) {
+                        if (!data) return '<span class="text-muted">—</span>';
+                        return moment(data).format('DD/MM/YYYY');
                     },
                 },
                 {
-                    data: "valorizacionTotal",
-                    name: "valorizacionTotal",
-                    className: "text-right font-weight-bold text-success",
-                    render: function(data, type, row) {
-                        return formatearNumero(data);
+                    data: 'diasVencer',
+                    name: 'diasVencer',
+                    className: 'align-middle text-center font-weight-bold',
+                    render: function (data) {
+                        if (data === null || data === undefined) return '<span class="text-muted">—</span>';
+                        if (data < 0) return '<span class="text-danger">' + data + ' días (VENCIDO)</span>';
+                        return data + ' días';
                     },
-                }
-            ],
-            columnDefs: [
-                {
-                    targets: [0, 1, 2, 3, 4],
-                    className: 'align-middle',
                 },
                 {
-                    targets: [5, 6, 7, 8],
-                    className: 'align-middle text-right',
-                }
+                    data: 'estado',
+                    name: 'estado',
+                    className: 'align-middle text-center',
+                    render: function (data) {
+                        switch (data) {
+                            case 'VENCIDO':
+                                return '<span class="badge px-3 py-2" style="background:#dc3545;">🔴 VENCIDO</span>';
+                            case 'CRITICO':
+                                return '<span class="badge px-3 py-2" style="background:#dc3545;">🔴 CRÍTICO</span>';
+                            case 'ALERTA':
+                                return '<span class="badge px-3 py-2" style="background:#ffc107; color:#000;">🟡 ALERTA</span>';
+                            case 'OPTIMO':
+                                return '<span class="badge px-3 py-2" style="background:#198754;">🟢 ÓPTIMO</span>';
+                            default:
+                                return '<span class="badge px-3 py-2" style="background:#6c757d;">⚪ SIN FECHA</span>';
+                        }
+                    },
+                },
             ],
-            lengthMenu: [[100, 200, 500, -1], [100, 200, 500, 'Todos']],
-            initComplete: function (data, row, cell, start, end, display) {
+            createdRow: function (row, data) {
+                switch (data.estado) {
+                    case 'VENCIDO':
+                    case 'CRITICO':
+                        $(row).css('background-color', '#fff5f5');
+                        break;
+                    case 'ALERTA':
+                        $(row).css('background-color', '#fffdf0');
+                        break;
+                    case 'OPTIMO':
+                        $(row).css('background-color', '#f0fff4');
+                        break;
+                }
+            },
+            initComplete: function () {
                 $('.dt-buttons button').addClass('m-1');
-                $('.dt-button-collection').appendTo('.dt-buttons');
                 $('.btn.btn-success').removeClass('dt-button btn-secondary buttons-excel buttons-html5');
                 $('.btn.btn-danger').removeClass('dt-button btn-secondary buttons-pdf buttons-html5');
                 $('.btn.btn-primary').removeClass('dt-button btn-secondary buttons-copy buttons-html5');
@@ -309,23 +289,15 @@
             $(id).html(h).trigger('change');
         });
     }
-    
-    function formatearNumero(numero, decimales = 2) {
-        if (numero === null || numero === undefined || isNaN(numero)) {
-            return "0.00";
-        }
 
+    function formatearNumero(numero, decimales = 2) {
+        if (numero === null || numero === undefined || isNaN(numero)) return '0.00';
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: decimales,
             maximumFractionDigits: decimales
         }).format(parseFloat(numero));
     }
 
-    function ShowSpinner() {
-        $('#efec-cargando').removeClass('d-none');
-    }
-
-    function HideSpinner() {
-        $('#efec-cargando').addClass('d-none');
-    }
+    function ShowSpinner() { $('#efec-cargando').removeClass('d-none'); }
+    function HideSpinner() { $('#efec-cargando').addClass('d-none'); }
 </script>

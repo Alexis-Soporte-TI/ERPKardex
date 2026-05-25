@@ -1533,6 +1533,106 @@ namespace ERPKardex.Controllers
             }
         }
 
+        [HttpGet]
+        public JsonResult GetReporteStockVencimiento(int? almacenId)
+        {
+            try
+            {
+                var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
+                int idAprobado = estadoAprobado?.Id ?? -1;
+
+                // Paso 1: Ingresos agrupados por producto + lote
+                var ingresos = (from d in _context.DIngresoSalidaAlms
+                                join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
+                                where c.EmpresaId == EmpresaUsuarioId
+                                   && c.EstadoId == idAprobado
+                                   && c.TipoMovimiento == true
+                                   && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
+                                select new
+                                {
+                                    d.CodProducto,
+                                    d.DescripcionProducto,
+                                    d.Lote,
+                                    d.FechaVencimiento,
+                                    d.CodUnidadMedida,
+                                    Cantidad = d.Cantidad ?? 0
+                                })
+                               .ToList()
+                               .GroupBy(x => new { x.CodProducto, x.DescripcionProducto, x.Lote, x.FechaVencimiento, x.CodUnidadMedida })
+                               .Select(g => new
+                               {
+                                   g.Key.CodProducto,
+                                   g.Key.DescripcionProducto,
+                                   g.Key.Lote,
+                                   g.Key.FechaVencimiento,
+                                   g.Key.CodUnidadMedida,
+                                   TotalIngresado = g.Sum(x => x.Cantidad)
+                               })
+                               .ToList();
+
+                // Paso 2: Salidas agrupadas por producto + lote (en memoria)
+                var salidas = (from d in _context.DIngresoSalidaAlms
+                               join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
+                               where c.EmpresaId == EmpresaUsuarioId
+                                  && c.EstadoId == idAprobado
+                                  && c.TipoMovimiento == false
+                                  && (!almacenId.HasValue || c.AlmacenId == almacenId.Value)
+                               select new
+                               {
+                                   d.CodProducto,
+                                   d.Lote,
+                                   Cantidad = d.Cantidad ?? 0
+                               })
+                              .ToList()
+                              .GroupBy(x => new { x.CodProducto, x.Lote })
+                              .ToDictionary(g => (g.Key.CodProducto, g.Key.Lote), g => g.Sum(x => x.Cantidad));
+
+                // Paso 3: Calcular stock real, días para vencer y estado
+                var today = DateTime.Today;
+                var reporte = ingresos
+                    .Select(i =>
+                    {
+                        var clave = (i.CodProducto, i.Lote);
+                        decimal totalSalidas = salidas.ContainsKey(clave) ? salidas[clave] : 0;
+                        decimal stockActual = i.TotalIngresado - totalSalidas;
+
+                        int? diasVencer = i.FechaVencimiento.HasValue
+                            ? (int)(i.FechaVencimiento.Value.Date - today).TotalDays
+                            : (int?)null;
+
+                        // 🔴 < 0 o < 548 días (~18 meses), 🟡 548–730 (~2 años), 🟢 > 730
+                        string estado = diasVencer.HasValue
+                            ? diasVencer.Value < 0 ? "VENCIDO"
+                            : diasVencer.Value <= 547 ? "CRITICO"
+                            : diasVencer.Value <= 730 ? "ALERTA"
+                            : "OPTIMO"
+                            : "SIN_FECHA";
+
+                        return new
+                        {
+                            i.CodProducto,
+                            i.DescripcionProducto,
+                            Lote = i.Lote ?? "-",
+                            FechaVencimiento = i.FechaVencimiento,
+                            i.CodUnidadMedida,
+                            StockActual = Math.Round(stockActual, 4),
+                            DiasVencer = diasVencer,
+                            Estado = estado
+                        };
+                    })
+                    .Where(x => x.StockActual > 0)
+                    .OrderBy(x => x.DiasVencer ?? int.MaxValue)
+                    .ThenBy(x => x.CodProducto)
+                    .ToList();
+
+                return Json(new { data = reporte, message = "Reporte generado exitosamente.", status = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { data = (object)null, message = ex.Message, status = false });
+            }
+        }
+
         #endregion
         #region 4. IMPRESIÓN (SIN VALORIZACIÓN)
         [HttpGet]
