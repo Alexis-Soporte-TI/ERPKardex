@@ -718,6 +718,32 @@
                             </li>
                         }
 
+                        @if (User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "1")
+                        {
+                            bool isAdminOpen = controllerName == "Seguridad";
+                            <li class="nav-header font-weight-bold" style="color:#f39c12;">ADMINISTRACIÓN GLOBAL</li>
+                            <li class="nav-item @(isAdminOpen ? "menu-open" : "")">
+                                <a href="#" class="nav-link @(isAdminOpen ? "active" : "")" style="color:#f39c12;">
+                                    <i class="nav-icon fas fa-shield-alt" style="color:#f39c12;"></i>
+                                    <p style="color:#f39c12;">Panel Admin <i class="right fas fa-angle-left"></i></p>
+                                </a>
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="/Seguridad/Usuarios" class="nav-link @(controllerName == "Seguridad" && actionName == "Usuarios" ? "active" : "")">
+                                            <i class="fas fa-users-cog nav-icon text-warning"></i>
+                                            <p>Gestión de Usuarios</p>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Seguridad/AlertasVencimiento" class="nav-link @(controllerName == "Seguridad" && actionName == "AlertasVencimiento" ? "active" : "")">
+                                            <i class="fas fa-bell nav-icon text-warning"></i>
+                                            <p>Alertas de Vencimiento</p>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
                         @if (await _permisos.TienePermiso("MOD_PERSONAL"))
                         {
                             <li class="nav-header font-weight-bold">MÓDULO PERSONAL</li>

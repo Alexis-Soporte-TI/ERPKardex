@@ -50,8 +50,8 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
     });
 
-// Configurar el Worker automático
-//builder.Services.AddHostedService<ERPKardex.Workers.VerificadorVencimientosWorker>();
+// Worker de alertas de vencimiento (corre diariamente y envía correos automáticos)
+builder.Services.AddHostedService<ERPKardex.Workers.AlertaVencimientoWorker>();
 
 // CACHÉ PARA PERMISOS
 builder.Services.AddMemoryCache(); // Habilitar Caché en RAM

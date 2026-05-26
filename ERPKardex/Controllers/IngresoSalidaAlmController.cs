@@ -1573,6 +1573,11 @@ namespace ERPKardex.Controllers
                 var estadoAprobado = _context.Estados.FirstOrDefault(e => e.Nombre == "Aprobado" && e.Tabla == "INGRESOSALIDAALM");
                 int idAprobado = estadoAprobado?.Id ?? -1;
 
+                // Leer umbrales configurados para esta empresa (con defaults si no hay config)
+                var config = _context.ConfigAlertasVencimiento.FirstOrDefault(c => c.EmpresaId == EmpresaUsuarioId);
+                int diasCritico = (config?.MesesCritico ?? 18) * 30;
+                int diasAlerta = (config?.MesesAlerta ?? 24) * 30;
+
                 // Paso 1: Ingresos agrupados por producto + lote
                 var ingresos = (from d in _context.DIngresoSalidaAlms
                                 join c in _context.IngresoSalidaAlms on d.IngresoSalidaAlmId equals c.Id
@@ -1632,11 +1637,10 @@ namespace ERPKardex.Controllers
                             ? (int)(i.FechaVencimiento.Value.Date - today).TotalDays
                             : (int?)null;
 
-                        // 🔴 < 0 o < 548 días (~18 meses), 🟡 548–730 (~2 años), 🟢 > 730
                         string estado = diasVencer.HasValue
                             ? diasVencer.Value < 0 ? "VENCIDO"
-                            : diasVencer.Value <= 547 ? "CRITICO"
-                            : diasVencer.Value <= 730 ? "ALERTA"
+                            : diasVencer.Value <= diasCritico ? "CRITICO"
+                            : diasVencer.Value <= diasAlerta ? "ALERTA"
                             : "OPTIMO"
                             : "SIN_FECHA";
 

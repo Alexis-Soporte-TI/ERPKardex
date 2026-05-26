@@ -328,15 +328,24 @@
             $('#txtTelefono').val(telefono);
             $('#txtPassword').val('');
 
-            $("#cbxRol option").filter(function() { return $(this).text() == rol; }).prop('selected', true);
-
             $('#lblTituloModal').text('Editar Acceso');
             $('#alertMultiEmpresa').addClass('d-none');
-
             $('#permisos-tab').removeClass('disabled');
-            fct_CargarPermisos(id);
 
+            // Mostrar la pestaña Datos primero y abrir el modal
+            $('#datos-tab').tab('show');
             $('#modalUsuario').modal('show');
+
+            // Esperar a que los combos estén cargados antes de seleccionar el rol y cargar permisos
+            function aplicarRolYPermisos() {
+                if ($('#cbxRol option').length === 0) {
+                    setTimeout(aplicarRolYPermisos, 100);
+                    return;
+                }
+                $("#cbxRol option").filter(function() { return $(this).text() == rol; }).prop('selected', true);
+                fct_CargarPermisos(id);
+            }
+            aplicarRolYPermisos();
         }
 
         function fct_GuardarDatos() {

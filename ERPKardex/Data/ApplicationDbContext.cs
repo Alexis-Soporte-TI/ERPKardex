@@ -102,6 +102,10 @@ namespace ERPKardex.Data
         public DbSet<DocumentoCobrarAplicacion> AplicacionesDocumentoCobrar { get; set; }
         public DbSet<AreaSolicitante> AreaSolicitante { get; set; }
         public DbSet<PersonalSolicitante> PersonalSolicitante { get; set; }
+
+        // MÓDULO ALERTAS DE VENCIMIENTO
+        public DbSet<ConfigAlertaVencimiento> ConfigAlertasVencimiento { get; set; }
+        public DbSet<CorreoAlertaStock> CorreosAlertaStock { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

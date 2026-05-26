@@ -1,0 +1,422 @@
+@{
+    ViewData["Title"] = "Configuración de Alertas de Vencimiento";
+}
+
+<div class="container-fluid py-4">
+
+    <!-- ENCABEZADO -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="bi bi-bell-fill"></i> Configuración de Alertas de Vencimiento de Stock</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-0">Define los umbrales de alerta (semáforo) y los destinatarios del correo automático semanal/bisemanal, separados por empresa.</p>
+        </div>
+    </div>
+
+    <!-- PANEL: Filtros compartidos -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-dark text-white">
+            <h6 class="mb-0"><i class="fas fa-filter mr-2"></i> Filtro de Estados — aplica a todos los envíos</h6>
+        </div>
+        <div class="card-body py-3">
+            <p class="text-muted small mb-2">Selecciona qué estados de vencimiento incluir en el correo:</p>
+            <div class="d-flex flex-wrap gap-2" style="gap:.5rem">
+                <div class="custom-control custom-checkbox custom-control-inline mr-3">
+                    <input type="checkbox" class="custom-control-input chk-estado" id="chkVencido" value="VENCIDO" checked>
+                    <label class="custom-control-label font-weight-bold text-danger" for="chkVencido">🔴 Vencido</label>
+                </div>
+                <div class="custom-control custom-checkbox custom-control-inline mr-3">
+                    <input type="checkbox" class="custom-control-input chk-estado" id="chkCritico" value="CRITICO" checked>
+                    <label class="custom-control-label font-weight-bold" style="color:#e74c3c" for="chkCritico">🔴 Crítico</label>
+                </div>
+                <div class="custom-control custom-checkbox custom-control-inline mr-3">
+                    <input type="checkbox" class="custom-control-input chk-estado" id="chkAlerta" value="ALERTA" checked>
+                    <label class="custom-control-label font-weight-bold text-warning" for="chkAlerta">🟡 Alerta</label>
+                </div>
+                <div class="custom-control custom-checkbox custom-control-inline mr-3">
+                    <input type="checkbox" class="custom-control-input chk-estado" id="chkOptimo" value="OPTIMO">
+                    <label class="custom-control-label font-weight-bold text-success" for="chkOptimo">🟢 Óptimo</label>
+                </div>
+                <div class="custom-control custom-checkbox custom-control-inline">
+                    <input type="checkbox" class="custom-control-input chk-estado" id="chkSinFecha" value="SIN_FECHA">
+                    <label class="custom-control-label font-weight-bold text-secondary" for="chkSinFecha">⚪ Sin Fecha</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- PANEL: Enviar correo de prueba -->
+        <div class="col-md-5">
+            <div class="card shadow h-100 border-left-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-vial mr-2"></i> Correo de Prueba (a ti mismo)</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Verifica que el sistema funciona y cómo llega el correo. Se envía solo a la dirección que escribas.</p>
+                    <div class="input-group">
+                        <input type="email" id="txtEmailPrueba" class="form-control" placeholder="tu@correo.com" value="">
+                        <div class="input-group-append">
+                            <button class="btn btn-warning font-weight-bold" id="btnEnviarPrueba" onclick="enviarEmailPrueba()">
+                                <i class="fas fa-paper-plane mr-1"></i> Enviar Prueba
+                            </button>
+                        </div>
+                    </div>
+                    <div id="alertPrueba" class="mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: Envío manual por empresa -->
+        <div class="col-md-7">
+            <div class="card shadow h-100 border-left-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-paper-plane mr-2"></i> Envío Manual a Destinatarios por Empresa</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0" id="tblEnvioManual">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Empresa</th>
+                                <th class="text-center">Destinatarios</th>
+                                <th class="text-center">Enviar Ahora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEnvioManual">
+                            <tr><td colspan="3" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- PANEL IZQUIERDO: Umbrales por empresa -->
+        <div class="col-md-5">
+            <div class="card shadow h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-sliders"></i> Umbrales del Semáforo por Empresa</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Configura a partir de cuántos meses un producto entra en zona roja o amarilla.</p>
+                    <table id="tbl_Config" class="table table-sm table-bordered table-hover w-100">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Empresa</th>
+                                <th class="text-center">🔴 Meses Crítico</th>
+                                <th class="text-center">🟡 Meses Alerta</th>
+                                <th class="text-center">Guardar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody_Config"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO: Destinatarios -->
+        <div class="col-md-7">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-envelope-fill"></i> Destinatarios del Correo Automático</h6>
+                    <button class="btn btn-sm btn-success" onclick="abrirModalCorreo()">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <table id="tbl_Correos" class="table table-sm table-bordered table-hover w-100">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th class="text-center">Frecuencia</th>
+                                <th class="text-center">Día</th>
+                                <th class="text-center">Activo</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DESTINATARIO -->
+<div class="modal fade" id="modalCorreo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="bi bi-envelope-fill"></i> Destinatario de Alerta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="correo_Id" value="0">
+                <div class="mb-3">
+                    <label>Empresa</label>
+                    <select id="correo_Empresa" class="form-control"></select>
+                </div>
+                <div class="mb-3">
+                    <label>Nombre</label>
+                    <input type="text" id="correo_Nombre" class="form-control" placeholder="Nombre del destinatario">
+                </div>
+                <div class="mb-3">
+                    <label>Email</label>
+                    <input type="email" id="correo_Email" class="form-control" placeholder="ejemplo@correo.com">
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Frecuencia</label>
+                        <select id="correo_Frecuencia" class="form-control">
+                            <option value="SEMANAL">Semanal</option>
+                            <option value="BISEMANAL">Bisemanal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>Día de envío</label>
+                        <select id="correo_Dia" class="form-control">
+                            <option value="1">Lunes</option>
+                            <option value="2">Martes</option>
+                            <option value="3">Miércoles</option>
+                            <option value="4">Jueves</option>
+                            <option value="5">Viernes</option>
+                            <option value="6">Sábado</option>
+                            <option value="7">Domingo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="correo_Activo" checked>
+                    <label class="form-check-label">Activo</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarCorreo()"><i class="bi bi-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var dtCorreos;
+    var diasNombre = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado', 7: 'Domingo' };
+
+    $(document).ready(function () {
+        cargarConfigUmbrales();
+        cargarCorreos();
+        cargarEmpresasModal();
+        cargarTablaEnvioManual();
+    });
+
+    // ─── UMBRALES ─────────────────────────────────────────────────────────────
+
+    function cargarConfigUmbrales() {
+        $.getJSON('/Seguridad/GetConfigAlertas', function (res) {
+            if (!res.status) { toastr.error('Error al cargar configuración'); return; }
+            var html = '';
+            res.data.forEach(function (r) {
+                html += `
+                <tr>
+                    <td>${r.empresa}</td>
+                    <td class="text-center">
+                        <input type="number" class="form-control form-control-sm text-center"
+                               id="critico_${r.empresaId}" value="${r.mesesCritico}" min="1" max="36" style="width:70px;margin:auto;">
+                    </td>
+                    <td class="text-center">
+                        <input type="number" class="form-control form-control-sm text-center"
+                               id="alerta_${r.empresaId}" value="${r.mesesAlerta}" min="1" max="60" style="width:70px;margin:auto;">
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-primary" onclick="guardarConfig(${r.empresaId})">
+                            <i class="bi bi-save"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            $('#tbody_Config').html(html);
+        });
+    }
+
+    function guardarConfig(empresaId) {
+        var mesesCritico = parseInt($('#critico_' + empresaId).val());
+        var mesesAlerta = parseInt($('#alerta_' + empresaId).val());
+        $.post('/Seguridad/GuardarConfigAlerta', { empresaId, mesesCritico, mesesAlerta }, function (res) {
+            if (res.status) toastr.success(res.message);
+            else toastr.error(res.message);
+        });
+    }
+
+    // ─── DESTINATARIOS ────────────────────────────────────────────────────────
+
+    function cargarCorreos() {
+        if (dtCorreos) { dtCorreos.destroy(); }
+        dtCorreos = $('#tbl_Correos').DataTable({
+            ajax: {
+                url: '/Seguridad/GetCorreosAlerta',
+                type: 'GET',
+                dataSrc: function (json) { return json.status ? json.data : []; }
+            },
+            columns: [
+                { data: 'empresa' },
+                { data: 'nombre' },
+                { data: 'email' },
+                { data: 'frecuencia', className: 'text-center',
+                  render: d => d === 'BISEMANAL' ? '<span class="badge bg-info">Bisemanal</span>' : '<span class="badge bg-primary">Semanal</span>' },
+                { data: 'diaEnvio', className: 'text-center',
+                  render: d => diasNombre[d] || d },
+                { data: 'activo', className: 'text-center',
+                  render: d => d ? '<span class="badge bg-success">Sí</span>' : '<span class="badge bg-secondary">No</span>' },
+                { data: null, className: 'text-center', orderable: false,
+                  render: function (data, type, row) {
+                    return `<button class="btn btn-sm btn-warning me-1" onclick="editarCorreo(${JSON.stringify(row).replace(/"/g, '&quot;')})"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarCorreo(${row.id})"><i class="bi bi-trash"></i></button>`;
+                  }}
+            ],
+            language: { emptyTable: 'No hay destinatarios configurados.', zeroRecords: 'Sin resultados.' },
+            paging: false,
+            searching: false,
+            info: false,
+            destroy: true
+        });
+    }
+
+    function cargarEmpresasModal() {
+        $.getJSON('/Seguridad/GetConfigAlertas', function (res) {
+            if (!res.status) return;
+            var html = '';
+            res.data.forEach(r => html += `<option value="${r.empresaId}">${r.empresa}</option>`);
+            $('#correo_Empresa').html(html);
+        });
+    }
+
+    function abrirModalCorreo() {
+        $('#correo_Id').val(0);
+        $('#correo_Nombre, #correo_Email').val('');
+        $('#correo_Frecuencia').val('SEMANAL');
+        $('#correo_Dia').val(1);
+        $('#correo_Activo').prop('checked', true);
+        $('#correo_Empresa').prop('selectedIndex', 0);
+        $('#modalCorreo').modal('show');
+    }
+
+    function editarCorreo(row) {
+        $('#correo_Id').val(row.id);
+        $('#correo_Empresa').val(row.empresaId);
+        $('#correo_Nombre').val(row.nombre);
+        $('#correo_Email').val(row.email);
+        $('#correo_Frecuencia').val(row.frecuencia);
+        $('#correo_Dia').val(row.diaEnvio);
+        $('#correo_Activo').prop('checked', row.activo);
+        $('#modalCorreo').modal('show');
+    }
+
+    function guardarCorreo() {
+        var data = {
+            id: $('#correo_Id').val(),
+            empresaId: $('#correo_Empresa').val(),
+            nombre: $('#correo_Nombre').val().trim(),
+            email: $('#correo_Email').val().trim(),
+            frecuencia: $('#correo_Frecuencia').val(),
+            diaEnvio: $('#correo_Dia').val(),
+            activo: $('#correo_Activo').is(':checked')
+        };
+        if (!data.nombre || !data.email) { toastr.warning('Complete nombre y email.'); return; }
+        $.post('/Seguridad/GuardarCorreoAlerta', data, function (res) {
+            if (res.status) {
+                toastr.success(res.message);
+                $('#modalCorreo').modal('hide');
+                dtCorreos.ajax.reload();
+            } else {
+                toastr.error(res.message);
+            }
+        });
+    }
+
+    function eliminarCorreo(id) {
+        if (!confirm('¿Eliminar este destinatario?')) return;
+        $.post('/Seguridad/EliminarCorreoAlerta', { id }, function (res) {
+            if (res.status) { toastr.success(res.message); dtCorreos.ajax.reload(); }
+            else toastr.error(res.message);
+        });
+    }
+
+    // ─── HELPER: leer checkboxes seleccionados ────────────────────────────────
+
+    function getEstadosFiltro() {
+        var vals = [];
+        $('.chk-estado:checked').each(function () { vals.push($(this).val()); });
+        if (vals.length === 0) { toastr.warning('Selecciona al menos un estado para incluir.'); return null; }
+        return vals.join(',');
+    }
+
+    // ─── CORREO DE PRUEBA ─────────────────────────────────────────────────────
+
+    function enviarEmailPrueba() {
+        var email = $('#txtEmailPrueba').val().trim();
+        if (!email) { toastr.warning('Ingresa un correo de destino.'); return; }
+        var estados = getEstadosFiltro();
+        if (!estados) return;
+
+        var btn = $('#btnEnviarPrueba');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Enviando...');
+        $('#alertPrueba').addClass('d-none');
+
+        $.post('/Seguridad/EnviarEmailPrueba', { email: email, estados: estados }, function (res) {
+            btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-1"></i> Enviar Prueba');
+            var cls = res.status ? 'alert-success' : 'alert-danger';
+            var ico = res.status ? 'fa-check-circle' : 'fa-times-circle';
+            $('#alertPrueba').removeClass('d-none alert-success alert-danger')
+                .addClass('alert ' + cls)
+                .html(`<i class="fas ${ico} mr-2"></i> ${res.message}`);
+        }).fail(function () {
+            btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-1"></i> Enviar Prueba');
+            $('#alertPrueba').removeClass('d-none').addClass('alert alert-danger')
+                .html('<i class="fas fa-times-circle mr-2"></i> Error de conexión al servidor.');
+        });
+    }
+
+    // ─── ENVÍO MANUAL POR EMPRESA ─────────────────────────────────────────────
+
+    function cargarTablaEnvioManual() {
+        $.getJSON('/Seguridad/GetResumenEnvioManual', function (res) {
+            if (!res.status) { $('#tbodyEnvioManual').html('<tr><td colspan="3" class="text-danger text-center">Error al cargar.</td></tr>'); return; }
+            if (res.data.length === 0) { $('#tbodyEnvioManual').html('<tr><td colspan="3" class="text-muted text-center py-3">No hay empresas con destinatarios configurados.</td></tr>'); return; }
+
+            var html = '';
+            res.data.forEach(function (r) {
+                var badge = r.totalDestinatarios > 0
+                    ? `<span class="badge badge-success">${r.totalDestinatarios} activo(s)</span>`
+                    : `<span class="badge badge-secondary">Sin destinatarios</span>`;
+                var btn = r.totalDestinatarios > 0
+                    ? `<button class="btn btn-sm btn-primary" onclick="enviarManual(${r.empresaId}, '${r.empresa.replace(/'/g, "\\'")}')"><i class="fas fa-paper-plane mr-1"></i> Enviar</button>`
+                    : `<button class="btn btn-sm btn-secondary" disabled title="Agrega destinatarios primero"><i class="fas fa-paper-plane mr-1"></i> Enviar</button>`;
+                html += `<tr><td class="font-weight-bold small">${r.empresa}</td><td class="text-center">${badge}</td><td class="text-center">${btn}</td></tr>`;
+            });
+            $('#tbodyEnvioManual').html(html);
+        });
+    }
+
+    function enviarManual(empresaId, empresaNombre) {
+        var estados = getEstadosFiltro();
+        if (!estados) return;
+
+        if (!confirm(`¿Enviar correo a todos los destinatarios activos de "${empresaNombre}"?`)) return;
+
+        var btn = $(`button[onclick="enviarManual(${empresaId}, '${empresaNombre.replace(/'/g, "\\'")}')"]`);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>');
+
+        $.post('/Seguridad/EnviarCorreoManual', { empresaId: empresaId, estados: estados }, function (res) {
+            btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-1"></i> Enviar');
+            if (res.status) toastr.success(res.message);
+            else toastr.error(res.message);
+        }).fail(function () {
+            btn.prop('disabled', false).html('<i class="fas fa-paper-plane mr-1"></i> Enviar');
+            toastr.error('Error de conexión al servidor.');
+        });
+    }
+</script>
