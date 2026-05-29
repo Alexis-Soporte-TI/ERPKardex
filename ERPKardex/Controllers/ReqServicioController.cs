@@ -353,7 +353,7 @@ namespace ERPKardex.Controllers
                             string nombrePersonal = personalSolicitante != null ? personalSolicitante.Nombre : "No especificado";
 
                             // Preparamos los datos del correo
-                            var destinatarios = new List<string> { "valarcon@corpsaf.com", "roliva@corpsaf.com" };
+                            var destinatarios = new List<string> { "roliva@corpsaf.com" };
                             var asunto = $"Nuevo Requerimiento de Servicio: {cabecera.Numero}";
 
                             // 3. Agregamos el Área y Personal al cuerpo del correo

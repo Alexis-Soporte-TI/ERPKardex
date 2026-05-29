@@ -106,6 +106,7 @@ namespace ERPKardex.Data
         // MÓDULO ALERTAS DE VENCIMIENTO
         public DbSet<ConfigAlertaVencimiento> ConfigAlertasVencimiento { get; set; }
         public DbSet<CorreoAlertaStock> CorreosAlertaStock { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
